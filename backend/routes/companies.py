@@ -6,6 +6,7 @@ import os
 from typing import List
 from models.company import Company, CompanyCreate, CompanyUpdate
 from utils.dependencies import get_current_user, get_current_company
+from data.tunisian_chart_of_accounts import TUNISIAN_CHART_OF_ACCOUNTS
 
 router = APIRouter(prefix="/api/companies", tags=["Companies"])
 
