@@ -24,6 +24,7 @@ import Accounting from './pages/Accounting';
 import Projects from './pages/Projects';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import PlaceholderPage from './pages/PlaceholderPage';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
