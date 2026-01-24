@@ -170,15 +170,15 @@ const InvoiceFormModal = ({ open, onClose, onSuccess, invoice }) => {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nouvelle facture</DialogTitle>
+          <DialogTitle>{isEditing ? 'Modifier la facture' : 'Nouvelle facture'}</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="customer_id">Client *</Label>
-              <Select value={formData.customer_id} onValueChange={(value) => handleChange('customer_id', value)} required>
-                <SelectTrigger>
+              <Select value={formData.customer_id} onValueChange={(value) => handleChange('customer_id', value)}>
+                <SelectTrigger data-testid="invoice-customer-select">
                   <SelectValue placeholder="Sélectionner un client" />
                 </SelectTrigger>
                 <SelectContent>
@@ -197,6 +197,7 @@ const InvoiceFormModal = ({ open, onClose, onSuccess, invoice }) => {
                 value={formData.subject}
                 onChange={(e) => handleChange('subject', e.target.value)}
                 placeholder="Objet de la facture"
+                data-testid="invoice-subject"
               />
             </div>
           </div>
