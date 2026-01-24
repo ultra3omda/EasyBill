@@ -672,7 +672,13 @@ const Products = () => {
                 <TableHeader>
                   <TableRow className="bg-gray-50">
                     <TableHead className="w-12">
-                      <input type="checkbox" className="rounded border-gray-300" />
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-gray-300"
+                        checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0}
+                        onChange={toggleSelectAll}
+                        data-testid="select-all-checkbox"
+                      />
                     </TableHead>
                     <TableHead className="text-xs font-semibold text-gray-600 uppercase">REF</TableHead>
                     <TableHead className="text-xs font-semibold text-gray-600 uppercase">TITRE</TableHead>
@@ -688,7 +694,13 @@ const Products = () => {
                   {filteredProducts.map((product) => (
                     <TableRow key={product.id} className="hover:bg-gray-50" data-testid={`product-row-${product.id}`}>
                       <TableCell>
-                        <input type="checkbox" className="rounded border-gray-300" />
+                        <input 
+                          type="checkbox" 
+                          className="rounded border-gray-300"
+                          checked={selectedProducts.includes(product.id)}
+                          onChange={() => toggleSelectProduct(product.id)}
+                          data-testid={`select-product-${product.id}`}
+                        />
                       </TableCell>
                       <TableCell className="text-sm text-gray-600 font-mono">{product.sku || '-'}</TableCell>
                       <TableCell>
