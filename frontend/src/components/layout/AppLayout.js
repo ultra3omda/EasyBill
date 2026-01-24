@@ -137,13 +137,12 @@ const AppLayout = ({ children }) => {
       icon: ShoppingCart,
       label: 'Achats',
       items: [
-        { icon: ClipboardCheck, label: 'Bons de réception', path: '/reception-notes' },
         { icon: FileText, label: 'Bons de commande', path: '/purchase-orders' },
         { icon: Receipt, label: 'Factures fournisseur', path: '/supplier-invoices' },
+        { icon: CreditCard, label: 'Paiements', path: '/supplier-payments' },
+        { icon: ClipboardCheck, label: 'Bons de réception', path: '/reception-notes' },
         { icon: Briefcase, label: 'Prestations de service', path: '/services' },
-        { icon: CreditCard, label: 'Paiements', path: '/purchase-payments' },
-        { icon: Percent, label: 'Retenue à la source', path: '/withholding-tax' },
-        { icon: AlertCircle, label: "Rappels d'achats", path: '/purchase-reminders' }
+        { icon: Percent, label: 'Retenue à la source', path: '/withholding-tax' }
       ]
     },
     {
