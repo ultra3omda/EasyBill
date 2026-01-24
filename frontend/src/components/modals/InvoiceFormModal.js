@@ -112,9 +112,22 @@ const InvoiceFormModal = ({ open, onClose, onSuccess, invoice }) => {
   const selectProduct = (index, productId) => {
     const product = products.find(p => p.id === productId);
     if (product) {
-      handleItemChange(index, 'description', product.name);
-      handleItemChange(index, 'unit_price', product.unit_price);
-      handleItemChange(index, 'tax_rate', product.tax_rate);
+      const newItems = [...formData.items];
+      newItems[index] = {
+        ...newItems[index],
+        description: product.name,
+        unit_price: product.selling_price || 0,
+        tax_rate: product.tax_rate || 19
+      };
+      // Recalculate total
+      const item = newItems[index];
+      const subtotal = item.quantity * item.unit_price;
+      const discountAmount = subtotal * (item.discount / 100);
+      const afterDiscount = subtotal - discountAmount;
+      const taxAmount = afterDiscount * (item.tax_rate / 100);
+      item.total = afterDiscount + taxAmount;
+      
+      setFormData(prev => ({ ...prev, items: newItems }));
     }
   };
 
@@ -125,15 +138,25 @@ const InvoiceFormModal = ({ open, onClose, onSuccess, invoice }) => {
       return;
     }
 
+    if (!formData.customer_id) {
+      toast({ title: 'Erreur', description: 'Veuillez sélectionner un client', variant: 'destructive' });
+      return;
+    }
+
     setLoading(true);
     try {
-      await invoicesAPI.create(currentCompany.id, formData);
-      toast({ title: 'Succès', description: 'Facture créée avec succès' });
+      if (isEditing) {
+        await invoicesAPI.update(currentCompany.id, invoice.id, formData);
+        toast({ title: 'Succès', description: 'Facture modifiée avec succès' });
+      } else {
+        await invoicesAPI.create(currentCompany.id, formData);
+        toast({ title: 'Succès', description: 'Facture créée avec succès' });
+      }
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Error creating invoice:', error);
-      toast({ title: 'Erreur', description: error.response?.data?.detail || 'Erreur lors de la création', variant: 'destructive' });
+      console.error('Error saving invoice:', error);
+      toast({ title: 'Erreur', description: error.response?.data?.detail || 'Erreur lors de l\'enregistrement', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
