@@ -116,7 +116,8 @@ async def list_customers(
         ]
     
     customers = await db.customers.find(query).to_list(1000)
-    return [{"id": str(c["_id"]), **{k: v for k, v in c.items() if k != "_id"}} for c in customers]
+    return [serialize_customer(c) for c in customers]
+
 
 @router.get("/{customer_id}")
 async def get_customer(
@@ -134,7 +135,7 @@ async def get_customer(
     if not customer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
     
-    return {"id": str(customer["_id"]), **{k: v for k, v in customer.items() if k != "_id"}}
+    return serialize_customer(customer)
 
 @router.put("/{customer_id}")
 async def update_customer(
