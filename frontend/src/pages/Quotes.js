@@ -102,6 +102,24 @@ const Quotes = () => {
     }
   };
 
+  const handleDownloadPdf = async (quote) => {
+    try {
+      const response = await pdfAPI.downloadQuote(currentCompany.id, quote.id);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Devis_${quote.number}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast({ title: 'Succès', description: 'PDF téléchargé' });
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast({ title: 'Erreur', description: 'Erreur lors du téléchargement du PDF', variant: 'destructive' });
+    }
+  };
+
   const openCreateModal = () => {
     setSelectedQuote(null);
     setModalOpen(true);
