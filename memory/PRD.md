@@ -1,39 +1,36 @@
 # EasyBill - Product Requirements Document
 
-## What's Been Implemented
+## Implemented Modules
 
-### Phase 1-5: Foundation - COMPLETE ✅
-- JWT authentication, Onboarding, Branding, Contacts, Stock
+### Foundation ✅
+- JWT Auth, Onboarding, Branding violet/gold
 
-### Phase 6: Sales Module - COMPLETE ✅
-- Factures, Devis, Bons de livraison, Avoirs, Paiements reçus, Rappels
+### Contacts ✅  
+- Clients CRUD, Fournisseurs CRUD
 
-### Phase 7: Purchases Module - COMPLETE ✅
-- **Bons de commande fournisseur** - Full CRUD + Send/Confirm/Receive
-- **Factures fournisseur** - Full CRUD with balance tracking
-- **Paiements fournisseur** - Full CRUD with invoice allocation
+### Stock ✅ (NEW)
+- **Articles** - Full CRUD
+- **Entrepôts** - Full CRUD avec stats (produits, valeur)
+- **Inventaire** - Vue temps réel du stock par entrepôt, alertes stock bas
+- **Mouvements** - Entrées/Sorties/Transferts/Ajustements
 
-## API Endpoints
+### Ventes ✅
+- Factures, Devis, Bons de livraison, Avoirs, Paiements, Rappels
 
-### Purchases Module (NEW)
-- `/api/purchase-orders/` - CRUD + `/send`, `/confirm`, `/receive`
-- `/api/supplier-invoices/` - CRUD + `/pending`
-- `/api/supplier-payments/` - CRUD
+### Achats ✅
+- Bons de commande, Factures fournisseur, Paiements fournisseur
 
-## Prioritized Backlog
+## API Endpoints (Stock)
+- `/api/warehouses/` - CRUD entrepôts
+- `/api/stock-movements/` - Mouvements + `/stock-levels`
 
-### P2 - Stock Compléments (Next)
-- [ ] Entrepôts
-- [ ] Inventaire
-- [ ] Mouvements de stock
+## Backlog
 
-### P3 - Comptabilité
-- [ ] Plan comptable
-- [ ] Écritures comptables
-- [ ] Grand livre, Balance, Journaux
+### P3 - Comptabilité (Next)
+- Plan comptable, Écritures, Grand livre, Balance
 
 ### P4 - Future
 - Dashboard données réelles
 - Génération PDF
-- Module Projets
+- Module Projets  
 - OAuth, Support bilingue FR/EN
