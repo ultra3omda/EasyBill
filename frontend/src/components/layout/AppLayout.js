@@ -39,7 +39,22 @@ import {
   Scale,
   Calendar,
   FileBarChart,
-  Settings
+  Settings,
+  UserPlus,
+  Shield,
+  PlusCircle,
+  Landmark,
+  Palette,
+  CalendarDays,
+  FileKey,
+  FolderOpen,
+  BarChart3,
+  Link2,
+  Workflow,
+  DollarSign,
+  TrendingUp,
+  Activity,
+  PieChart
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -69,7 +84,7 @@ const AppLayout = ({ children }) => {
     }));
   };
 
-  // Menu structure based on iberis.io
+  // Menu structure based on iberis.io with nested submenus
   const menuStructure = [
     {
       type: 'single',
@@ -140,10 +155,30 @@ const AppLayout = ({ children }) => {
         { icon: BookOpen, label: 'Plan comptable', path: '/chart-of-accounts' },
         { icon: PenLine, label: 'Écritures Comptables', path: '/journal-entries' },
         { icon: BookMarked, label: 'Grands Livres', path: '/ledgers' },
-        { icon: Scale, label: 'Balances', path: '/balances' },
+        { 
+          type: 'nested',
+          key: 'balances',
+          icon: Scale, 
+          label: 'Balances',
+          items: [
+            { icon: Users, label: 'Balance tiers', path: '/balance-tiers' },
+            { icon: Scale, label: 'Balance générale', path: '/balance-generale' }
+          ]
+        },
         { icon: FileText, label: 'Journaux légaux', path: '/legal-journals' },
         { icon: Calendar, label: 'Exercices comptables', path: '/fiscal-years' },
-        { icon: FileBarChart, label: 'États comptables', path: '/financial-statements' }
+        { 
+          type: 'nested',
+          key: 'etats-comptables',
+          icon: FileBarChart, 
+          label: 'États comptables',
+          items: [
+            { icon: FileBarChart, label: 'Bilan', path: '/bilan' },
+            { icon: TrendingUp, label: 'État de résultat', path: '/income-statement' },
+            { icon: Activity, label: 'État des flux de trésorerie', path: '/cash-flow' },
+            { icon: PieChart, label: 'États financiers', path: '/financial-statements' }
+          ]
+        }
       ]
     },
     {
@@ -153,15 +188,106 @@ const AppLayout = ({ children }) => {
       path: '/projects'
     },
     {
-      type: 'single',
+      type: 'group',
+      key: 'parametres',
       icon: Settings,
       label: 'Paramètres',
-      path: '/settings'
+      items: [
+        { icon: UserPlus, label: 'Collaborateurs', path: '/collaborators' },
+        { icon: Shield, label: 'Rôles & permissions', path: '/roles-permissions' },
+        { icon: PlusCircle, label: 'Entrées supplémentaires', path: '/additional-entries' },
+        { icon: Percent, label: 'Taxes', path: '/taxes' },
+        { icon: Landmark, label: 'Banques', path: '/banks' },
+        { icon: Palette, label: 'Personnalisation', path: '/customization' },
+        { icon: CalendarDays, label: 'Calendrier', path: '/calendar' },
+        { icon: FileKey, label: "Journal d'accès", path: '/access-logs' },
+        { icon: FolderOpen, label: 'Mes Fichiers', path: '/files' },
+        { icon: BarChart3, label: 'Mes Rapports', path: '/reports' },
+        { icon: Link2, label: 'Intégrations', path: '/integrations' },
+        { icon: Workflow, label: 'Workflows', path: '/workflows' }
+      ]
     }
   ];
 
   const isActiveItem = (path) => location.pathname === path;
-  const isActiveGroup = (items) => items?.some(item => location.pathname === item.path);
+  const isActiveGroup = (items) => items?.some(item => {
+    if (item.type === 'nested') {
+      return item.items?.some(subItem => location.pathname === subItem.path);
+    }
+    return location.pathname === item.path;
+  });
+
+  // Render menu item (handles nested submenus)
+  const renderMenuItem = (item, depth = 0) => {
+    if (item.type === 'nested') {
+      const isExpanded = expandedMenus[item.key];
+      const hasActiveChild = item.items?.some(subItem => location.pathname === subItem.path);
+      
+      return (
+        <div key={item.key}>
+          <button
+            onClick={() => toggleMenu(item.key)}
+            className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm transition-colors ${
+              hasActiveChild
+                ? 'bg-violet-50 text-violet-600'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <item.icon className="w-4 h-4" />
+              {item.label}
+            </div>
+            {isExpanded ? (
+              <ChevronDown className="w-3 h-3" />
+            ) : (
+              <ChevronRight className="w-3 h-3" />
+            )}
+          </button>
+          
+          {isExpanded && (
+            <div className="ml-4 mt-1 space-y-1 border-l border-gray-200">
+              {item.items.map((subItem) => {
+                const SubIcon = subItem.icon;
+                const isSubActive = isActiveItem(subItem.path);
+                return (
+                  <Link
+                    key={subItem.path}
+                    to={subItem.path}
+                    className={`flex items-center gap-3 px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                      isSubActive
+                        ? 'bg-violet-50 text-violet-600 font-medium'
+                        : 'text-gray-500 hover:bg-gray-100'
+                    }`}
+                  >
+                    <SubIcon className="w-3 h-3" />
+                    {subItem.label}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    }
+    
+    // Regular item
+    const Icon = item.icon;
+    const isActive = isActiveItem(item.path);
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+          isActive
+            ? 'bg-violet-50 text-violet-600 font-medium'
+            : 'text-gray-600 hover:bg-gray-100'
+        }`}
+      >
+        <Icon className="w-4 h-4" />
+        {item.label}
+      </Link>
+    );
+  };
 
   return (
     <div className="h-screen flex overflow-hidden bg-gray-50">
@@ -255,24 +381,7 @@ const AppLayout = ({ children }) => {
                       
                       {isExpanded && (
                         <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200">
-                          {item.items.map((subItem) => {
-                            const SubIcon = subItem.icon;
-                            const isSubActive = isActiveItem(subItem.path);
-                            return (
-                              <Link
-                                key={subItem.path}
-                                to={subItem.path}
-                                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                                  isSubActive
-                                    ? 'bg-violet-50 text-violet-600 font-medium'
-                                    : 'text-gray-600 hover:bg-gray-100'
-                                }`}
-                              >
-                                <SubIcon className="w-4 h-4" />
-                                {subItem.label}
-                              </Link>
-                            );
-                          })}
+                          {item.items.map((subItem) => renderMenuItem(subItem, 1))}
                         </div>
                       )}
                     </div>
