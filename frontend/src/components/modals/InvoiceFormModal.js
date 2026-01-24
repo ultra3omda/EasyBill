@@ -228,7 +228,7 @@ const InvoiceFormModal = ({ open, onClose, onSuccess, invoice }) => {
           <div>
             <div className="flex items-center justify-between mb-2">
               <Label>Articles / Services</Label>
-              <Button type="button" size="sm" onClick={addItem} className="bg-teal-600 hover:bg-teal-700">
+              <Button type="button" size="sm" onClick={addItem} className="bg-violet-600 hover:bg-violet-700">
                 <Plus className="w-4 h-4 mr-1" /> Ajouter
               </Button>
             </div>
