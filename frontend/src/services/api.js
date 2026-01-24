@@ -100,6 +100,15 @@ export const productsAPI = {
   deleteAll: (companyId) => apiClient.delete(`/products/bulk/delete-all?company_id=${companyId}`),
 };
 
+// Warehouses API
+export const warehousesAPI = {
+  create: (companyId, data) => apiClient.post(`/warehouses/?company_id=${companyId}`, data),
+  list: (companyId) => apiClient.get(`/warehouses/?company_id=${companyId}`),
+  get: (companyId, id) => apiClient.get(`/warehouses/${id}?company_id=${companyId}`),
+  update: (companyId, id, data) => apiClient.put(`/warehouses/${id}?company_id=${companyId}`, data),
+  delete: (companyId, id) => apiClient.delete(`/warehouses/${id}?company_id=${companyId}`),
+};
+
 // Quotes API - Note: trailing slash required to avoid 307 redirect losing auth header
 export const quotesAPI = {
   create: (companyId, data) => apiClient.post(`/quotes/?company_id=${companyId}`, data),
