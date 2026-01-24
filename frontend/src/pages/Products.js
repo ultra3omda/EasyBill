@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/layout/AppLayout';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -36,12 +36,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '../components/ui/dropdown-menu';
 import { 
   Plus, Search, Edit, Trash2, MoreVertical, Eye,
   Package, TrendingDown, TrendingUp, ShoppingCart, ChevronDown,
   Image, FileText, Calculator, BarChart3, Layers, QrCode, Barcode,
-  AlertCircle, Warehouse
+  AlertCircle, Warehouse, Download, Upload, FileSpreadsheet, Merge,
+  Trash, Check
 } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
 import { useCompany } from '../hooks/useCompany';
@@ -86,6 +88,20 @@ const TAX_RATES = [
   { value: 0, label: 'Exonéré 0%' }
 ];
 
+// Delimiters
+const DELIMITERS = [
+  { value: ';', label: 'Point-virgule (;)' },
+  { value: ',', label: 'Virgule (,)' },
+  { value: '\t', label: 'Tabulation' }
+];
+
+// Encodings
+const ENCODINGS = [
+  { value: 'utf-8', label: 'UTF-8' },
+  { value: 'iso-8859-1', label: 'ISO-8859-1 (Latin-1)' },
+  { value: 'windows-1252', label: 'Windows-1252' }
+];
+
 const Products = () => {
   const { currentCompany } = useCompany();
   const [products, setProducts] = useState([]);
@@ -96,6 +112,15 @@ const Products = () => {
   const [formLoading, setFormLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
   const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  
+  // Import modal state
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importDelimiter, setImportDelimiter] = useState(';');
+  const [importEncoding, setImportEncoding] = useState('utf-8');
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef(null);
   
   const [formData, setFormData] = useState({
     name: '',
