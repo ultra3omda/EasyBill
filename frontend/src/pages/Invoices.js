@@ -118,6 +118,17 @@ const Invoices = () => {
     invoice.number?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Calculate stats from real data
+  const stats = {
+    totalInvoiced: filteredInvoices.reduce((acc, inv) => acc + (inv.total || 0), 0),
+    totalPaid: filteredInvoices.filter(inv => inv.status === 'paid').reduce((acc, inv) => acc + (inv.total || 0), 0),
+    totalPending: filteredInvoices.filter(inv => ['draft', 'sent'].includes(inv.status)).reduce((acc, inv) => acc + (inv.balance_due || 0), 0),
+    totalOverdue: filteredInvoices.filter(inv => inv.status === 'overdue').reduce((acc, inv) => acc + (inv.balance_due || 0), 0),
+    paidCount: filteredInvoices.filter(inv => inv.status === 'paid').length,
+    pendingCount: filteredInvoices.filter(inv => ['draft', 'sent'].includes(inv.status)).length,
+    overdueCount: filteredInvoices.filter(inv => inv.status === 'overdue').length
+  };
+
   if (!currentCompany) {
     return <AppLayout><div className="text-center py-20">Aucune entreprise sélectionnée</div></AppLayout>;
   }
