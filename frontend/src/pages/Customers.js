@@ -171,10 +171,10 @@ const Customers = () => {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center text-teal-600 font-semibold">
-                          {customer.name.charAt(0)}
+                          {customer.display_name?.charAt(0)}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{customer.name}</p>
+                          <p className="font-medium text-gray-900">{customer.display_name}</p>
                         </div>
                       </div>
                     </TableCell>
