@@ -460,11 +460,46 @@ const SupplierFormModal = ({ open, onClose, onSuccess, supplier = null }) => {
         <p className="text-sm text-gray-500">Coordonnées du contact</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      {/* Show name fields only for Entreprise (already filled for Particulier in step 1) */}
+      {supplierType === 'entreprise' ? (
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <Label>Titre</Label>
+            <Select value={formData.title} onValueChange={(v) => handleChange('title', v)}>
+              <SelectTrigger className="mt-1" data-testid="supplier-title">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TITLES.map(t => (
+                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Prénom *</Label>
+            <Input
+              value={formData.first_name}
+              onChange={(e) => handleChange('first_name', e.target.value)}
+              className="mt-1"
+              data-testid="supplier-first-name"
+            />
+          </div>
+          <div>
+            <Label>Nom de famille</Label>
+            <Input
+              value={formData.last_name}
+              onChange={(e) => handleChange('last_name', e.target.value)}
+              className="mt-1"
+              data-testid="supplier-last-name"
+            />
+          </div>
+        </div>
+      ) : (
         <div>
           <Label>Titre</Label>
           <Select value={formData.title} onValueChange={(v) => handleChange('title', v)}>
-            <SelectTrigger className="mt-1" data-testid="supplier-title">
+            <SelectTrigger className="mt-1 w-32" data-testid="supplier-title">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -473,37 +508,6 @@ const SupplierFormModal = ({ open, onClose, onSuccess, supplier = null }) => {
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <div>
-          <Label>Prénom *</Label>
-          <Input
-            value={formData.first_name}
-            onChange={(e) => handleChange('first_name', e.target.value)}
-            className="mt-1"
-            data-testid="supplier-first-name"
-          />
-        </div>
-        <div>
-          <Label>Nom de famille</Label>
-          <Input
-            value={formData.last_name}
-            onChange={(e) => handleChange('last_name', e.target.value)}
-            className="mt-1"
-            data-testid="supplier-last-name"
-          />
-        </div>
-      </div>
-
-      {supplierType === 'particulier' && (
-        <div>
-          <Label>Numéro d'identité (CIN)</Label>
-          <Input
-            value={formData.identity_number}
-            onChange={(e) => handleChange('identity_number', e.target.value)}
-            placeholder="00000000"
-            className="mt-1"
-            data-testid="supplier-identity-number"
-          />
         </div>
       )}
 
