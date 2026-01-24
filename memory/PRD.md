@@ -69,11 +69,16 @@ Clone complet du logiciel de facturation tunisien (inspiré d'iberis.io) rebapti
 - [x] Two-column onboarding form with pre-filled dropdowns
 - [x] API endpoints: `/api/auth/*`, `/api/companies/`
 
-### Phase 4: Core Modules (SCAFFOLDED)
-- [x] Dashboard with mock KPIs (violet/gold theme)
-- [x] Navigation sidebar with hierarchical menu
-- [x] Basic page layouts for all modules
-- [x] Placeholder pages for new modules
+### Phase 5: Default Configuration & Settings CRUD - COMPLETE ✅
+- [x] Création automatique des taxes par défaut (TVA 19%, 13%, 7%, 0%, DC 10%, FODEC 1%)
+- [x] Création automatique du Timbre fiscal (1 TND)
+- [x] Création automatique des méthodes de paiement par défaut
+- [x] Création automatique des catégories d'achat par défaut
+- [x] Journal d'accès automatique pour toutes les actions
+- [x] Page CRUD Taxes fonctionnelle
+- [x] Page CRUD Entrées supplémentaires fonctionnelle
+- [x] Page Journal d'accès fonctionnelle
+- [x] API Backend pour settings (taxes, entries, banks, payment methods, etc.)
 
 ## Menu Structure (Complete - January 24, 2026)
 - Tableau de bord
