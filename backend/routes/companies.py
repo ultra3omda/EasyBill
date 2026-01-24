@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 from typing import List
 from models.company import Company, CompanyCreate, CompanyUpdate
@@ -13,18 +13,136 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
+
+async def create_default_taxes(company_id: ObjectId, user_id: ObjectId, user_name: str):
+    """Create default taxes for a new company (Tunisia)."""
+    default_taxes = [
+        {"name": "T.V.A", "rate": 19.0, "description": "TVA 19%", "is_default": True},
+        {"name": "T.V.A", "rate": 13.0, "description": "TVA 13%", "is_default": False},
+        {"name": "T.V.A", "rate": 7.0, "description": "TVA 7%", "is_default": False},
+        {"name": "T.V.A", "rate": 0.0, "description": "TVA 0%", "is_default": False},
+        {"name": "Droit de consommation", "rate": 10.0, "description": "Droit de consommation 10%", "is_default": False},
+        {"name": "Taxe FODEC", "rate": 1.0, "description": "FODEC 1%", "is_default": False},
+    ]
+    
+    now = datetime.now(timezone.utc)
+    for tax in default_taxes:
+        tax_doc = {
+            **tax,
+            "company_id": company_id,
+            "is_active": True,
+            "created_at": now,
+            "updated_at": now
+        }
+        await db.taxes.insert_one(tax_doc)
+        
+        # Log action
+        await db.access_logs.insert_one({
+            "company_id": company_id,
+            "user_id": user_id,
+            "user_name": user_name,
+            "category": "Taxe",
+            "action": "Créer",
+            "element": tax["name"],
+            "created_at": now
+        })
+
+
+async def create_default_additional_entries(company_id: ObjectId, user_id: ObjectId, user_name: str):
+    """Create default additional entries for a new company (Tunisia)."""
+    default_entries = [
+        {
+            "title": "Timbre fiscal",
+            "value": 1.0,  # 1,000 TND
+            "type": "fixed",
+            "calculation": "after_tax",
+            "sign": "positive",
+            "usage": "everywhere"
+        }
+    ]
+    
+    now = datetime.now(timezone.utc)
+    for entry in default_entries:
+        entry_doc = {
+            **entry,
+            "company_id": company_id,
+            "is_active": True,
+            "created_at": now,
+            "updated_at": now
+        }
+        await db.additional_entries.insert_one(entry_doc)
+        
+        # Log action
+        await db.access_logs.insert_one({
+            "company_id": company_id,
+            "user_id": user_id,
+            "user_name": user_name,
+            "category": "Entrées supplémentaires",
+            "action": "Créer",
+            "element": entry["title"],
+            "created_at": now
+        })
+
+
+async def create_default_payment_methods(company_id: ObjectId):
+    """Create default payment methods for a new company."""
+    default_methods = [
+        {"name": "Espèces", "description": "Paiement en espèces"},
+        {"name": "Chèque", "description": "Paiement par chèque"},
+        {"name": "Virement bancaire", "description": "Virement bancaire"},
+        {"name": "Carte bancaire", "description": "Paiement par carte"},
+        {"name": "Effet de commerce", "description": "Effet de commerce"},
+    ]
+    
+    now = datetime.now(timezone.utc)
+    for method in default_methods:
+        method_doc = {
+            **method,
+            "company_id": company_id,
+            "is_active": True,
+            "created_at": now
+        }
+        await db.payment_methods.insert_one(method_doc)
+
+
+async def create_default_purchase_categories(company_id: ObjectId):
+    """Create default purchase categories for a new company."""
+    default_categories = [
+        {"name": "Fournitures de bureau", "description": "Fournitures et consommables"},
+        {"name": "Matériel informatique", "description": "Ordinateurs, imprimantes, etc."},
+        {"name": "Services", "description": "Services et prestations"},
+        {"name": "Transport", "description": "Frais de transport et déplacement"},
+        {"name": "Loyer", "description": "Loyer et charges locatives"},
+        {"name": "Téléphone & Internet", "description": "Communications"},
+        {"name": "Électricité & Eau", "description": "Charges d'énergie"},
+        {"name": "Autres", "description": "Autres dépenses"},
+    ]
+    
+    now = datetime.now(timezone.utc)
+    for category in default_categories:
+        category_doc = {
+            **category,
+            "company_id": company_id,
+            "is_active": True,
+            "created_at": now
+        }
+        await db.purchase_categories.insert_one(category_doc)
+
+
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_company(company_data: CompanyCreate, current_user: dict = Depends(get_current_user)):
     company_dict = company_data.dict(exclude_unset=True)
+    now = datetime.now(timezone.utc)
+    
     company_dict.update({
         "owner_id": current_user["_id"],
         "primary_currency": company_data.primary_currency or "TND",
-        "taxes": [{"name": "TVA", "rate": 19.0, "default": True}],
+        "taxes": [],  # Taxes are now stored separately
         "banks": [],
         "numbering": {
-            "invoice_prefix": "INV",
+            "invoice_prefix": "FAC",
             "invoice_next": 1,
-            "quote_prefix": "QUO",
+            "quote_prefix": "DEV",
             "quote_next": 1,
             "delivery_prefix": "BL",
             "delivery_next": 1,
@@ -33,35 +151,62 @@ async def create_company(company_data: CompanyCreate, current_user: dict = Depen
             "credit_prefix": "AV",
             "credit_next": 1,
             "purchase_order_prefix": "BC",
-            "purchase_order_next": 1
+            "purchase_order_next": 1,
+            "receipt_prefix": "BR",
+            "receipt_next": 1,
+            "supplier_invoice_prefix": "FF",
+            "supplier_invoice_next": 1,
+            "payment_prefix": "PAY",
+            "payment_next": 1
         },
         "pdf_settings": {
             "show_logo": True,
             "show_addresses": True,
             "show_product_images": False,
-            "show_prices": True
+            "show_prices": True,
+            "show_bank_details": True,
+            "show_stamp": True,
+            "template": "classic"
         },
         "collaborators": [],
         "subscription": {
             "plan": "free",
             "status": "active"
         },
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow()
+        "created_at": now,
+        "updated_at": now
     })
     
     result = await db.companies.insert_one(company_dict)
+    company_id = result.inserted_id
+    user_name = current_user.get("full_name", current_user.get("email", ""))
+    
+    # Create default data for the new company
+    await create_default_taxes(company_id, current_user["_id"], user_name)
+    await create_default_additional_entries(company_id, current_user["_id"], user_name)
+    await create_default_payment_methods(company_id)
+    await create_default_purchase_categories(company_id)
+    
+    # Log company creation
+    await db.access_logs.insert_one({
+        "company_id": company_id,
+        "user_id": current_user["_id"],
+        "user_name": user_name,
+        "category": "Entreprise",
+        "action": "Créer",
+        "element": company_dict["name"],
+        "created_at": now
+    })
     
     # Return company data with proper serialization
     return {
-        "id": str(result.inserted_id),
+        "id": str(company_id),
         "name": company_dict["name"],
         "fiscal_id": company_dict.get("fiscal_id"),
         "activity": company_dict.get("activity"),
         "logo": company_dict.get("logo"),
         "address": company_dict.get("address"),
         "primary_currency": company_dict["primary_currency"],
-        "taxes": company_dict["taxes"],
         "numbering": company_dict["numbering"],
         "pdf_settings": company_dict["pdf_settings"],
         "subscription": company_dict["subscription"],
