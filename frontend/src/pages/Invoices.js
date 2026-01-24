@@ -66,7 +66,39 @@ const Invoices = () => {
     }
   };
 
+  const handleSend = async (invoiceId) => {
+    try {
+      await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/invoices/${invoiceId}/send?company_id=${currentCompany.id}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      toast({ title: 'Succès', description: 'Facture marquée comme envoyée' });
+      loadInvoices();
+    } catch (error) {
+      toast({ title: 'Erreur', description: 'Erreur lors de l\'envoi', variant: 'destructive' });
+    }
+  };
+
+  const handleMarkPaid = async (invoiceId) => {
+    try {
+      await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/invoices/${invoiceId}/mark-paid?company_id=${currentCompany.id}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      toast({ title: 'Succès', description: 'Facture marquée comme payée' });
+      loadInvoices();
+    } catch (error) {
+      toast({ title: 'Erreur', description: 'Erreur lors du paiement', variant: 'destructive' });
+    }
+  };
+
   const openCreateModal = () => {
+    setSelectedInvoice(null);
+    setModalOpen(true);
+  };
+
+  const openEditModal = (invoice) => {
+    setSelectedInvoice(invoice);
     setModalOpen(true);
   };
 
