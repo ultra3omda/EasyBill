@@ -20,9 +20,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
-import { Plus, Search, Filter, Download, Send, Eye, Edit, Trash2, MoreVertical } from 'lucide-react';
+import { Plus, Search, Filter, Download, Send, Eye, Edit, Trash2, MoreVertical, FileText, CreditCard, CheckCircle } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
 
 const Invoices = () => {
@@ -31,6 +32,7 @@ const Invoices = () => {
   const [invoices, setInvoices] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
