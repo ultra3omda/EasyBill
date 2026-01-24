@@ -155,6 +155,7 @@ export const accountingAPI = {
   updateAccount: (companyId, id, data) => apiClient.put(`/accounting/accounts/${id}?company_id=${companyId}`, data),
   deleteAccount: (companyId, id) => apiClient.delete(`/accounting/accounts/${id}?company_id=${companyId}`),
   getAccountTypes: () => apiClient.get('/accounting/account-types'),
+  seedChartOfAccounts: (companyId) => apiClient.post(`/accounting/seed-chart-of-accounts?company_id=${companyId}`),
 };
 
 export default apiClient;
