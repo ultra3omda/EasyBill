@@ -178,9 +178,27 @@ const AppRoutes = () => {
       <Route path="/journal-entries" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/ledgers" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/balances" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/balance-tiers" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/balance-generale" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/legal-journals" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/fiscal-years" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/financial-statements" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/bilan" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/income-statement" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/cash-flow" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      
+      {/* Paramètres Routes */}
+      <Route path="/collaborators" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/roles-permissions" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/additional-entries" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/taxes" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/banks" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/customization" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/calendar" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/access-logs" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/files" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/integrations" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/workflows" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" />} />
