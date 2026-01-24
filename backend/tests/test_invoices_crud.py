@@ -95,7 +95,7 @@ def test_create_customer():
     }
     
     response = requests.post(
-        f"{BASE_URL}/api/customers?company_id={auth_data['company_id']}",
+        f"{BASE_URL}/api/customers/?company_id={auth_data['company_id']}",
         headers={"Authorization": f"Bearer {auth_data['token']}"},
         json=customer_data
     )
@@ -112,7 +112,7 @@ def test_list_customers():
     assert auth_data is not None, "Could not login"
     
     response = requests.get(
-        f"{BASE_URL}/api/customers?company_id={auth_data['company_id']}",
+        f"{BASE_URL}/api/customers/?company_id={auth_data['company_id']}",
         headers={"Authorization": f"Bearer {auth_data['token']}"}
     )
     
@@ -137,7 +137,7 @@ def test_create_product():
     }
     
     response = requests.post(
-        f"{BASE_URL}/api/products?company_id={auth_data['company_id']}",
+        f"{BASE_URL}/api/products/?company_id={auth_data['company_id']}",
         headers={"Authorization": f"Bearer {auth_data['token']}"},
         json=product_data
     )
@@ -154,7 +154,7 @@ def test_list_products():
     assert auth_data is not None, "Could not login"
     
     response = requests.get(
-        f"{BASE_URL}/api/products?company_id={auth_data['company_id']}",
+        f"{BASE_URL}/api/products/?company_id={auth_data['company_id']}",
         headers={"Authorization": f"Bearer {auth_data['token']}"}
     )
     
@@ -192,7 +192,7 @@ def test_create_invoice():
     }
     
     response = requests.post(
-        f"{BASE_URL}/api/invoices?company_id={auth_data['company_id']}",
+        f"{BASE_URL}/api/invoices/?company_id={auth_data['company_id']}",
         headers={"Authorization": f"Bearer {auth_data['token']}"},
         json=invoice_data
     )
@@ -211,7 +211,7 @@ def test_list_invoices():
     assert auth_data is not None, "Could not login"
     
     response = requests.get(
-        f"{BASE_URL}/api/invoices?company_id={auth_data['company_id']}",
+        f"{BASE_URL}/api/invoices/?company_id={auth_data['company_id']}",
         headers={"Authorization": f"Bearer {auth_data['token']}"}
     )
     
@@ -250,7 +250,7 @@ def test_get_invoice_by_id():
     }
     
     create_response = requests.post(
-        f"{BASE_URL}/api/invoices?company_id={auth_data['company_id']}",
+        f"{BASE_URL}/api/invoices/?company_id={auth_data['company_id']}",
         headers={"Authorization": f"Bearer {auth_data['token']}"},
         json=invoice_data
     )
@@ -290,7 +290,7 @@ def test_update_invoice():
     }
     
     create_response = requests.post(
-        f"{BASE_URL}/api/invoices?company_id={auth_data['company_id']}",
+        f"{BASE_URL}/api/invoices/?company_id={auth_data['company_id']}",
         headers={"Authorization": f"Bearer {auth_data['token']}"},
         json=invoice_data
     )
@@ -344,7 +344,7 @@ def test_delete_invoice():
     }
     
     create_response = requests.post(
-        f"{BASE_URL}/api/invoices?company_id={auth_data['company_id']}",
+        f"{BASE_URL}/api/invoices/?company_id={auth_data['company_id']}",
         headers={"Authorization": f"Bearer {auth_data['token']}"},
         json=invoice_data
     )
@@ -390,7 +390,7 @@ def test_send_invoice():
     }
     
     create_response = requests.post(
-        f"{BASE_URL}/api/invoices?company_id={auth_data['company_id']}",
+        f"{BASE_URL}/api/invoices/?company_id={auth_data['company_id']}",
         headers={"Authorization": f"Bearer {auth_data['token']}"},
         json=invoice_data
     )
@@ -437,7 +437,7 @@ def test_mark_invoice_paid():
     }
     
     create_response = requests.post(
-        f"{BASE_URL}/api/invoices?company_id={auth_data['company_id']}",
+        f"{BASE_URL}/api/invoices/?company_id={auth_data['company_id']}",
         headers={"Authorization": f"Bearer {auth_data['token']}"},
         json=invoice_data
     )
@@ -487,7 +487,7 @@ def test_partial_payment():
     }
     
     create_response = requests.post(
-        f"{BASE_URL}/api/invoices?company_id={auth_data['company_id']}",
+        f"{BASE_URL}/api/invoices/?company_id={auth_data['company_id']}",
         headers={"Authorization": f"Bearer {auth_data['token']}"},
         json=invoice_data
     )
@@ -533,7 +533,7 @@ def test_create_invoice_without_customer():
     }
     
     response = requests.post(
-        f"{BASE_URL}/api/invoices?company_id={auth_data['company_id']}",
+        f"{BASE_URL}/api/invoices/?company_id={auth_data['company_id']}",
         headers={"Authorization": f"Bearer {auth_data['token']}"},
         json=invoice_data
     )
@@ -558,7 +558,7 @@ def test_get_nonexistent_invoice():
 
 def test_invoice_unauthenticated():
     """Test invoice endpoints without authentication"""
-    response = requests.get(f"{BASE_URL}/api/invoices?company_id=test")
+    response = requests.get(f"{BASE_URL}/api/invoices/?company_id=test")
     
     assert response.status_code in [401, 403], f"Expected 401/403, got {response.status_code}"
     print(f"✓ Unauthenticated request correctly rejected")
