@@ -59,6 +59,7 @@ async def log_customer_action(company_id, user_id, user_name, action, element, i
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_customer(
     customer_data: CustomerCreate,
+    request: Request,
     company_id: str = Query(...),
     current_user: dict = Depends(get_current_user)
 ):
@@ -82,12 +83,19 @@ async def create_customer(
         "invoice_count": 0,
         "quote_count": 0,
         "public_access": {"enabled": False},
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
         "created_by": current_user["_id"]
     })
     
     result = await db.customers.insert_one(customer_dict)
+    
+    # Log action
+    await log_customer_action(
+        company_id, str(current_user["_id"]), current_user.get("full_name", ""),
+        "Créer", display_name, request.client.host if request.client else None
+    )
+    
     return {"id": str(result.inserted_id), "message": "Customer created successfully"}
 
 @router.get("/")
