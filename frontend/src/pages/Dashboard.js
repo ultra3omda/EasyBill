@@ -274,7 +274,7 @@ const Dashboard = () => {
               <XAxis dataKey="month" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip />
-              <Bar dataKey="value" fill="#14b8a6" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="value" fill="#7c3aed" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
