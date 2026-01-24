@@ -309,6 +309,120 @@ const Products = () => {
     setIsDialogOpen(true);
   };
 
+  // Selection handlers
+  const toggleSelectProduct = (productId) => {
+    setSelectedProducts(prev => 
+      prev.includes(productId) 
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedProducts.length === filteredProducts.length) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(filteredProducts.map(p => p.id));
+    }
+  };
+
+  // Import handlers
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImportFile(file);
+    }
+  };
+
+  const handleImport = async () => {
+    if (!importFile) {
+      toast({ title: 'Erreur', description: 'Veuillez sélectionner un fichier', variant: 'destructive' });
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', importFile);
+      formData.append('delimiter', importDelimiter);
+      formData.append('encoding', importEncoding);
+
+      const response = await productsAPI.importProducts(currentCompany.id, formData);
+      toast({ 
+        title: 'Import réussi', 
+        description: response.data.message 
+      });
+      
+      if (response.data.errors?.length > 0) {
+        console.warn('Import errors:', response.data.errors);
+      }
+      
+      setImportModalOpen(false);
+      setImportFile(null);
+      fetchProducts();
+    } catch (error) {
+      toast({
+        title: 'Erreur d\'import',
+        description: error.response?.data?.detail || 'Erreur lors de l\'import',
+        variant: 'destructive'
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const downloadTemplate = () => {
+    const token = localStorage.getItem('token');
+    const url = productsAPI.downloadTemplate(currentCompany.id);
+    window.open(`${url}&token=${token}`, '_blank');
+  };
+
+  // Export handlers
+  const exportPriceList = () => {
+    const token = localStorage.getItem('token');
+    const url = productsAPI.exportPrices(currentCompany.id);
+    window.open(`${url}&token=${token}`, '_blank');
+  };
+
+  const exportStockState = () => {
+    const token = localStorage.getItem('token');
+    const url = productsAPI.exportStock(currentCompany.id);
+    window.open(`${url}&token=${token}`, '_blank');
+  };
+
+  // Bulk delete
+  const handleBulkDelete = async () => {
+    if (selectedProducts.length === 0) {
+      toast({ title: 'Erreur', description: 'Aucun article sélectionné', variant: 'destructive' });
+      return;
+    }
+    
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer ${selectedProducts.length} article(s) ?`)) return;
+    
+    try {
+      await productsAPI.bulkDelete(currentCompany.id, selectedProducts);
+      toast({ title: 'Succès', description: `${selectedProducts.length} articles supprimés` });
+      setSelectedProducts([]);
+      fetchProducts();
+    } catch (error) {
+      toast({ title: 'Erreur', description: 'Erreur lors de la suppression', variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (!window.confirm('ATTENTION: Êtes-vous sûr de vouloir supprimer TOUS les articles ? Cette action est irréversible.')) return;
+    if (!window.confirm('Confirmez une seconde fois pour supprimer tous les articles.')) return;
+    
+    try {
+      await productsAPI.deleteAll(currentCompany.id);
+      toast({ title: 'Succès', description: 'Tous les articles ont été supprimés' });
+      setSelectedProducts([]);
+      fetchProducts();
+    } catch (error) {
+      toast({ title: 'Erreur', description: 'Erreur lors de la suppression', variant: 'destructive' });
+    }
+  };
+
   // Filter products by tab
   const getFilteredProducts = () => {
     let filtered = products.filter(product =>
