@@ -38,6 +38,7 @@ import SupplierPayments from './pages/SupplierPayments';
 import Warehouses from './pages/Warehouses';
 import Inventory from './pages/Inventory';
 import StockMovements from './pages/StockMovements';
+import ChartOfAccounts from './pages/ChartOfAccounts';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
