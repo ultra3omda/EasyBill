@@ -209,19 +209,11 @@ const Customers = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Eye className="w-4 h-4 mr-2" />
-                            Voir détails
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openEditModal(customer)}>
                             <Edit className="w-4 h-4 mr-2" />
                             Modifier
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Mail className="w-4 h-4 mr-2" />
-                            Envoyer email
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600">
+                          <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(customer.id)}>
                             <Trash2 className="w-4 h-4 mr-2" />
                             Supprimer
                           </DropdownMenuItem>
@@ -235,6 +227,13 @@ const Customers = () => {
           </div>
         </Card>
       </div>
+
+      <CustomerFormModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSuccess={loadCustomers}
+        customer={selectedCustomer}
+      />
     </AppLayout>
   );
 };
