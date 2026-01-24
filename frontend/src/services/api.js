@@ -70,10 +70,10 @@ export const customersAPI = {
   getStats: (companyId, id) => apiClient.get(`/customers/${id}/stats?company_id=${companyId}`),
 };
 
-// Suppliers API
+// Suppliers API - Note: trailing slash required to avoid 307 redirect losing auth header
 export const suppliersAPI = {
-  create: (companyId, data) => apiClient.post(`/suppliers?company_id=${companyId}`, data),
-  list: (companyId, search = '') => apiClient.get(`/suppliers?company_id=${companyId}${search ? `&search=${search}` : ''}`),
+  create: (companyId, data) => apiClient.post(`/suppliers/?company_id=${companyId}`, data),
+  list: (companyId, search = '') => apiClient.get(`/suppliers/?company_id=${companyId}${search ? `&search=${search}` : ''}`),
   get: (companyId, id) => apiClient.get(`/suppliers/${id}?company_id=${companyId}`),
   update: (companyId, id, data) => apiClient.put(`/suppliers/${id}?company_id=${companyId}`, data),
   delete: (companyId, id) => apiClient.delete(`/suppliers/${id}?company_id=${companyId}`),
