@@ -134,7 +134,7 @@ async def create_invoice(
 async def list_invoices(
     company_id: str = Query(...),
     search: Optional[str] = None,
-    status: Optional[str] = None,
+    status_filter: Optional[str] = Query(None, alias="status"),
     current_user: dict = Depends(get_current_user)
 ):
     company = await get_current_company(current_user, company_id)
@@ -145,17 +145,21 @@ async def list_invoices(
             {"number": {"$regex": search, "$options": "i"}},
             {"subject": {"$regex": search, "$options": "i"}}
         ]
-    if status:
-        query["status"] = status
+    if status_filter:
+        query["status"] = status_filter
     
-    invoices = await db.invoices.find(query).sort("date", -1).to_list(1000)
+    invoices = await db.invoices.find(query).sort("created_at", -1).to_list(1000)
     
     # Populate customer names
     for invoice in invoices:
-        customer = await db.customers.find_one({"_id": invoice["customer_id"]})
-        invoice["customer_name"] = customer["display_name"] if customer else "Unknown"
+        if invoice.get("customer_id"):
+            customer = await db.customers.find_one({"_id": invoice["customer_id"]})
+            invoice["customer_name"] = customer.get("display_name", "Inconnu") if customer else "Inconnu"
+        else:
+            invoice["customer_name"] = "Inconnu"
     
-    return [{"id": str(i["_id"]), **{k: v for k, v in i.items() if k != "_id"}} for i in invoices]
+    return [serialize_invoice(inv) for inv in invoices]
+
 
 @router.get("/{invoice_id}")
 async def get_invoice(
@@ -174,31 +178,52 @@ async def get_invoice(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
     
     # Populate customer details
-    customer = await db.customers.find_one({"_id": invoice["customer_id"]})
-    invoice["customer"] = {"id": str(customer["_id"]), **{k: v for k, v in customer.items() if k != "_id"}} if customer else None
+    if invoice.get("customer_id"):
+        customer = await db.customers.find_one({"_id": invoice["customer_id"]})
+        if customer:
+            invoice["customer_name"] = customer.get("display_name", "")
+            invoice["customer"] = {
+                "id": str(customer["_id"]),
+                "display_name": customer.get("display_name"),
+                "email": customer.get("email"),
+                "phone": customer.get("phone"),
+                "address": customer.get("billing_address")
+            }
     
-    return {"id": str(invoice["_id"]), **{k: v for k, v in invoice.items() if k != "_id"}}
+    return serialize_invoice(invoice)
+
 
 @router.put("/{invoice_id}")
 async def update_invoice(
     invoice_id: str,
     invoice_update: InvoiceUpdate,
+    request: Request,
     company_id: str = Query(...),
     current_user: dict = Depends(get_current_user)
 ):
     company = await get_current_company(current_user, company_id)
     
+    # Get existing invoice for logging
+    existing = await db.invoices.find_one({"_id": ObjectId(invoice_id)})
+    if not existing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
+    
     update_data = {k: v for k, v in invoice_update.dict(exclude_unset=True).items()}
     
     # Recalculate totals if items updated
-    if 'items' in update_data:
-        items = [item.dict() for item in update_data['items']]
+    if 'items' in update_data and update_data['items']:
+        items = [item.dict() if hasattr(item, 'dict') else item for item in update_data['items']]
         totals = calculate_document_totals(items)
         update_data.update(totals)
         update_data['items'] = items
-        update_data['balance_due'] = totals['total'] - update_data.get('amount_paid', 0)
+        current_paid = existing.get('amount_paid', 0)
+        update_data['balance_due'] = totals['total'] - current_paid
     
-    update_data["updated_at"] = datetime.utcnow()
+    # Handle customer_id update
+    if 'customer_id' in update_data and update_data['customer_id']:
+        update_data['customer_id'] = ObjectId(update_data['customer_id'])
+    
+    update_data["updated_at"] = datetime.now(timezone.utc)
     
     result = await db.invoices.update_one(
         {"_id": ObjectId(invoice_id), "company_id": ObjectId(company_id)},
@@ -208,15 +233,32 @@ async def update_invoice(
     if result.matched_count == 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
     
+    # Log action
+    await log_invoice_action(
+        company_id, str(current_user["_id"]), current_user.get("full_name", ""),
+        "Modifier", existing.get("number", ""), request.client.host if request.client else None
+    )
+    
     return {"message": "Invoice updated successfully"}
+
 
 @router.delete("/{invoice_id}")
 async def delete_invoice(
     invoice_id: str,
+    request: Request,
     company_id: str = Query(...),
     current_user: dict = Depends(get_current_user)
 ):
     company = await get_current_company(current_user, company_id)
+    
+    # Get invoice before deletion for stats update and logging
+    invoice = await db.invoices.find_one({
+        "_id": ObjectId(invoice_id),
+        "company_id": ObjectId(company_id)
+    })
+    
+    if not invoice:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
     
     result = await db.invoices.delete_one({
         "_id": ObjectId(invoice_id),
@@ -226,4 +268,119 @@ async def delete_invoice(
     if result.deleted_count == 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
     
+    # Update customer stats if customer exists
+    if invoice.get("customer_id"):
+        await db.customers.update_one(
+            {"_id": invoice["customer_id"]},
+            {
+                "$inc": {
+                    "invoice_count": -1,
+                    "total_invoiced": -invoice.get("total", 0),
+                    "balance": -invoice.get("balance_due", 0)
+                }
+            }
+        )
+    
+    # Log action
+    await log_invoice_action(
+        company_id, str(current_user["_id"]), current_user.get("full_name", ""),
+        "Supprimer", invoice.get("number", ""), request.client.host if request.client else None
+    )
+    
     return {"message": "Invoice deleted successfully"}
+
+
+@router.post("/{invoice_id}/send")
+async def send_invoice(
+    invoice_id: str,
+    request: Request,
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Mark invoice as sent."""
+    company = await get_current_company(current_user, company_id)
+    
+    invoice = await db.invoices.find_one({
+        "_id": ObjectId(invoice_id),
+        "company_id": ObjectId(company_id)
+    })
+    
+    if not invoice:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
+    
+    await db.invoices.update_one(
+        {"_id": ObjectId(invoice_id)},
+        {
+            "$set": {
+                "status": "sent",
+                "sent_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    await log_invoice_action(
+        company_id, str(current_user["_id"]), current_user.get("full_name", ""),
+        "Envoyer", invoice.get("number", ""), request.client.host if request.client else None
+    )
+    
+    return {"message": "Invoice marked as sent"}
+
+
+@router.post("/{invoice_id}/mark-paid")
+async def mark_invoice_paid(
+    invoice_id: str,
+    request: Request,
+    company_id: str = Query(...),
+    amount: Optional[float] = Query(None),
+    current_user: dict = Depends(get_current_user)
+):
+    """Mark invoice as paid (fully or partially)."""
+    company = await get_current_company(current_user, company_id)
+    
+    invoice = await db.invoices.find_one({
+        "_id": ObjectId(invoice_id),
+        "company_id": ObjectId(company_id)
+    })
+    
+    if not invoice:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
+    
+    payment_amount = amount if amount is not None else invoice.get("balance_due", 0)
+    new_amount_paid = invoice.get("amount_paid", 0) + payment_amount
+    new_balance = invoice.get("total", 0) - new_amount_paid
+    
+    new_status = "paid" if new_balance <= 0 else "partial"
+    
+    await db.invoices.update_one(
+        {"_id": ObjectId(invoice_id)},
+        {
+            "$set": {
+                "amount_paid": new_amount_paid,
+                "balance_due": max(0, new_balance),
+                "status": new_status,
+                "paid_at": datetime.now(timezone.utc) if new_status == "paid" else None,
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    # Update customer balance
+    if invoice.get("customer_id"):
+        await db.customers.update_one(
+            {"_id": invoice["customer_id"]},
+            {
+                "$inc": {
+                    "total_paid": payment_amount,
+                    "balance": -payment_amount
+                }
+            }
+        )
+    
+    await log_invoice_action(
+        company_id, str(current_user["_id"]), current_user.get("full_name", ""),
+        "Paiement", f"{invoice.get('number', '')} - {payment_amount} TND",
+        request.client.host if request.client else None
+    )
+    
+    return {"message": "Payment recorded", "new_status": new_status, "balance_due": max(0, new_balance)}
