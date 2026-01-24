@@ -132,6 +132,7 @@ def test_create_product():
         "name": f"TEST_Product_{uuid.uuid4().hex[:8]}",
         "sku": f"SKU-{uuid.uuid4().hex[:6]}",
         "selling_price": 100.00,
+        "unit_price": 100.00,  # Required field
         "tax_rate": 19,
         "type": "product"
     }
