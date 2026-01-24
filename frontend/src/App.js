@@ -35,6 +35,9 @@ import Reminders from './pages/Reminders';
 import PurchaseOrders from './pages/PurchaseOrders';
 import SupplierInvoices from './pages/SupplierInvoices';
 import SupplierPayments from './pages/SupplierPayments';
+import Warehouses from './pages/Warehouses';
+import Inventory from './pages/Inventory';
+import StockMovements from './pages/StockMovements';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
