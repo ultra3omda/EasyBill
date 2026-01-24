@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { mockInvoices } from '../data/mockData';
+import { invoicesAPI } from '../services/api';
+import { useCompany } from '../hooks/useCompany';
 import AppLayout from '../components/layout/AppLayout';
+import InvoiceFormModal from '../components/modals/InvoiceFormModal';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -21,11 +23,50 @@ import {
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
 import { Plus, Search, Filter, Download, Send, Eye, Edit, Trash2, MoreVertical } from 'lucide-react';
+import { toast } from '../hooks/use-toast';
 
 const Invoices = () => {
   const { t } = useLanguage();
-  const [invoices, setInvoices] = useState(mockInvoices);
+  const { currentCompany } = useCompany();
+  const [invoices, setInvoices] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (currentCompany) {
+      loadInvoices();
+    }
+  }, [currentCompany]);
+
+  const loadInvoices = async () => {
+    if (!currentCompany) return;
+    setLoading(true);
+    try {
+      const response = await invoicesAPI.list(currentCompany.id, { search: searchTerm });
+      setInvoices(response.data);
+    } catch (error) {
+      console.error('Error loading invoices:', error);
+      toast({ title: 'Erreur', description: 'Impossible de charger les factures', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (invoiceId) => {
+    if (!window.confirm('Voulez-vous vraiment supprimer cette facture ?')) return;
+    try {
+      await invoicesAPI.delete(currentCompany.id, invoiceId);
+      toast({ title: 'Succès', description: 'Facture supprimée' });
+      loadInvoices();
+    } catch (error) {
+      toast({ title: 'Erreur', description: 'Erreur lors de la suppression', variant: 'destructive' });
+    }
+  };
+
+  const openCreateModal = () => {
+    setModalOpen(true);
+  };
 
   const getStatusBadge = (status) => {
     const statusConfig = {
