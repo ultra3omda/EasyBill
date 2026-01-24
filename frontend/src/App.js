@@ -238,7 +238,7 @@ const AppRoutes = () => {
       <Route path="/purchase-reminders" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       
       {/* Comptabilité Routes */}
-      <Route path="/chart-of-accounts" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/chart-of-accounts" element={<ProtectedRoute><ChartOfAccounts /></ProtectedRoute>} />
       <Route path="/journal-entries" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/ledgers" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/balances" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
