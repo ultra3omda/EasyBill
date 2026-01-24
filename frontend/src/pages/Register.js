@@ -88,7 +88,7 @@ const Register = () => {
           <p className="text-gray-600">Commencez votre essai gratuit</p>
         </div>
 
-        <form onSubmit={handleRegister} className="space-y-5">
+        <form onSubmit={handleRegister} className="space-y-5" data-testid="register-form">
           <div>
             <Label htmlFor="name">{t('auth.fullName')}</Label>
             <div className="relative mt-2">
@@ -101,6 +101,7 @@ const Register = () => {
                 className="pl-10"
                 placeholder="Nom complet"
                 required
+                data-testid="register-name-input"
               />
             </div>
           </div>
@@ -117,6 +118,7 @@ const Register = () => {
                 className="pl-10"
                 placeholder="Nom de l'entreprise"
                 required
+                data-testid="register-company-input"
               />
             </div>
           </div>
@@ -133,6 +135,7 @@ const Register = () => {
                 className="pl-10"
                 placeholder="exemple@email.com"
                 required
+                data-testid="register-email-input"
               />
             </div>
           </div>
@@ -149,6 +152,7 @@ const Register = () => {
                 className="pl-10"
                 placeholder="••••••••"
                 required
+                data-testid="register-password-input"
               />
             </div>
           </div>
@@ -165,6 +169,7 @@ const Register = () => {
                 className="pl-10"
                 placeholder="••••••••"
                 required
+                data-testid="register-confirm-password-input"
               />
             </div>
           </div>
@@ -173,6 +178,7 @@ const Register = () => {
             type="submit" 
             className="w-full bg-teal-600 hover:bg-teal-700 text-white py-6"
             disabled={loading}
+            data-testid="register-submit-button"
           >
             {loading ? 'Inscription...' : t('auth.registerButton')}
           </Button>
