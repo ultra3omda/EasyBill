@@ -26,7 +26,7 @@ const Login = () => {
       if (result.success) {
         toast({
           title: 'Connexion réussie',
-          description: 'Bienvenue sur Iberis!',
+          description: 'Bienvenue sur EasyBill!',
         });
         navigate('/dashboard');
       }
@@ -48,7 +48,7 @@ const Login = () => {
       if (result.success) {
         toast({
           title: 'Connexion réussie',
-          description: 'Bienvenue sur Iberis!',
+          description: 'Bienvenue sur EasyBill!',
         });
         navigate('/dashboard');
       }
@@ -64,14 +64,17 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-violet-50 to-amber-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md p-8 shadow-xl">
         <div className="text-center mb-8">
-          <img 
-            src="https://finances.iberis.io/images/logo-iberis.png" 
-            alt="Iberis" 
-            className="h-10 mx-auto mb-4"
-          />
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-violet-700 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-xl">E</span>
+            </div>
+            <span className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-amber-500 bg-clip-text text-transparent">
+              EasyBill
+            </span>
+          </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('auth.loginTitle')}</h1>
           <p className="text-gray-600">Accédez à votre espace de gestion</p>
         </div>
@@ -113,17 +116,17 @@ const Login = () => {
 
           <div className="flex items-center justify-between">
             <label className="flex items-center">
-              <input type="checkbox" className="mr-2" data-testid="login-remember-checkbox" />
+              <input type="checkbox" className="mr-2 accent-violet-600" data-testid="login-remember-checkbox" />
               <span className="text-sm text-gray-600">Se souvenir de moi</span>
             </label>
-            <Link to="/forgot-password" className="text-sm text-teal-600 hover:text-teal-700">
+            <Link to="/forgot-password" className="text-sm text-violet-600 hover:text-violet-700">
               {t('auth.forgotPassword')}
             </Link>
           </div>
 
           <Button 
             type="submit" 
-            className="w-full bg-teal-600 hover:bg-teal-700 text-white py-6"
+            className="w-full bg-violet-600 hover:bg-violet-700 text-white py-6"
             disabled={loading}
             data-testid="login-submit-button"
           >
@@ -143,7 +146,7 @@ const Login = () => {
         <Button
           type="button"
           variant="outline"
-          className="w-full py-6 border-2"
+          className="w-full py-6 border-2 hover:bg-violet-50"
           onClick={handleGoogleLogin}
           disabled={loading}
           data-testid="login-google-button"
@@ -154,7 +157,7 @@ const Login = () => {
 
         <p className="text-center mt-6 text-gray-600">
           {t('auth.noAccount')}{' '}
-          <Link to="/register" className="text-teal-600 hover:text-teal-700 font-semibold">
+          <Link to="/register" className="text-violet-600 hover:text-violet-700 font-semibold">
             {t('auth.registerButton')}
           </Link>
         </p>
