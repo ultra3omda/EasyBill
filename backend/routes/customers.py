@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Query
+from fastapi import APIRouter, HTTPException, status, Depends, Query, Request
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 from typing import List, Optional
 from models.customer import Customer, CustomerCreate, CustomerUpdate
@@ -12,6 +12,49 @@ router = APIRouter(prefix="/api/customers", tags=["Customers"])
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
+
+
+def serialize_customer(c: dict) -> dict:
+    """Serialize customer document for JSON response."""
+    result = {
+        "id": str(c["_id"]),
+        "first_name": c.get("first_name"),
+        "last_name": c.get("last_name"),
+        "company_name": c.get("company_name"),
+        "display_name": c.get("display_name"),
+        "email": c.get("email"),
+        "phone": c.get("phone"),
+        "mobile": c.get("mobile"),
+        "fiscal_id": c.get("fiscal_id"),
+        "activity": c.get("activity"),
+        "currency": c.get("currency", "TND"),
+        "billing_address": c.get("billing_address"),
+        "shipping_address": c.get("shipping_address"),
+        "notes": c.get("notes"),
+        "balance": c.get("balance", 0.0),
+        "total_invoiced": c.get("total_invoiced", 0.0),
+        "total_paid": c.get("total_paid", 0.0),
+        "invoices": c.get("invoice_count", 0),
+        "quotes": c.get("quote_count", 0),
+        "address": c.get("billing_address", {}).get("street", "") if c.get("billing_address") else "",
+        "created_at": c["created_at"].isoformat() if c.get("created_at") else None,
+        "updated_at": c["updated_at"].isoformat() if c.get("updated_at") else None
+    }
+    return result
+
+
+async def log_customer_action(company_id, user_id, user_name, action, element, ip_address=None):
+    """Log customer action."""
+    await db.access_logs.insert_one({
+        "company_id": ObjectId(company_id),
+        "user_id": ObjectId(user_id),
+        "user_name": user_name,
+        "category": "Client",
+        "action": action,
+        "element": element,
+        "ip_address": ip_address,
+        "created_at": datetime.now(timezone.utc)
+    })
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_customer(
