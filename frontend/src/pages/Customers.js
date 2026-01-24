@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { mockCustomers } from '../data/mockData';
+import { customersAPI } from '../services/api';
+import { useCompany } from '../hooks/useCompany';
 import AppLayout from '../components/layout/AppLayout';
+import CustomerFormModal from '../components/modals/CustomerFormModal';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -21,11 +23,57 @@ import {
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
 import { Plus, Search, Filter, Download, Eye, Edit, Trash2, MoreVertical, Mail, Phone } from 'lucide-react';
+import { toast } from '../hooks/use-toast';
 
 const Customers = () => {
   const { t } = useLanguage();
-  const [customers, setCustomers] = useState(mockCustomers);
+  const { currentCompany } = useCompany();
+  const [customers, setCustomers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (currentCompany) {
+      loadCustomers();
+    }
+  }, [currentCompany]);
+
+  const loadCustomers = async () => {
+    if (!currentCompany) return;
+    setLoading(true);
+    try {
+      const response = await customersAPI.list(currentCompany.id, searchTerm);
+      setCustomers(response.data);
+    } catch (error) {
+      console.error('Error loading customers:', error);
+      toast({ title: 'Erreur', description: 'Impossible de charger les clients', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (customerId) => {
+    if (!window.confirm('Voulez-vous vraiment supprimer ce client ?')) return;
+    try {
+      await customersAPI.delete(currentCompany.id, customerId);
+      toast({ title: 'Succès', description: 'Client supprimé' });
+      loadCustomers();
+    } catch (error) {
+      toast({ title: 'Erreur', description: 'Erreur lors de la suppression', variant: 'destructive' });
+    }
+  };
+
+  const openEditModal = (customer) => {
+    setSelectedCustomer(customer);
+    setModalOpen(true);
+  };
+
+  const openCreateModal = () => {
+    setSelectedCustomer(null);
+    setModalOpen(true);
+  };
 
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
