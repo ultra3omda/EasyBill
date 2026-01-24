@@ -337,8 +337,8 @@ const InvoiceFormModal = ({ open, onClose, onSuccess, invoice }) => {
             <Button type="button" variant="outline" onClick={onClose}>
               Annuler
             </Button>
-            <Button type="submit" disabled={loading} className="bg-teal-600 hover:bg-teal-700">
-              {loading ? 'Création...' : 'Créer la facture'}
+            <Button type="submit" disabled={loading} className="bg-violet-600 hover:bg-violet-700" data-testid="invoice-submit">
+              {loading ? 'Enregistrement...' : (isEditing ? 'Modifier' : 'Créer la facture')}
             </Button>
           </DialogFooter>
         </form>
