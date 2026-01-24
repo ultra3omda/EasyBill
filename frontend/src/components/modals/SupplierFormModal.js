@@ -348,7 +348,7 @@ const SupplierFormModal = ({ open, onClose, onSuccess, supplier = null }) => {
         </div>
       </RadioGroup>
 
-      {supplierType === 'entreprise' && (
+      {supplierType === 'entreprise' ? (
         <div className="space-y-4 pt-4 border-t">
           <div>
             <Label>Nom de l'entreprise *</Label>
@@ -368,6 +368,41 @@ const SupplierFormModal = ({ open, onClose, onSuccess, supplier = null }) => {
               placeholder="0000000/A/A/000"
               className="mt-1"
               data-testid="supplier-fiscal-id"
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4 pt-4 border-t">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Prénom *</Label>
+              <Input
+                value={formData.first_name}
+                onChange={(e) => handleChange('first_name', e.target.value)}
+                placeholder="Prénom"
+                className="mt-1"
+                data-testid="supplier-first-name-step1"
+              />
+            </div>
+            <div>
+              <Label>Nom de famille</Label>
+              <Input
+                value={formData.last_name}
+                onChange={(e) => handleChange('last_name', e.target.value)}
+                placeholder="Nom"
+                className="mt-1"
+                data-testid="supplier-last-name-step1"
+              />
+            </div>
+          </div>
+          <div>
+            <Label>Numéro d'identité (CIN)</Label>
+            <Input
+              value={formData.identity_number}
+              onChange={(e) => handleChange('identity_number', e.target.value)}
+              placeholder="00000000"
+              className="mt-1"
+              data-testid="supplier-identity-number"
             />
           </div>
         </div>
