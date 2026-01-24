@@ -76,9 +76,13 @@ const Customers = () => {
   };
 
   const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email.toLowerCase().includes(searchTerm.toLowerCase())
+    customer.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    customer.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (!currentCompany) {
+    return <AppLayout><div className="text-center py-20">Aucune entreprise sélectionnée</div></AppLayout>;
+  }
 
   return (
     <AppLayout>
@@ -89,7 +93,7 @@ const Customers = () => {
             <h1 className="text-3xl font-bold text-gray-900">{t('nav.customers')}</h1>
             <p className="text-gray-500 mt-1">{filteredCustomers.length} clients au total</p>
           </div>
-          <Button className="bg-teal-600 hover:bg-teal-700 text-white">
+          <Button className="bg-teal-600 hover:bg-teal-700 text-white" onClick={openCreateModal}>
             <Plus className="w-4 h-4 mr-2" />
             Ajouter un client
           </Button>
