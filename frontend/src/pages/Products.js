@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { mockProducts } from '../data/mockData';
+import { productsAPI } from '../services/api';
+import { useCompany } from '../hooks/useCompany';
 import AppLayout from '../components/layout/AppLayout';
+import ProductFormModal from '../components/modals/ProductFormModal';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -21,11 +23,57 @@ import {
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
 import { Plus, Search, Filter, Download, Eye, Edit, Trash2, MoreVertical, Package } from 'lucide-react';
+import { toast } from '../hooks/use-toast';
 
 const Products = () => {
   const { t } = useLanguage();
-  const [products, setProducts] = useState(mockProducts);
+  const { currentCompany } = useCompany();
+  const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (currentCompany) {
+      loadProducts();
+    }
+  }, [currentCompany]);
+
+  const loadProducts = async () => {
+    if (!currentCompany) return;
+    setLoading(true);
+    try {
+      const response = await productsAPI.list(currentCompany.id, { search: searchTerm });
+      setProducts(response.data);
+    } catch (error) {
+      console.error('Error loading products:', error);
+      toast({ title: 'Erreur', description: 'Impossible de charger les produits', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (productId) => {
+    if (!window.confirm('Voulez-vous vraiment supprimer ce produit ?')) return;
+    try {
+      await productsAPI.delete(currentCompany.id, productId);
+      toast({ title: 'Succès', description: 'Produit supprimé' });
+      loadProducts();
+    } catch (error) {
+      toast({ title: 'Erreur', description: 'Erreur lors de la suppression', variant: 'destructive' });
+    }
+  };
+
+  const openEditModal = (product) => {
+    setSelectedProduct(product);
+    setModalOpen(true);
+  };
+
+  const openCreateModal = () => {
+    setSelectedProduct(null);
+    setModalOpen(true);
+  };
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
