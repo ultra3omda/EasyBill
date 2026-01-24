@@ -92,6 +92,24 @@ const Invoices = () => {
     }
   };
 
+  const handleDownloadPdf = async (invoice) => {
+    try {
+      const response = await pdfAPI.downloadInvoice(currentCompany.id, invoice.id);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Facture_${invoice.number}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast({ title: 'Succès', description: 'PDF téléchargé' });
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast({ title: 'Erreur', description: 'Erreur lors du téléchargement du PDF', variant: 'destructive' });
+    }
+  };
+
   const openCreateModal = () => {
     setSelectedInvoice(null);
     setModalOpen(true);
