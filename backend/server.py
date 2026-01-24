@@ -41,6 +41,9 @@ app.include_router(invoices.router)
 app.include_router(payments.router)
 app.include_router(projects.router)
 app.include_router(settings.router, prefix="/api")
+app.include_router(delivery_notes.router)
+app.include_router(credit_notes.router)
+app.include_router(reminders.router)
 
 # Root endpoint
 @app.get("/")
