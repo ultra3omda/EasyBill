@@ -278,7 +278,7 @@ const CompanyOnboarding = () => {
               <h3 className="font-semibold text-gray-900">Informations générales</h3>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4" data-testid="onboarding-form">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Nom de l'entreprise *</Label>
@@ -288,6 +288,7 @@ const CompanyOnboarding = () => {
                     placeholder="GOOGLE?"
                     required
                     className="mt-1"
+                    data-testid="onboarding-company-name-input"
                   />
                 </div>
 
@@ -298,7 +299,7 @@ const CompanyOnboarding = () => {
                     onValueChange={(value) => handleChange('activity', value)}
                     required
                   >
-                    <SelectTrigger className="mt-1">
+                    <SelectTrigger className="mt-1" data-testid="onboarding-activity-select">
                       <SelectValue placeholder="Sélectionner" />
                     </SelectTrigger>
                     <SelectContent>
@@ -318,6 +319,7 @@ const CompanyOnboarding = () => {
                     onChange={(e) => handleChange('phone', e.target.value)}
                     placeholder="71559882"
                     className="mt-1"
+                    data-testid="onboarding-phone-input"
                   />
                 </div>
 
@@ -328,6 +330,7 @@ const CompanyOnboarding = () => {
                     onChange={(e) => handleChange('website', e.target.value)}
                     placeholder="https://www.google.com"
                     className="mt-1"
+                    data-testid="onboarding-website-input"
                   />
                 </div>
               </div>
@@ -339,6 +342,7 @@ const CompanyOnboarding = () => {
                   onChange={(e) => handleChange('address.street', e.target.value)}
                   placeholder="1, route de la liberté"
                   className="mt-1"
+                  data-testid="onboarding-address-input"
                 />
               </div>
 
@@ -350,6 +354,7 @@ const CompanyOnboarding = () => {
                     onChange={(e) => handleChange('address.city', e.target.value)}
                     placeholder="Tunis"
                     className="mt-1"
+                    data-testid="onboarding-city-input"
                   />
                 </div>
 
@@ -360,6 +365,7 @@ const CompanyOnboarding = () => {
                     onChange={(e) => handleChange('address.postal_code', e.target.value)}
                     placeholder="2000"
                     className="mt-1"
+                    data-testid="onboarding-postal-code-input"
                   />
                 </div>
 
@@ -369,7 +375,7 @@ const CompanyOnboarding = () => {
                     value={formData.address.country} 
                     onValueChange={(value) => handleChange('address.country', value)}
                   >
-                    <SelectTrigger className="mt-1">
+                    <SelectTrigger className="mt-1" data-testid="onboarding-country-select">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -386,6 +392,7 @@ const CompanyOnboarding = () => {
                   type="submit"
                   disabled={loading}
                   className="bg-teal-600 hover:bg-teal-700 text-white px-8"
+                  data-testid="onboarding-submit-button"
                 >
                   {loading ? 'Création...' : 'Soumettre'}
                 </Button>
