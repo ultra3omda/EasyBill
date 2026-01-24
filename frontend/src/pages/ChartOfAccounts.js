@@ -211,6 +211,24 @@ const ChartOfAccounts = () => {
     setExpandedNodes(new Set());
   };
 
+  const handleSeedChartOfAccounts = async () => {
+    try {
+      setSeeding(true);
+      const response = await accountingAPI.seedChartOfAccounts(companyId);
+      if (response.data.seeded) {
+        toast.success(`${response.data.count} comptes créés avec succès`);
+        fetchAccounts();
+      } else {
+        toast.info(response.data.message);
+      }
+    } catch (error) {
+      console.error('Error seeding chart of accounts:', error);
+      toast.error('Erreur lors de la création du plan comptable');
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
