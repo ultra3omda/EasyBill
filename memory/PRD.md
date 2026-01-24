@@ -40,9 +40,28 @@ Build a full-stack invoicing and business management application named "EasyBill
 - [x] **Suppliers Page** - Same Iberis-style design with KPIs
 - [x] **Supplier Form Modal** - Same dynamic form as customers
 
-### Stock Module
+### Stock Module ✅ (Updated 2026-01-24)
+- [x] **Products Page** - Iberis-style KPIs (Stock le plus bas, Valeur du Stock, Le plus rentable, Article le plus vendu)
+- [x] **Tabbed Navigation** - Tous les articles, Pour la vente, Pour l'achat, Matière première
+- [x] **Product Form Modal** - Comprehensive form with:
+  - Image upload zone
+  - Informations générales (Titre, Référence, Description, Taxes, Unité, Catégorie, Marque)
+  - Destination (Vente, Achat, Les deux, Matière première)
+  - Type de référence (Lots, Numéros de série, Désactivé)
+  - Type d'article (Produit, Service)
+  - Calcul de quantité (Simple, Composée)
+  - Barcode & QR Code
+  - Alerte de stock avec seuil configurable
+  - Grille des prix (Prix de vente HT, Prix d'achat HT)
+  - Stock & Entrepôt
+  - Article composé avec composants
+- [x] **Import/Export** - Full CSV functionality:
+  - Import modal avec téléchargement de modèle, upload fichier, délimiteur/encodage configurables
+  - Export liste des prix (CSV)
+  - Export état du stock (CSV)
+- [x] **Bulk Actions** - Sélection multiple avec checkboxes, suppression en masse, suppression totale
 - [x] Products CRUD
-- [x] Warehouses management
+- [x] Warehouses management (Principal auto-créé par entreprise)
 - [x] Stock movements tracking
 - [x] Inventory view
 
@@ -87,9 +106,10 @@ Build a full-stack invoicing and business management application named "EasyBill
 - [ ] Bilingual Support (FR/EN)
 
 ### P2 - Future
-- [ ] Data Import/Export (CSV/Excel)
+- [ ] Import/Export for Contacts (CSV/Excel) - Products import/export done
 - [ ] Email reminders for overdue invoices
 - [ ] External REST API (Open API)
+- [ ] Warehouses dedicated page (management UI)
 
 ---
 
