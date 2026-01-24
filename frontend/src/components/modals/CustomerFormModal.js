@@ -214,10 +214,12 @@ const CustomerFormModal = ({ open, onClose, onSuccess, customer = null }) => {
       case 1:
         if (clientType === 'entreprise') {
           return formData.company_name?.trim() !== '';
+        } else {
+          // Particulier: require first_name
+          return formData.first_name?.trim() !== '';
         }
-        return true;
       case 2:
-        return formData.first_name?.trim() !== '';
+        return true; // Optional fields in step 2
       case 3:
         return true; // Address is optional
       case 4:
@@ -231,7 +233,7 @@ const CustomerFormModal = ({ open, onClose, onSuccess, customer = null }) => {
     if (!validateStep(currentStep)) {
       toast({ 
         title: 'Champs requis', 
-        description: currentStep === 1 ? 'Veuillez saisir le nom de l\'entreprise' : 'Veuillez saisir le prénom',
+        description: clientType === 'entreprise' ? 'Veuillez saisir le nom de l\'entreprise' : 'Veuillez saisir le prénom',
         variant: 'destructive' 
       });
       return;
@@ -370,7 +372,7 @@ const CustomerFormModal = ({ open, onClose, onSuccess, customer = null }) => {
         </div>
       </RadioGroup>
 
-      {clientType === 'entreprise' && (
+      {clientType === 'entreprise' ? (
         <div className="space-y-4 pt-4 border-t">
           <div>
             <Label>Nom de l'entreprise *</Label>
@@ -390,6 +392,41 @@ const CustomerFormModal = ({ open, onClose, onSuccess, customer = null }) => {
               placeholder="0000000/A/A/000"
               className="mt-1"
               data-testid="customer-fiscal-id"
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4 pt-4 border-t">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Prénom *</Label>
+              <Input
+                value={formData.first_name}
+                onChange={(e) => handleChange('first_name', e.target.value)}
+                placeholder="Prénom"
+                className="mt-1"
+                data-testid="customer-first-name-step1"
+              />
+            </div>
+            <div>
+              <Label>Nom de famille</Label>
+              <Input
+                value={formData.last_name}
+                onChange={(e) => handleChange('last_name', e.target.value)}
+                placeholder="Nom"
+                className="mt-1"
+                data-testid="customer-last-name-step1"
+              />
+            </div>
+          </div>
+          <div>
+            <Label>Numéro d'identité (CIN)</Label>
+            <Input
+              value={formData.identity_number}
+              onChange={(e) => handleChange('identity_number', e.target.value)}
+              placeholder="00000000"
+              className="mt-1"
+              data-testid="customer-identity-number"
             />
           </div>
         </div>
