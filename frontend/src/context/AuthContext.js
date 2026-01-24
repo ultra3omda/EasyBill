@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { authAPI } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -26,61 +27,62 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
-    // Mock login - will be replaced with real API call
-    const mockUser = {
-      id: '1',
-      email: email,
-      name: 'Chaibi Alaa',
-      company: 'Iberis Demo',
-      role: 'admin'
-    };
-    
-    const mockToken = 'mock-jwt-token-' + Date.now();
-    
-    setUser(mockUser);
-    localStorage.setItem('user', JSON.stringify(mockUser));
-    localStorage.setItem('token', mockToken);
-    
-    return { success: true, user: mockUser };
+    try {
+      const response = await authAPI.login({ email, password });
+      const { access_token, user: userData } = response.data;
+      
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('token', access_token);
+      
+      return { success: true, user: userData };
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
   };
 
   const loginWithGoogle = async () => {
-    // Mock Google login - will be replaced with real OAuth
-    const mockUser = {
-      id: '2',
-      email: 'user@gmail.com',
-      name: 'Google User',
-      company: 'Iberis Demo',
-      role: 'admin',
-      avatar: 'https://ui-avatars.com/api/?name=Google+User'
-    };
-    
-    const mockToken = 'mock-google-token-' + Date.now();
-    
-    setUser(mockUser);
-    localStorage.setItem('user', JSON.stringify(mockUser));
-    localStorage.setItem('token', mockToken);
-    
-    return { success: true, user: mockUser };
+    try {
+      // Mock Google OAuth for now - in production this would use actual Google OAuth
+      const response = await authAPI.googleLogin({ 
+        email: 'user@gmail.com',
+        name: 'Google User'
+      });
+      
+      const { access_token, user: userData } = response.data;
+      
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('token', access_token);
+      
+      return { success: true, user: userData };
+    } catch (error) {
+      console.error('Google login error:', error);
+      throw error;
+    }
   };
 
   const register = async (name, email, password, company) => {
-    // Mock registration - will be replaced with real API call
-    const mockUser = {
-      id: Date.now().toString(),
-      email: email,
-      name: name,
-      company: company,
-      role: 'admin'
-    };
-    
-    const mockToken = 'mock-jwt-token-' + Date.now();
-    
-    setUser(mockUser);
-    localStorage.setItem('user', JSON.stringify(mockUser));
-    localStorage.setItem('token', mockToken);
-    
-    return { success: true, user: mockUser };
+    try {
+      const response = await authAPI.register({
+        full_name: name,
+        email,
+        password,
+        company_name: company
+      });
+      
+      const { access_token, user: userData } = response.data;
+      
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('token', access_token);
+      
+      return { success: true, user: userData };
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
+    }
   };
 
   const logout = () => {
