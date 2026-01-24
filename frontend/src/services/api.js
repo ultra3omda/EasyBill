@@ -52,11 +52,11 @@ export const authAPI = {
 
 // Companies API
 export const companiesAPI = {
-  create: (data) => apiClient.post('/companies', data),
-  list: () => apiClient.get('/companies'),
-  get: (id) => apiClient.get(`/companies/${id}`),
-  update: (id, data) => apiClient.put(`/companies/${id}`, data),
-  delete: (id) => apiClient.delete(`/companies/${id}`),
+  create: (data) => apiClient.post('/companies/', data),
+  list: () => apiClient.get('/companies/'),
+  get: (id) => apiClient.get(`/companies/${id}/`),
+  update: (id, data) => apiClient.put(`/companies/${id}/`, data),
+  delete: (id) => apiClient.delete(`/companies/${id}/`),
   getDashboard: (id) => apiClient.get(`/companies/${id}/dashboard`),
 };
 
