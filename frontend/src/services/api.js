@@ -79,12 +79,12 @@ export const suppliersAPI = {
   delete: (companyId, id) => apiClient.delete(`/suppliers/${id}?company_id=${companyId}`),
 };
 
-// Products API
+// Products API - Note: trailing slash required to avoid 307 redirect losing auth header
 export const productsAPI = {
-  create: (companyId, data) => apiClient.post(`/products?company_id=${companyId}`, data),
+  create: (companyId, data) => apiClient.post(`/products/?company_id=${companyId}`, data),
   list: (companyId, params = {}) => {
     const queryParams = new URLSearchParams({ company_id: companyId, ...params }).toString();
-    return apiClient.get(`/products?${queryParams}`);
+    return apiClient.get(`/products/?${queryParams}`);
   },
   get: (companyId, id) => apiClient.get(`/products/${id}?company_id=${companyId}`),
   update: (companyId, id, data) => apiClient.put(`/products/${id}?company_id=${companyId}`, data),
