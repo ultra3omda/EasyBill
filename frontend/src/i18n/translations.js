@@ -153,7 +153,7 @@ export const translations = {
     landing: {
       title: 'The Invoicing Software',
       titleHighlight: 'You Need',
-      subtitle: 'Iberis is specially designed for SME managers, with an intuitive, practical solution perfectly adapted to their needs.',
+      subtitle: 'EasyBill is specially designed for SME managers, with an intuitive, practical solution perfectly adapted to their needs.',
       requestDemo: 'Request a Demo',
       watchDemo: 'Watch Demo',
       createAccount: 'Create free account',
