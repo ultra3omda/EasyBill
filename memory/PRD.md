@@ -1,140 +1,107 @@
 # EasyBill - Product Requirements Document
 
-## Project Overview
-Full-stack invoicing and business management application (clone of iberis.io) with Tunisian accounting standards compliance.
+## Original Problem Statement
+Build a full-stack invoicing and business management application named "EasyBill", inspired by iberis.io, for Tunisian businesses (TPME).
+
+## Core Requirements
+1. **Application:** Full-stack invoicing and business management
+2. **Branding:** EasyBill with violet/gold color scheme
+3. **Authentication:** JWT (email/password), OAuth (Google/Facebook) planned
+4. **Bilingual:** French and English support planned
+5. **PDF Generation:** Invoices and quotes downloadable as PDFs
+
+## User Personas
+- Small and Medium Enterprise (TPME) owners in Tunisia
+- Accountants and financial managers
+- Sales teams managing invoices and quotes
+
+## Architecture
+- **Frontend:** React + TailwindCSS + Shadcn UI + Recharts
+- **Backend:** FastAPI + MongoDB (motor)
+- **PDF:** WeasyPrint
 
 ---
 
-## ✅ IMPLEMENTED MODULES (Jan 2026)
+## Implemented Features
 
-### Foundation ✅
-- JWT Authentication (email/password)
-- Company Onboarding with default data seeding
-- Branding: EasyBill - violet/gold theme
-- Hierarchical menu navigation
+### Core System
+- [x] JWT Authentication (login/register)
+- [x] Company Onboarding with automatic data seeding
+- [x] Hierarchical navigation menu
+- [x] Multi-company support
 
-### Contacts ✅  
-- **Clients** - Full CRUD with stats
-- **Fournisseurs** - Full CRUD
+### Contacts Module ✅ (Updated 2026-01-24)
+- [x] **Customers Page** - Iberis-style KPIs (Clients, Impayé, Chiffre d'affaire, Nouveaux ce mois)
+- [x] **Customer Form Modal** - Dynamic form with Particulier/Entreprise toggle
+  - Informations générales (Titre, Prénom, Nom, Entreprise, Email, etc.)
+  - Informations professionnelles (Type, N° fiscal/CIN, Activité, Devise, Conditions de paiement)
+  - Adresses de facturation et livraison avec copie automatique
+  - Listes pré-remplies (Gouvernorats tunisiens, Devises, Conditions de paiement, Activités)
+- [x] **Suppliers Page** - Same Iberis-style design with KPIs
+- [x] **Supplier Form Modal** - Same dynamic form as customers
 
-### Stock ✅
-- **Articles (Products)** - Full CRUD
-- **Entrepôts (Warehouses)** - Full CRUD with stats
-- **Inventaire** - Real-time stock view by warehouse
-- **Mouvements** - Stock movements (In/Out/Transfer/Adjustment)
+### Stock Module
+- [x] Products CRUD
+- [x] Warehouses management
+- [x] Stock movements tracking
+- [x] Inventory view
 
-### Ventes (Sales) ✅
-- **Factures (Invoices)** - Full CRUD + **PDF Generation**
-- **Devis (Quotes)** - Full CRUD + **PDF Generation** + Convert to invoice
-- **Bons de livraison** - Full CRUD + **PDF Generation**
-- **Factures d'avoir (Credit Notes)** - Full CRUD
-- **Paiements reçus** - Full CRUD (Espèces, Chèque, Virement)
-- **Rappels** - Full CRUD
+### Sales Module
+- [x] Invoices CRUD with PDF generation
+- [x] Quotes CRUD with PDF generation
+- [x] Delivery Notes
+- [x] Credit Notes
+- [x] Payments tracking
 
-### Achats (Purchases) ✅
-- **Bons de commande (Purchase Orders)** - Full CRUD
-- **Factures fournisseur (Supplier Invoices)** - Full CRUD
-- **Paiements effectués (Supplier Payments)** - Full CRUD
+### Purchases Module
+- [x] Purchase Orders CRUD
+- [x] Supplier Invoices
+- [x] Supplier Payments
 
-### Comptabilité (Accounting) ✅
-- **Plan Comptable Tunisien (SCE)** - 490 accounts auto-seeded
-- **Tableau de Bord Comptable** - Charts (Pie & Bar), stats, quick links
-- **Écritures Comptables (Journal Entries)** - Full CRUD with post/cancel
-- **Grand Livre (General Ledger)** - By account with date filter
-- **Balance des Comptes (Trial Balance)** - Balanced/unbalanced status
+### Accounting Module ✅
+- [x] Chart of Accounts (490 Tunisian accounts)
+- [x] Accounting Dashboard with Recharts
+- [x] Journal Entries CRUD
+- [x] General Ledger
+- [x] Trial Balance
 
-### PDF Generation ✅ (NEW)
-- **WeasyPrint** integration for professional PDF generation
-- **Factures** - PDF with fiscal stamp, amount in words
-- **Devis** - PDF with validity date, conditions
-- **Bons de livraison** - PDF with signature zones
-- API endpoints: `/api/pdf/invoice/{id}`, `/api/pdf/quote/{id}`, `/api/pdf/delivery-note/{id}`
+### PDF Generation ✅
+- [x] Invoice PDF with company info, fiscal stamp, total in letters
+- [x] Quote PDF
 
-### Module Projets ✅ (UPDATED)
-- **Projets** - Full CRUD with customer link, budget, hourly rate
-- **Tâches** - Full CRUD with status (todo, in_progress, review, completed), priority
-- **Timesheets** - Full CRUD with billable tracking
-- Stats endpoint with totals
-
----
-
-## API Endpoints
-
-### PDF Generation (NEW)
-- `GET /api/pdf/invoice/{id}` - Generate invoice PDF
-- `GET /api/pdf/quote/{id}` - Generate quote PDF
-- `GET /api/pdf/delivery-note/{id}` - Generate delivery note PDF
-
-### Projects (UPDATED)
-- `GET /api/projects/stats` - Project statistics
-- `GET /api/projects/` - List projects
-- `POST /api/projects/` - Create project
-- `GET /api/projects/{id}` - Get project
-- `PUT /api/projects/{id}` - Update project
-- `DELETE /api/projects/{id}` - Delete project
-- `GET /api/projects/{id}/tasks` - List tasks
-- `POST /api/projects/{id}/tasks` - Create task
-- `PUT /api/projects/{id}/tasks/{task_id}` - Update task
-- `DELETE /api/projects/{id}/tasks/{task_id}` - Delete task
-- `GET /api/projects/{id}/timesheets` - List timesheets
-- `POST /api/projects/{id}/timesheets` - Create timesheet
-- `DELETE /api/projects/{id}/timesheets/{ts_id}` - Delete timesheet
+### Settings
+- [x] Company settings
+- [x] Taxes configuration
+- [x] Fiscal stamps
+- [x] Access logs
 
 ---
 
-## Tech Stack
-- **Frontend:** React, React Router, TailwindCSS, Shadcn UI, Recharts
-- **Backend:** FastAPI, Pydantic, MongoDB with motor, WeasyPrint
-- **Authentication:** JWT
-
----
-
-## Test Coverage
-- `/app/backend/tests/test_accounting_crud.py` - Chart of accounts
-- `/app/backend/tests/test_journal_entries.py` - Journal entries
-- `/app/test_reports/iteration_4.json` - Latest report (100% pass)
-
----
-
-## BACKLOG
+## Prioritized Backlog
 
 ### P0 - In Progress
-- [ ] Frontend Projects page (Tâches, Timesheets)
-- [ ] OAuth Google integration
+- [ ] **Projects Module Frontend** - Backend ready, need UI
 
-### P1 - High Priority
-- [ ] Bilingual support (FR/EN) with i18n
-- [ ] États comptables (Bilan, État de résultat)
-- [ ] Journaux légaux
+### P1 - Next Up
+- [ ] OAuth Google Integration
+- [ ] Bilingual Support (FR/EN)
 
-### P2 - Medium Priority
-- [ ] Data import/export (CSV/Excel)
-- [ ] Automated email reminders
-- [ ] Cash flow statement
-
-### P3 - Low Priority
-- [ ] OAuth Facebook
-- [ ] External API (Open API)
-- [ ] Advanced reporting
+### P2 - Future
+- [ ] Data Import/Export (CSV/Excel)
+- [ ] Email reminders for overdue invoices
+- [ ] External REST API (Open API)
 
 ---
 
-## Test Credentials
-- Email: comptable@test.com
-- Password: Test123!
-- Company ID: 6974f559a9d10a5493c3241a
+## Technical Notes
 
----
+### MongoDB Serialization
+Always exclude `_id` from projections or convert `ObjectId` to `str` for JSON responses.
 
-## Change Log
+### WeasyPrint Dependencies
+Required system libraries: `libpangoft2-1.0-0`, `libpango-1.0-0`, `libcairo2`, `libgdk-pixbuf-2.0-0`
 
-### Jan 24, 2026 (Session 2)
-- ✅ PDF Generation with WeasyPrint (Factures, Devis, Bons de livraison)
-- ✅ Updated Projects backend with Tasks and Timesheets CRUD
-- ✅ PDF includes fiscal stamp, amount in words (French)
-
-### Jan 24, 2026 (Session 1)
-- ✅ Accounting Dashboard with Recharts
-- ✅ Journal Entries CRUD with post/cancel
-- ✅ General Ledger and Trial Balance
-- ✅ 30 backend tests passing
+### Test Credentials
+- Email: demo@test.com
+- Password: Demo123!
+- Company ID: 69750647d138aa95c3cad9f5
