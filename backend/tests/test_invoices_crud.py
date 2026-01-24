@@ -14,28 +14,61 @@ BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 EXISTING_USER = {"email": "onboard_test@test.com", "password": "testpass123"}
 
 
+# Module-level fixtures
+@pytest.fixture(scope="module")
+def auth_data():
+    """Get auth token and company_id - shared across all tests"""
+    response = requests.post(f"{BASE_URL}/api/auth/login", json=EXISTING_USER)
+    if response.status_code != 200:
+        pytest.skip(f"Could not login: {response.text}")
+    
+    token = response.json()["access_token"]
+    
+    # Get company
+    companies_response = requests.get(
+        f"{BASE_URL}/api/companies/",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    if companies_response.status_code != 200 or len(companies_response.json()) == 0:
+        pytest.skip("No companies available")
+    
+    company_id = companies_response.json()[0]["id"]
+    return {"token": token, "company_id": company_id}
+
+
+@pytest.fixture(scope="module")
+def test_customer_id(auth_data):
+    """Create or get a test customer for invoice tests"""
+    # First try to list existing customers
+    response = requests.get(
+        f"{BASE_URL}/api/customers?company_id={auth_data['company_id']}",
+        headers={"Authorization": f"Bearer {auth_data['token']}"}
+    )
+    
+    if response.status_code == 200 and len(response.json()) > 0:
+        return response.json()[0]["id"]
+    
+    # Create a new customer if none exist
+    customer_data = {
+        "first_name": "TEST_Invoice",
+        "last_name": "TestCustomer",
+        "email": f"test_inv_{uuid.uuid4().hex[:8]}@test.com"
+    }
+    
+    create_response = requests.post(
+        f"{BASE_URL}/api/customers?company_id={auth_data['company_id']}",
+        headers={"Authorization": f"Bearer {auth_data['token']}"},
+        json=customer_data
+    )
+    
+    if create_response.status_code == 201:
+        return create_response.json()["id"]
+    
+    pytest.skip("Could not create or find a customer for testing")
+
+
 class TestInvoicesSetup:
     """Setup tests - verify prerequisites"""
-    
-    @pytest.fixture(scope="class")
-    def auth_data(self):
-        """Get auth token and company_id"""
-        response = requests.post(f"{BASE_URL}/api/auth/login", json=EXISTING_USER)
-        if response.status_code != 200:
-            pytest.skip(f"Could not login: {response.text}")
-        
-        token = response.json()["access_token"]
-        
-        # Get company
-        companies_response = requests.get(
-            f"{BASE_URL}/api/companies/",
-            headers={"Authorization": f"Bearer {token}"}
-        )
-        if companies_response.status_code != 200 or len(companies_response.json()) == 0:
-            pytest.skip("No companies available")
-        
-        company_id = companies_response.json()[0]["id"]
-        return {"token": token, "company_id": company_id}
     
     def test_api_reachable(self):
         """Test API connectivity"""
@@ -52,24 +85,6 @@ class TestInvoicesSetup:
 
 class TestCustomersAPI:
     """Customer API tests - required for invoice creation"""
-    
-    @pytest.fixture(scope="class")
-    def auth_data(self):
-        """Get auth token and company_id"""
-        response = requests.post(f"{BASE_URL}/api/auth/login", json=EXISTING_USER)
-        if response.status_code != 200:
-            pytest.skip(f"Could not login: {response.text}")
-        
-        token = response.json()["access_token"]
-        companies_response = requests.get(
-            f"{BASE_URL}/api/companies/",
-            headers={"Authorization": f"Bearer {token}"}
-        )
-        if companies_response.status_code != 200 or len(companies_response.json()) == 0:
-            pytest.skip("No companies available")
-        
-        company_id = companies_response.json()[0]["id"]
-        return {"token": token, "company_id": company_id}
     
     def test_create_customer(self, auth_data):
         """Test creating a customer for invoice testing"""
@@ -106,24 +121,6 @@ class TestCustomersAPI:
 
 class TestProductsAPI:
     """Product API tests - helpful for invoice line items"""
-    
-    @pytest.fixture(scope="class")
-    def auth_data(self):
-        """Get auth token and company_id"""
-        response = requests.post(f"{BASE_URL}/api/auth/login", json=EXISTING_USER)
-        if response.status_code != 200:
-            pytest.skip(f"Could not login: {response.text}")
-        
-        token = response.json()["access_token"]
-        companies_response = requests.get(
-            f"{BASE_URL}/api/companies/",
-            headers={"Authorization": f"Bearer {token}"}
-        )
-        if companies_response.status_code != 200 or len(companies_response.json()) == 0:
-            pytest.skip("No companies available")
-        
-        company_id = companies_response.json()[0]["id"]
-        return {"token": token, "company_id": company_id}
     
     def test_create_product(self, auth_data):
         """Test creating a product for invoice testing"""
@@ -162,54 +159,6 @@ class TestProductsAPI:
 class TestInvoicesCRUD:
     """Invoice CRUD operations tests"""
     
-    @pytest.fixture(scope="class")
-    def auth_data(self):
-        """Get auth token and company_id"""
-        response = requests.post(f"{BASE_URL}/api/auth/login", json=EXISTING_USER)
-        if response.status_code != 200:
-            pytest.skip(f"Could not login: {response.text}")
-        
-        token = response.json()["access_token"]
-        companies_response = requests.get(
-            f"{BASE_URL}/api/companies/",
-            headers={"Authorization": f"Bearer {token}"}
-        )
-        if companies_response.status_code != 200 or len(companies_response.json()) == 0:
-            pytest.skip("No companies available")
-        
-        company_id = companies_response.json()[0]["id"]
-        return {"token": token, "company_id": company_id}
-    
-    @pytest.fixture(scope="class")
-    def test_customer_id(self, auth_data):
-        """Create or get a test customer for invoice tests"""
-        # First try to list existing customers
-        response = requests.get(
-            f"{BASE_URL}/api/customers?company_id={auth_data['company_id']}",
-            headers={"Authorization": f"Bearer {auth_data['token']}"}
-        )
-        
-        if response.status_code == 200 and len(response.json()) > 0:
-            return response.json()[0]["id"]
-        
-        # Create a new customer if none exist
-        customer_data = {
-            "first_name": "TEST_Invoice",
-            "last_name": "TestCustomer",
-            "email": f"test_inv_{uuid.uuid4().hex[:8]}@test.com"
-        }
-        
-        create_response = requests.post(
-            f"{BASE_URL}/api/customers?company_id={auth_data['company_id']}",
-            headers={"Authorization": f"Bearer {auth_data['token']}"},
-            json=customer_data
-        )
-        
-        if create_response.status_code == 201:
-            return create_response.json()["id"]
-        
-        pytest.skip("Could not create or find a customer for testing")
-    
     def test_create_invoice(self, auth_data, test_customer_id):
         """Test creating a new invoice"""
         invoice_data = {
@@ -242,10 +191,6 @@ class TestInvoicesCRUD:
         assert "id" in data, "Response should contain invoice id"
         assert "number" in data, "Response should contain invoice number"
         print(f"✓ Invoice created: {data['number']} (ID: {data['id']})")
-        
-        # Store for later tests
-        auth_data["created_invoice_id"] = data["id"]
-        auth_data["created_invoice_number"] = data["number"]
     
     def test_list_invoices(self, auth_data):
         """Test listing invoices"""
@@ -392,53 +337,6 @@ class TestInvoicesCRUD:
 class TestInvoiceStatusActions:
     """Test invoice status change actions (send, mark paid)"""
     
-    @pytest.fixture(scope="class")
-    def auth_data(self):
-        """Get auth token and company_id"""
-        response = requests.post(f"{BASE_URL}/api/auth/login", json=EXISTING_USER)
-        if response.status_code != 200:
-            pytest.skip(f"Could not login: {response.text}")
-        
-        token = response.json()["access_token"]
-        companies_response = requests.get(
-            f"{BASE_URL}/api/companies/",
-            headers={"Authorization": f"Bearer {token}"}
-        )
-        if companies_response.status_code != 200 or len(companies_response.json()) == 0:
-            pytest.skip("No companies available")
-        
-        company_id = companies_response.json()[0]["id"]
-        return {"token": token, "company_id": company_id}
-    
-    @pytest.fixture(scope="class")
-    def test_customer_id(self, auth_data):
-        """Get a test customer"""
-        response = requests.get(
-            f"{BASE_URL}/api/customers?company_id={auth_data['company_id']}",
-            headers={"Authorization": f"Bearer {auth_data['token']}"}
-        )
-        
-        if response.status_code == 200 and len(response.json()) > 0:
-            return response.json()[0]["id"]
-        
-        # Create customer if none exist
-        customer_data = {
-            "first_name": "TEST_Status",
-            "last_name": "Customer",
-            "email": f"test_status_{uuid.uuid4().hex[:8]}@test.com"
-        }
-        
-        create_response = requests.post(
-            f"{BASE_URL}/api/customers?company_id={auth_data['company_id']}",
-            headers={"Authorization": f"Bearer {auth_data['token']}"},
-            json=customer_data
-        )
-        
-        if create_response.status_code == 201:
-            return create_response.json()["id"]
-        
-        pytest.skip("Could not get customer for testing")
-    
     def test_send_invoice(self, auth_data, test_customer_id):
         """Test marking invoice as sent"""
         # Create invoice
@@ -568,24 +466,6 @@ class TestInvoiceStatusActions:
 
 class TestInvoiceValidation:
     """Test invoice validation and error handling"""
-    
-    @pytest.fixture(scope="class")
-    def auth_data(self):
-        """Get auth token and company_id"""
-        response = requests.post(f"{BASE_URL}/api/auth/login", json=EXISTING_USER)
-        if response.status_code != 200:
-            pytest.skip(f"Could not login: {response.text}")
-        
-        token = response.json()["access_token"]
-        companies_response = requests.get(
-            f"{BASE_URL}/api/companies/",
-            headers={"Authorization": f"Bearer {token}"}
-        )
-        if companies_response.status_code != 200 or len(companies_response.json()) == 0:
-            pytest.skip("No companies available")
-        
-        company_id = companies_response.json()[0]["id"]
-        return {"token": token, "company_id": company_id}
     
     def test_create_invoice_without_customer(self, auth_data):
         """Test that invoice creation fails without customer_id"""
