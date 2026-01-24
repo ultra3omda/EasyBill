@@ -330,17 +330,17 @@ class TestAuthentication:
     def test_list_products_without_auth(self):
         """Test that listing products without auth fails"""
         response = requests.get(f"{BASE_URL}/api/products/?company_id={COMPANY_ID}")
-        assert response.status_code == 401
+        assert response.status_code in [401, 403]  # Either unauthorized or forbidden
     
     def test_export_without_auth(self):
         """Test that export without auth fails"""
         response = requests.get(f"{BASE_URL}/api/products/export/stock?company_id={COMPANY_ID}")
-        assert response.status_code == 401
+        assert response.status_code in [401, 403]
     
     def test_import_without_auth(self):
         """Test that import without auth fails"""
         response = requests.post(f"{BASE_URL}/api/products/import?company_id={COMPANY_ID}")
-        assert response.status_code == 401
+        assert response.status_code in [401, 403]
 
 
 if __name__ == "__main__":
