@@ -69,13 +69,20 @@ const ProtectedRoute = ({ children }) => {
 };
 
 const AppRoutes = () => {
+  const { user } = useAuth();
+
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       
-      {/* Protected Routes */}
+      {/* Onboarding - requires auth but not company */}
+      <Route path="/onboarding" element={
+        user ? <CompanyOnboarding /> : <Navigate to="/login" />
+      } />
+      
+      {/* Protected Routes - require both auth and company */}
       <Route path="/dashboard" element={
         <ProtectedRoute>
           <Dashboard />
