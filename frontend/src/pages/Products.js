@@ -1186,6 +1186,133 @@ const Products = () => {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Import Modal */}
+        <Dialog open={importModalOpen} onOpenChange={setImportModalOpen}>
+          <DialogContent className="max-w-lg" data-testid="import-modal">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Upload className="w-5 h-5 text-violet-600" />
+                Importer des articles
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-6 py-4">
+              {/* Download Template */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800 mb-3">
+                  Téléchargez d'abord le modèle Excel pour préparer vos données correctement.
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="text-blue-600 border-blue-300 hover:bg-blue-100"
+                  onClick={downloadTemplate}
+                  data-testid="download-template-btn"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Télécharger le modèle
+                </Button>
+              </div>
+
+              {/* File Upload */}
+              <div className="space-y-3">
+                <Label>Fichier à importer *</Label>
+                <div 
+                  className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                    importFile ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-violet-400'
+                  }`}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    accept=".csv,.xlsx,.xls"
+                    className="hidden"
+                    data-testid="import-file-input"
+                  />
+                  {importFile ? (
+                    <div className="flex items-center justify-center gap-2 text-green-600">
+                      <Check className="w-5 h-5" />
+                      <span className="font-medium">{importFile.name}</span>
+                    </div>
+                  ) : (
+                    <>
+                      <FileSpreadsheet className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600">Cliquez pour sélectionner un fichier</p>
+                      <p className="text-xs text-gray-400 mt-1">CSV, Excel (.xlsx, .xls)</p>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Options */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Délimiteur</Label>
+                  <Select value={importDelimiter} onValueChange={setImportDelimiter}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DELIMITERS.map(d => (
+                        <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Encodage</Label>
+                  <Select value={importEncoding} onValueChange={setImportEncoding}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ENCODINGS.map(e => (
+                        <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Info */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-xs text-amber-700">
+                  <strong>Note:</strong> Les colonnes obligatoires sont "titre" (ou "name"). 
+                  Les autres colonnes sont optionnelles et seront importées si présentes.
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setImportModalOpen(false);
+                setImportFile(null);
+              }}>
+                Annuler
+              </Button>
+              <Button 
+                onClick={handleImport}
+                disabled={!importFile || importing}
+                className="bg-violet-600 hover:bg-violet-700"
+                data-testid="import-submit-btn"
+              >
+                {importing ? (
+                  <>
+                    <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                    Import en cours...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Importer
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
