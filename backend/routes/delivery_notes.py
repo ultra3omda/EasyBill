@@ -1,0 +1,240 @@
+from fastapi import APIRouter, HTTPException, status, Depends, Query, Request
+from motor.motor_asyncio import AsyncIOMotorClient
+from bson import ObjectId
+from datetime import datetime, timezone
+import os
+from typing import Optional
+from models.delivery_note import DeliveryNote, DeliveryNoteCreate, DeliveryNoteUpdate
+from utils.dependencies import get_current_user, get_current_company
+from utils.helpers import generate_document_number
+
+router = APIRouter(prefix="/api/delivery-notes", tags=["Delivery Notes"])
+
+mongo_url = os.environ['MONGO_URL']
+client = AsyncIOMotorClient(mongo_url)
+db = client[os.environ['DB_NAME']]
+
+
+def serialize_delivery_note(d: dict) -> dict:
+    """Serialize delivery note document for JSON response."""
+    return {
+        "id": str(d["_id"]),
+        "company_id": str(d.get("company_id")) if d.get("company_id") else None,
+        "customer_id": str(d.get("customer_id")) if d.get("customer_id") else None,
+        "customer_name": d.get("customer_name", ""),
+        "invoice_id": str(d.get("invoice_id")) if d.get("invoice_id") else None,
+        "quote_id": str(d.get("quote_id")) if d.get("quote_id") else None,
+        "number": d.get("number"),
+        "date": d["date"].isoformat() if isinstance(d.get("date"), datetime) else d.get("date"),
+        "shipping_address": d.get("shipping_address"),
+        "items": d.get("items", []),
+        "notes": d.get("notes"),
+        "status": d.get("status", "draft"),
+        "delivered_at": d["delivered_at"].isoformat() if isinstance(d.get("delivered_at"), datetime) else d.get("delivered_at"),
+        "delivery_person": d.get("delivery_person"),
+        "created_at": d["created_at"].isoformat() if isinstance(d.get("created_at"), datetime) else d.get("created_at"),
+        "updated_at": d["updated_at"].isoformat() if isinstance(d.get("updated_at"), datetime) else d.get("updated_at")
+    }
+
+
+async def log_action(company_id, user_id, user_name, action, element, ip_address=None):
+    await db.access_logs.insert_one({
+        "company_id": ObjectId(company_id),
+        "user_id": ObjectId(user_id),
+        "user_name": user_name,
+        "category": "Bon de livraison",
+        "action": action,
+        "element": element,
+        "ip_address": ip_address,
+        "created_at": datetime.now(timezone.utc)
+    })
+
+
+@router.post("/", status_code=status.HTTP_201_CREATED)
+async def create_delivery_note(
+    data: DeliveryNoteCreate,
+    request: Request,
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    company = await get_current_company(current_user, company_id)
+    
+    numbering = company.get("numbering", {})
+    prefix = numbering.get("delivery_prefix", "BL")
+    next_num = numbering.get("delivery_next", 1)
+    
+    number = generate_document_number(prefix, next_num, datetime.now().year)
+    
+    doc_dict = data.dict(exclude={'items'})
+    items = [item.dict() for item in data.items]
+    
+    if isinstance(doc_dict.get('date'), str):
+        doc_dict['date'] = datetime.fromisoformat(doc_dict['date'].replace('Z', '+00:00'))
+    
+    doc_dict.update({
+        "company_id": ObjectId(company_id),
+        "customer_id": ObjectId(data.customer_id),
+        "number": number,
+        "items": items,
+        "status": "draft",
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+        "created_by": current_user["_id"]
+    })
+    
+    if data.invoice_id:
+        doc_dict["invoice_id"] = ObjectId(data.invoice_id)
+    if data.quote_id:
+        doc_dict["quote_id"] = ObjectId(data.quote_id)
+    
+    result = await db.delivery_notes.insert_one(doc_dict)
+    
+    await db.companies.update_one(
+        {"_id": ObjectId(company_id)},
+        {"$inc": {"numbering.delivery_next": 1}}
+    )
+    
+    await log_action(company_id, str(current_user["_id"]), current_user.get("full_name", ""), "Créer", number, request.client.host if request.client else None)
+    
+    return {"id": str(result.inserted_id), "number": number, "message": "Delivery note created"}
+
+
+@router.get("/")
+async def list_delivery_notes(
+    company_id: str = Query(...),
+    search: Optional[str] = None,
+    status_filter: Optional[str] = Query(None, alias="status"),
+    current_user: dict = Depends(get_current_user)
+):
+    company = await get_current_company(current_user, company_id)
+    
+    query = {"company_id": ObjectId(company_id)}
+    if search:
+        query["$or"] = [
+            {"number": {"$regex": search, "$options": "i"}}
+        ]
+    if status_filter:
+        query["status"] = status_filter
+    
+    docs = await db.delivery_notes.find(query).sort("created_at", -1).to_list(1000)
+    
+    for doc in docs:
+        if doc.get("customer_id"):
+            customer = await db.customers.find_one({"_id": doc["customer_id"]})
+            doc["customer_name"] = customer.get("display_name", "Inconnu") if customer else "Inconnu"
+    
+    return [serialize_delivery_note(d) for d in docs]
+
+
+@router.get("/{doc_id}")
+async def get_delivery_note(
+    doc_id: str,
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    company = await get_current_company(current_user, company_id)
+    
+    doc = await db.delivery_notes.find_one({
+        "_id": ObjectId(doc_id),
+        "company_id": ObjectId(company_id)
+    })
+    
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delivery note not found")
+    
+    if doc.get("customer_id"):
+        customer = await db.customers.find_one({"_id": doc["customer_id"]})
+        doc["customer_name"] = customer.get("display_name", "") if customer else ""
+    
+    return serialize_delivery_note(doc)
+
+
+@router.put("/{doc_id}")
+async def update_delivery_note(
+    doc_id: str,
+    data: DeliveryNoteUpdate,
+    request: Request,
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    company = await get_current_company(current_user, company_id)
+    
+    existing = await db.delivery_notes.find_one({"_id": ObjectId(doc_id)})
+    if not existing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delivery note not found")
+    
+    update_data = {k: v for k, v in data.dict(exclude_unset=True).items()}
+    
+    if 'items' in update_data and update_data['items']:
+        update_data['items'] = [item.dict() if hasattr(item, 'dict') else item for item in update_data['items']]
+    
+    if 'customer_id' in update_data and update_data['customer_id']:
+        update_data['customer_id'] = ObjectId(update_data['customer_id'])
+    
+    update_data["updated_at"] = datetime.now(timezone.utc)
+    
+    await db.delivery_notes.update_one(
+        {"_id": ObjectId(doc_id), "company_id": ObjectId(company_id)},
+        {"$set": update_data}
+    )
+    
+    await log_action(company_id, str(current_user["_id"]), current_user.get("full_name", ""), "Modifier", existing.get("number", ""), request.client.host if request.client else None)
+    
+    return {"message": "Delivery note updated"}
+
+
+@router.delete("/{doc_id}")
+async def delete_delivery_note(
+    doc_id: str,
+    request: Request,
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    company = await get_current_company(current_user, company_id)
+    
+    doc = await db.delivery_notes.find_one({
+        "_id": ObjectId(doc_id),
+        "company_id": ObjectId(company_id)
+    })
+    
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delivery note not found")
+    
+    await db.delivery_notes.delete_one({"_id": ObjectId(doc_id)})
+    
+    await log_action(company_id, str(current_user["_id"]), current_user.get("full_name", ""), "Supprimer", doc.get("number", ""), request.client.host if request.client else None)
+    
+    return {"message": "Delivery note deleted"}
+
+
+@router.post("/{doc_id}/deliver")
+async def mark_delivered(
+    doc_id: str,
+    request: Request,
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    company = await get_current_company(current_user, company_id)
+    
+    doc = await db.delivery_notes.find_one({
+        "_id": ObjectId(doc_id),
+        "company_id": ObjectId(company_id)
+    })
+    
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delivery note not found")
+    
+    await db.delivery_notes.update_one(
+        {"_id": ObjectId(doc_id)},
+        {
+            "$set": {
+                "status": "delivered",
+                "delivered_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    await log_action(company_id, str(current_user["_id"]), current_user.get("full_name", ""), "Livrer", doc.get("number", ""), request.client.host if request.client else None)
+    
+    return {"message": "Delivery note marked as delivered"}
