@@ -76,9 +76,13 @@ const Products = () => {
   };
 
   const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.sku.toLowerCase().includes(searchTerm.toLowerCase())
+    product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.sku?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (!currentCompany) {
+    return <AppLayout><div className="text-center py-20">Aucune entreprise sélectionnée</div></AppLayout>;
+  }
 
   return (
     <AppLayout>
@@ -89,7 +93,7 @@ const Products = () => {
             <h1 className="text-3xl font-bold text-gray-900">{t('nav.products')}</h1>
             <p className="text-gray-500 mt-1">{filteredProducts.length} produits et services</p>
           </div>
-          <Button className="bg-teal-600 hover:bg-teal-700 text-white">
+          <Button className="bg-teal-600 hover:bg-teal-700 text-white" onClick={openCreateModal}>
             <Plus className="w-4 h-4 mr-2" />
             Ajouter un produit
           </Button>
