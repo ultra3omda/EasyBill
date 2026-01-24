@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { quotesAPI } from '../services/api';
+import { quotesAPI, pdfAPI } from '../services/api';
 import { useCompany } from '../hooks/useCompany';
 import AppLayout from '../components/layout/AppLayout';
 import QuoteFormModal from '../components/modals/QuoteFormModal';
@@ -23,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
-import { Plus, Search, Filter, Download, Send, Edit, Trash2, MoreVertical, FileCheck, FileText, CheckCircle } from 'lucide-react';
+import { Plus, Search, Filter, Download, Send, Edit, Trash2, MoreVertical, FileCheck, FileText, CheckCircle, Printer } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
 
 const Quotes = () => {
