@@ -168,14 +168,17 @@ const CompanyOnboarding = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-violet-50 to-amber-50 py-8 px-4">
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-8">
-          <img 
-            src="https://finances.iberis.io/images/logo-iberis.png" 
-            alt="Iberis" 
-            className="h-10 mx-auto mb-4"
-          />
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-violet-700 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-xl">E</span>
+            </div>
+            <span className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-amber-500 bg-clip-text text-transparent">
+              EasyBill
+            </span>
+          </div>
           <h1 className="text-2xl font-bold text-gray-900">Réglages</h1>
           <p className="text-gray-600 text-sm">Nouvelle entreprise</p>
         </div>
@@ -188,13 +191,13 @@ const CompanyOnboarding = () => {
                 {logoPreview ? (
                   <img src={logoPreview} alt="Logo" className="w-32 h-32 mx-auto object-contain rounded-lg border" />
                 ) : (
-                  <div className="w-32 h-32 mx-auto bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed">
-                    <Building className="w-12 h-12 text-gray-400" />
+                  <div className="w-32 h-32 mx-auto bg-violet-50 rounded-lg flex items-center justify-center border-2 border-dashed border-violet-200">
+                    <Building className="w-12 h-12 text-violet-400" />
                   </div>
                 )}
               </div>
               <label className="cursor-pointer">
-                <span className="text-sm text-teal-600 hover:text-teal-700">Télécharger un logo</span>
+                <span className="text-sm text-violet-600 hover:text-violet-700">Télécharger un logo</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -217,7 +220,7 @@ const CompanyOnboarding = () => {
             {/* Informations comptables */}
             <div className="mt-6 pt-6 border-t">
               <div className="flex items-center gap-2 mb-4">
-                <DollarSign className="w-5 h-5 text-teal-600" />
+                <DollarSign className="w-5 h-5 text-amber-600" />
                 <h3 className="font-semibold text-gray-900">Informations comptables</h3>
               </div>
               
