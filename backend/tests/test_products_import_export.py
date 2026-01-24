@@ -248,6 +248,7 @@ class TestProductCRUD:
     
     def test_create_product(self, api_client):
         """Test creating a new product"""
+        # Note: Backend model uses unit_price, but route maps selling_price to it
         product_data = {
             "name": "TEST_CRUD_Product",
             "sku": "TEST-CRUD-001",
@@ -255,11 +256,9 @@ class TestProductCRUD:
             "type": "product",
             "category": "Informatique",
             "unit": "pièce",
-            "selling_price": 100.0,
-            "purchase_price": 80.0,
+            "unit_price": 100.0,  # Required field in ProductCreate model
             "tax_rate": 19,
-            "quantity_in_stock": 10,
-            "destination": "both"
+            "stock_quantity": 10
         }
         
         response = api_client.post(
