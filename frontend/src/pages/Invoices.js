@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { invoicesAPI } from '../services/api';
+import { invoicesAPI, pdfAPI } from '../services/api';
 import { useCompany } from '../hooks/useCompany';
 import AppLayout from '../components/layout/AppLayout';
 import InvoiceFormModal from '../components/modals/InvoiceFormModal';
@@ -23,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
-import { Plus, Search, Filter, Download, Send, Eye, Edit, Trash2, MoreVertical, FileText, CreditCard, CheckCircle } from 'lucide-react';
+import { Plus, Search, Filter, Download, Send, Eye, Edit, Trash2, MoreVertical, FileText, CreditCard, CheckCircle, Printer } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
 
 const Invoices = () => {
