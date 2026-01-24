@@ -2,18 +2,15 @@ from fastapi import APIRouter, HTTPException, status, Depends, Request
 from typing import List
 from datetime import datetime, timezone
 from bson import ObjectId
+from motor.motor_asyncio import AsyncIOMotorClient
+import os
 
-from ..utils.auth import get_current_user
-from ..utils.database import db
-from ..models.settings import (
-    Tax, TaxCreate, TaxUpdate,
-    AdditionalEntry, AdditionalEntryCreate, AdditionalEntryUpdate,
-    Bank, BankCreate, BankUpdate,
-    PaymentMethod, PaymentMethodCreate,
-    PurchaseCategory, PurchaseCategoryCreate,
-    WithholdingType, WithholdingTypeCreate,
-    AccessLog
-)
+from utils.dependencies import get_current_user
+
+# Database connection
+mongo_url = os.environ.get('MONGO_URL')
+client = AsyncIOMotorClient(mongo_url)
+db = client[os.environ.get('DB_NAME', 'easybill')]
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
