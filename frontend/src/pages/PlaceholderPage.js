@@ -28,9 +28,26 @@ const routeTitles = {
   '/journal-entries': 'Écritures Comptables',
   '/ledgers': 'Grands Livres',
   '/balances': 'Balances',
+  '/balance-tiers': 'Balance tiers',
+  '/balance-generale': 'Balance générale',
   '/legal-journals': 'Journaux légaux',
   '/fiscal-years': 'Exercices comptables',
-  '/financial-statements': 'États comptables'
+  '/financial-statements': 'États financiers',
+  '/bilan': 'Bilan',
+  '/income-statement': 'État de résultat',
+  '/cash-flow': 'État des flux de trésorerie',
+  '/collaborators': 'Collaborateurs',
+  '/roles-permissions': 'Rôles & permissions',
+  '/additional-entries': 'Entrées supplémentaires',
+  '/taxes': 'Taxes',
+  '/banks': 'Banques',
+  '/customization': 'Personnalisation',
+  '/calendar': 'Calendrier',
+  '/access-logs': "Journal d'accès",
+  '/files': 'Mes Fichiers',
+  '/reports': 'Mes Rapports',
+  '/integrations': 'Intégrations',
+  '/workflows': 'Workflows'
 };
 
 const PlaceholderPage = () => {
