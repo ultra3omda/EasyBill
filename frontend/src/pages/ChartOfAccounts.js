@@ -576,9 +576,33 @@ const ChartOfAccounts = () => {
                   </div>
                 ))
               )
-            ) : accountTree.length === 0 ? (
-              <div className="py-12 text-center text-gray-500">
-                Aucun compte dans le plan comptable
+            ) : accountTree.length === 0 && !loading ? (
+              <div className="py-16 text-center">
+                <BookOpen className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                  Plan comptable vide
+                </h3>
+                <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                  Votre plan comptable n'a pas encore été initialisé. Cliquez sur le bouton ci-dessous pour créer automatiquement le plan comptable tunisien (SCE).
+                </p>
+                <Button
+                  onClick={handleSeedChartOfAccounts}
+                  disabled={seeding}
+                  className="bg-violet-600 hover:bg-violet-700"
+                  data-testid="seed-chart-btn"
+                >
+                  {seeding ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Création en cours...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 mr-2" />
+                      Initialiser le plan comptable tunisien
+                    </>
+                  )}
+                </Button>
               </div>
             ) : (
               accountTree.map((node) => renderAccountNode(node))
