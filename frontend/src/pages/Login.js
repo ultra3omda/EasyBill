@@ -76,7 +76,7 @@ const Login = () => {
           <p className="text-gray-600">Accédez à votre espace de gestion</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-6">
+        <form onSubmit={handleLogin} className="space-y-6" data-testid="login-form">
           <div>
             <Label htmlFor="email">{t('auth.email')}</Label>
             <div className="relative mt-2">
@@ -89,6 +89,7 @@ const Login = () => {
                 className="pl-10"
                 placeholder="exemple@email.com"
                 required
+                data-testid="login-email-input"
               />
             </div>
           </div>
@@ -105,13 +106,14 @@ const Login = () => {
                 className="pl-10"
                 placeholder="••••••••"
                 required
+                data-testid="login-password-input"
               />
             </div>
           </div>
 
           <div className="flex items-center justify-between">
             <label className="flex items-center">
-              <input type="checkbox" className="mr-2" />
+              <input type="checkbox" className="mr-2" data-testid="login-remember-checkbox" />
               <span className="text-sm text-gray-600">Se souvenir de moi</span>
             </label>
             <Link to="/forgot-password" className="text-sm text-teal-600 hover:text-teal-700">
@@ -123,6 +125,7 @@ const Login = () => {
             type="submit" 
             className="w-full bg-teal-600 hover:bg-teal-700 text-white py-6"
             disabled={loading}
+            data-testid="login-submit-button"
           >
             {loading ? 'Connexion...' : t('auth.loginButton')}
           </Button>
