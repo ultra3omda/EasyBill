@@ -148,3 +148,52 @@ async def get_account_types():
         {"code": "6", "type": "expense", "name": "Comptes de charges"},
         {"code": "7", "type": "income", "name": "Comptes de produits"}
     ]
+
+
+@router.post("/seed-chart-of-accounts")
+async def seed_chart_of_accounts(company_id: str = Query(...), current_user: dict = Depends(get_current_user)):
+    """Seed the Tunisian chart of accounts for an existing company (if not already seeded)."""
+    from data.tunisian_chart_of_accounts import TUNISIAN_CHART_OF_ACCOUNTS
+    
+    company = await get_current_company(current_user, company_id)
+    
+    # Check if already seeded
+    existing_count = await db.chart_of_accounts.count_documents({"company_id": ObjectId(company_id)})
+    if existing_count > 0:
+        return {"message": f"Plan comptable déjà présent ({existing_count} comptes)", "count": existing_count, "seeded": False}
+    
+    # Seed the chart of accounts
+    now = datetime.now(timezone.utc)
+    accounts_to_insert = []
+    
+    for account in TUNISIAN_CHART_OF_ACCOUNTS:
+        account_doc = {
+            "code": account["code"],
+            "name": account["name"],
+            "type": account["type"],
+            "is_group": account.get("is_group", False),
+            "parent_code": account.get("parent_code"),
+            "company_id": ObjectId(company_id),
+            "is_system": True,
+            "is_active": True,
+            "balance": 0.0,
+            "created_at": now
+        }
+        accounts_to_insert.append(account_doc)
+    
+    if accounts_to_insert:
+        await db.chart_of_accounts.insert_many(accounts_to_insert)
+    
+    # Log action
+    user_name = current_user.get("full_name", current_user.get("email", ""))
+    await db.access_logs.insert_one({
+        "company_id": ObjectId(company_id),
+        "user_id": current_user["_id"],
+        "user_name": user_name,
+        "category": "Plan comptable",
+        "action": "Seed",
+        "element": f"Plan comptable tunisien ({len(accounts_to_insert)} comptes)",
+        "created_at": now
+    })
+    
+    return {"message": f"Plan comptable tunisien créé avec succès", "count": len(accounts_to_insert), "seeded": True}
