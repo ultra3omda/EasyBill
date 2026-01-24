@@ -70,20 +70,22 @@ async def create_supplier(
 ):
     company = await get_current_company(current_user, company_id)
     
-    # Generate display_name
-    if supplier_data.company_name:
-        display_name = supplier_data.company_name
-    elif supplier_data.last_name:
-        display_name = f"{supplier_data.last_name}, {supplier_data.first_name}"
-    else:
-        display_name = supplier_data.first_name
+    # Generate display_name if not provided
+    display_name = supplier_data.display_name
+    if not display_name:
+        if supplier_data.company_name:
+            display_name = supplier_data.company_name
+        elif supplier_data.last_name:
+            display_name = f"{supplier_data.last_name}, {supplier_data.first_name}"
+        else:
+            display_name = supplier_data.first_name
     
     supplier_dict = supplier_data.dict(exclude_unset=True)
     supplier_dict.update({
         "company_id": ObjectId(company_id),
         "display_name": display_name,
         "balance": 0.0,
-        "total_purchased": 0.0,
+        "total_purchases": 0.0,
         "total_paid": 0.0,
         "purchase_order_count": 0,
         "created_at": datetime.now(timezone.utc),
