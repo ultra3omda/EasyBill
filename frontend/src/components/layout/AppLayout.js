@@ -151,19 +151,11 @@ const AppLayout = ({ children }) => {
       icon: Calculator,
       label: 'Comptabilité',
       items: [
+        { icon: PieChart, label: 'Tableau de bord', path: '/accounting-dashboard' },
         { icon: BookOpen, label: 'Plan comptable', path: '/chart-of-accounts' },
         { icon: PenLine, label: 'Écritures Comptables', path: '/journal-entries' },
-        { icon: BookMarked, label: 'Grands Livres', path: '/ledgers' },
-        { 
-          type: 'nested',
-          key: 'balances',
-          icon: Scale, 
-          label: 'Balances',
-          items: [
-            { icon: Users, label: 'Balance tiers', path: '/balance-tiers' },
-            { icon: Scale, label: 'Balance générale', path: '/balance-generale' }
-          ]
-        },
+        { icon: BookMarked, label: 'Grand Livre', path: '/general-ledger' },
+        { icon: Scale, label: 'Balance des comptes', path: '/trial-balance' },
         { icon: FileText, label: 'Journaux légaux', path: '/legal-journals' },
         { icon: Calendar, label: 'Exercices comptables', path: '/fiscal-years' },
         { 
