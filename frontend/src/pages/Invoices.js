@@ -307,6 +307,10 @@ const Invoices = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleDownloadPdf(invoice)}>
+                                <Printer className="w-4 h-4 mr-2" />
+                                Télécharger PDF
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => openEditModal(invoice)}>
                                 <Edit className="w-4 h-4 mr-2" />
                                 Modifier
