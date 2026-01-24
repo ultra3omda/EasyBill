@@ -207,15 +207,11 @@ const Products = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Eye className="w-4 h-4 mr-2" />
-                            Voir détails
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openEditModal(product)}>
                             <Edit className="w-4 h-4 mr-2" />
                             Modifier
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600">
+                          <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(product.id)}>
                             <Trash2 className="w-4 h-4 mr-2" />
                             Supprimer
                           </DropdownMenuItem>
@@ -229,6 +225,13 @@ const Products = () => {
           </div>
         </Card>
       </div>
+
+      <ProductFormModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSuccess={loadProducts}
+        product={selectedProduct}
+      />
     </AppLayout>
   );
 };
