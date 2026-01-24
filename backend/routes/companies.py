@@ -130,6 +130,42 @@ async def create_default_purchase_categories(company_id: ObjectId):
         await db.purchase_categories.insert_one(category_doc)
 
 
+async def create_default_chart_of_accounts(company_id: ObjectId, user_id: ObjectId, user_name: str):
+    """Create default Tunisian chart of accounts for a new company."""
+    now = datetime.now(timezone.utc)
+    accounts_to_insert = []
+    
+    for account in TUNISIAN_CHART_OF_ACCOUNTS:
+        account_doc = {
+            "code": account["code"],
+            "name": account["name"],
+            "type": account["type"],
+            "is_group": account.get("is_group", False),
+            "parent_code": account.get("parent_code"),
+            "company_id": company_id,
+            "is_system": True,
+            "is_active": True,
+            "balance": 0.0,
+            "created_at": now
+        }
+        accounts_to_insert.append(account_doc)
+    
+    # Bulk insert for better performance
+    if accounts_to_insert:
+        await db.chart_of_accounts.insert_many(accounts_to_insert)
+    
+    # Log action
+    await db.access_logs.insert_one({
+        "company_id": company_id,
+        "user_id": user_id,
+        "user_name": user_name,
+        "category": "Plan comptable",
+        "action": "Créer",
+        "element": f"Plan comptable tunisien ({len(accounts_to_insert)} comptes)",
+        "created_at": now
+    })
+
+
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_company(company_data: CompanyCreate, current_user: dict = Depends(get_current_user)):
     company_dict = company_data.dict(exclude_unset=True)
