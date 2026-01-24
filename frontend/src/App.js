@@ -28,6 +28,10 @@ import PlaceholderPage from './pages/PlaceholderPage';
 import TaxesPage from './pages/TaxesPage';
 import AdditionalEntriesPage from './pages/AdditionalEntriesPage';
 import AccessLogsPage from './pages/AccessLogsPage';
+import DeliveryNotes from './pages/DeliveryNotes';
+import CreditNotes from './pages/CreditNotes';
+import Payments from './pages/Payments';
+import Reminders from './pages/Reminders';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
