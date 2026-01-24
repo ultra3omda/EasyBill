@@ -11,6 +11,7 @@ from routes import auth, companies, customers, suppliers, products, quotes, invo
 from routes import delivery_notes, credit_notes, reminders
 from routes import purchase_orders, supplier_invoices, supplier_payments
 from routes import warehouses, stock_movements, accounting
+from routes import journal_entries
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
