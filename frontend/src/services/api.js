@@ -89,6 +89,15 @@ export const productsAPI = {
   get: (companyId, id) => apiClient.get(`/products/${id}?company_id=${companyId}`),
   update: (companyId, id, data) => apiClient.put(`/products/${id}?company_id=${companyId}`, data),
   delete: (companyId, id) => apiClient.delete(`/products/${id}?company_id=${companyId}`),
+  // Import/Export
+  downloadTemplate: (companyId) => `${API}/products/export/template?company_id=${companyId}`,
+  importProducts: (companyId, formData) => apiClient.post(`/products/import?company_id=${companyId}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  exportStock: (companyId) => `${API}/products/export/stock?company_id=${companyId}`,
+  exportPrices: (companyId) => `${API}/products/export/prices?company_id=${companyId}`,
+  bulkDelete: (companyId, productIds) => apiClient.delete(`/products/bulk/delete?company_id=${companyId}`, { data: { product_ids: productIds } }),
+  deleteAll: (companyId) => apiClient.delete(`/products/bulk/delete-all?company_id=${companyId}`),
 };
 
 // Quotes API - Note: trailing slash required to avoid 307 redirect losing auth header
