@@ -35,6 +35,10 @@ app.include_router(companies.router)
 app.include_router(customers.router)
 app.include_router(suppliers.router)
 app.include_router(products.router)
+app.include_router(quotes.router)
+app.include_router(invoices.router)
+app.include_router(payments.router)
+app.include_router(projects.router)
 
 # Root endpoint
 @app.get("/")
