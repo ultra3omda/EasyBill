@@ -39,6 +39,10 @@ import Warehouses from './pages/Warehouses';
 import Inventory from './pages/Inventory';
 import StockMovements from './pages/StockMovements';
 import ChartOfAccounts from './pages/ChartOfAccounts';
+import AccountingDashboard from './pages/AccountingDashboard';
+import JournalEntries from './pages/JournalEntries';
+import GeneralLedger from './pages/GeneralLedger';
+import TrialBalance from './pages/TrialBalance';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
