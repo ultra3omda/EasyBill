@@ -93,6 +93,49 @@ const LEGAL_FORMS = [
   { value: 'OTHER', label: 'Autre' }
 ];
 
+// Tunisian Governorates
+const GOVERNORATES = [
+  'Tunis', 'Ariana', 'Ben Arous', 'Manouba', 'Nabeul', 'Zaghouan', 'Bizerte',
+  'Béja', 'Jendouba', 'Le Kef', 'Siliana', 'Sousse', 'Monastir', 'Mahdia',
+  'Sfax', 'Kairouan', 'Kasserine', 'Sidi Bouzid', 'Gabès', 'Medenine',
+  'Tataouine', 'Gafsa', 'Tozeur', 'Kébili'
+];
+
+// Activity Types
+const ACTIVITIES = [
+  'Agence ou société commerciale',
+  'Industrie',
+  'Services',
+  'Commerce de gros',
+  'Commerce de détail',
+  'Import/Export',
+  'Construction et BTP',
+  'Transport et logistique',
+  'Technologies de l\'information',
+  'Conseil et consulting',
+  'Santé et pharmaceutique',
+  'Agriculture et agroalimentaire',
+  'Banques et assurances',
+  'Immobilier',
+  'Autre'
+];
+
+// Currencies
+const CURRENCIES = [
+  { value: 'TND', label: 'Dinar(s) tunisien' },
+  { value: 'EUR', label: 'Euro' },
+  { value: 'USD', label: 'Dollar américain' },
+  { value: 'GBP', label: 'Livre sterling' }
+];
+
+// Fiscal Year options
+const FISCAL_YEARS = [
+  { value: 'jan-dec', label: 'Janvier - Décembre' },
+  { value: 'apr-mar', label: 'Avril - Mars' },
+  { value: 'jul-jun', label: 'Juillet - Juin' },
+  { value: 'oct-sep', label: 'Octobre - Septembre' }
+];
+
 const AppLayout = ({ children }) => {
   const { user, logout } = useAuth();
   const { language, changeLanguage, t } = useLanguage();
