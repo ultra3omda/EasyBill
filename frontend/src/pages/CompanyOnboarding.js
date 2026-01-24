@@ -394,7 +394,7 @@ const CompanyOnboarding = () => {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="bg-teal-600 hover:bg-teal-700 text-white px-8"
+                  className="bg-violet-600 hover:bg-violet-700 text-white px-8"
                   data-testid="onboarding-submit-button"
                 >
                   {loading ? 'Création...' : 'Soumettre'}
