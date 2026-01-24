@@ -198,10 +198,12 @@ const SupplierFormModal = ({ open, onClose, onSuccess, supplier = null }) => {
       case 1:
         if (supplierType === 'entreprise') {
           return formData.company_name?.trim() !== '';
+        } else {
+          // Particulier: require first_name
+          return formData.first_name?.trim() !== '';
         }
-        return true;
       case 2:
-        return formData.first_name?.trim() !== '';
+        return true; // Optional fields in step 2
       default:
         return true;
     }
@@ -211,7 +213,7 @@ const SupplierFormModal = ({ open, onClose, onSuccess, supplier = null }) => {
     if (!validateStep(currentStep)) {
       toast({ 
         title: 'Champs requis', 
-        description: currentStep === 1 ? 'Veuillez saisir le nom de l\'entreprise' : 'Veuillez saisir le prénom',
+        description: supplierType === 'entreprise' ? 'Veuillez saisir le nom de l\'entreprise' : 'Veuillez saisir le prénom',
         variant: 'destructive' 
       });
       return;
