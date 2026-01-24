@@ -51,9 +51,23 @@ async def create_company(company_data: CompanyCreate, current_user: dict = Depen
     })
     
     result = await db.companies.insert_one(company_dict)
-    company_dict["_id"] = result.inserted_id
     
-    return {"id": str(result.inserted_id), **company_dict}
+    # Return company data with proper serialization
+    return {
+        "id": str(result.inserted_id),
+        "name": company_dict["name"],
+        "fiscal_id": company_dict.get("fiscal_id"),
+        "activity": company_dict.get("activity"),
+        "logo": company_dict.get("logo"),
+        "address": company_dict.get("address"),
+        "primary_currency": company_dict["primary_currency"],
+        "taxes": company_dict["taxes"],
+        "numbering": company_dict["numbering"],
+        "pdf_settings": company_dict["pdf_settings"],
+        "subscription": company_dict["subscription"],
+        "created_at": company_dict["created_at"].isoformat(),
+        "updated_at": company_dict["updated_at"].isoformat()
+    }
 
 @router.get("/")
 async def list_companies(current_user: dict = Depends(get_current_user)):
