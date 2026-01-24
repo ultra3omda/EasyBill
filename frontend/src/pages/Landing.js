@@ -107,10 +107,10 @@ const Landing = () => {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
-            <Button className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-6 text-lg rounded-lg">
+            <Button className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-6 text-lg rounded-lg">
               {t('landing.requestDemo')}
             </Button>
-            <Button variant="outline" className="border-teal-600 text-teal-600 hover:bg-teal-50 px-8 py-6 text-lg rounded-lg">
+            <Button variant="outline" className="border-violet-600 text-violet-600 hover:bg-violet-50 px-8 py-6 text-lg rounded-lg">
               {t('landing.watchDemo')}
             </Button>
             <div className="flex gap-3">
@@ -128,17 +128,17 @@ const Landing = () => {
           </Button>
 
           {/* E-invoicing Banner */}
-          <div className="bg-gradient-to-r from-teal-500 to-teal-600 rounded-2xl p-6 text-white flex flex-col md:flex-row items-center justify-between max-w-4xl mx-auto mt-8">
+          <div className="bg-gradient-to-r from-violet-600 to-amber-500 rounded-2xl p-6 text-white flex flex-col md:flex-row items-center justify-between max-w-4xl mx-auto mt-8">
             <div className="flex items-center gap-4 mb-4 md:mb-0">
               <div className="bg-white/20 rounded-full p-3">
                 <FileText className="w-6 h-6" />
               </div>
               <div className="text-left">
                 <h3 className="font-semibold text-lg">Facturation électronique obligatoire en 2026</h3>
-                <p className="text-teal-50 text-sm">préparez votre entreprise à la nouvelle réglementation tunisienne</p>
+                <p className="text-violet-100 text-sm">préparez votre entreprise à la nouvelle réglementation tunisienne</p>
               </div>
             </div>
-            <Button className="bg-white text-teal-600 hover:bg-gray-100">
+            <Button className="bg-white text-violet-600 hover:bg-gray-100">
               Découvrir la solution
             </Button>
           </div>
