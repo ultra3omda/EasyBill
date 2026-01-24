@@ -40,32 +40,32 @@ const Dashboard = () => {
       label: t('dashboard.marginRate'),
       value: `${mockDashboardStats.marginRate.value}%`,
       change: mockDashboardStats.marginRate.change,
-      bgColor: 'bg-purple-50',
-      iconColor: 'text-purple-600',
+      bgColor: 'bg-violet-50',
+      iconColor: 'text-violet-600',
       icon: TrendingUp
     },
     {
       label: t('dashboard.marginRate2'),
       value: `${mockDashboardStats.marginNet.value}%`,
       change: mockDashboardStats.marginNet.change,
-      bgColor: 'bg-blue-50',
-      iconColor: 'text-blue-600',
+      bgColor: 'bg-amber-50',
+      iconColor: 'text-amber-600',
       icon: TrendingDown
     },
     {
       label: t('dashboard.dso'),
       value: mockDashboardStats.dso.value,
       change: mockDashboardStats.dso.change,
-      bgColor: 'bg-orange-50',
-      iconColor: 'text-orange-600',
+      bgColor: 'bg-violet-50',
+      iconColor: 'text-violet-600',
       icon: FileText
     },
     {
       label: t('dashboard.renewal'),
       value: `${mockDashboardStats.renewal.value}%`,
       change: mockDashboardStats.renewal.change,
-      bgColor: 'bg-teal-50',
-      iconColor: 'text-teal-600',
+      bgColor: 'bg-amber-50',
+      iconColor: 'text-amber-600',
       icon: TrendingUp
     }
   ];
