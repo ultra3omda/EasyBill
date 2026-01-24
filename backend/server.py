@@ -49,6 +49,8 @@ app.include_router(reminders.router)
 app.include_router(purchase_orders.router)
 app.include_router(supplier_invoices.router)
 app.include_router(supplier_payments.router)
+app.include_router(warehouses.router)
+app.include_router(stock_movements.router)
 
 # Root endpoint
 @app.get("/")
