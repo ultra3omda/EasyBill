@@ -150,6 +150,38 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       
+      {/* Stock Routes */}
+      <Route path="/warehouses" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/inventory" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/stock-movements" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      
+      {/* Ventes Routes */}
+      <Route path="/delivery-notes" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/exit-vouchers" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/credit-notes" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/expense-reports" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/sales-payments" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/reminders" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/pos" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      
+      {/* Achats Routes */}
+      <Route path="/reception-notes" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/purchase-orders" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/supplier-invoices" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/services" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/purchase-payments" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/withholding-tax" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/purchase-reminders" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      
+      {/* Comptabilité Routes */}
+      <Route path="/chart-of-accounts" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/journal-entries" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/ledgers" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/balances" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/legal-journals" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/fiscal-years" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/financial-statements" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
