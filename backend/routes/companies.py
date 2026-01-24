@@ -223,6 +223,7 @@ async def create_company(company_data: CompanyCreate, current_user: dict = Depen
     await create_default_additional_entries(company_id, current_user["_id"], user_name)
     await create_default_payment_methods(company_id)
     await create_default_purchase_categories(company_id)
+    await create_default_chart_of_accounts(company_id, current_user["_id"], user_name)
     
     # Log company creation
     await db.access_logs.insert_one({
