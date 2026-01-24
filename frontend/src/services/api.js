@@ -104,12 +104,12 @@ export const quotesAPI = {
   convertToInvoice: (companyId, id) => apiClient.post(`/quotes/${id}/convert?company_id=${companyId}`),
 };
 
-// Invoices API
+// Invoices API - Note: trailing slash required to avoid 307 redirect losing auth header
 export const invoicesAPI = {
-  create: (companyId, data) => apiClient.post(`/invoices?company_id=${companyId}`, data),
+  create: (companyId, data) => apiClient.post(`/invoices/?company_id=${companyId}`, data),
   list: (companyId, params = {}) => {
     const queryParams = new URLSearchParams({ company_id: companyId, ...params }).toString();
-    return apiClient.get(`/invoices?${queryParams}`);
+    return apiClient.get(`/invoices/?${queryParams}`);
   },
   get: (companyId, id) => apiClient.get(`/invoices/${id}?company_id=${companyId}`),
   update: (companyId, id, data) => apiClient.put(`/invoices/${id}?company_id=${companyId}`, data),
