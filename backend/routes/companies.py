@@ -69,6 +69,28 @@ async def create_company(company_data: CompanyCreate, current_user: dict = Depen
         "updated_at": company_dict["updated_at"].isoformat()
     }
 
+def serialize_company(c: dict) -> dict:
+    """Serialize company document for JSON response."""
+    return {
+        "id": str(c["_id"]),
+        "name": c.get("name"),
+        "fiscal_id": c.get("fiscal_id"),
+        "activity": c.get("activity"),
+        "logo": c.get("logo"),
+        "phone": c.get("phone"),
+        "website": c.get("website"),
+        "address": c.get("address"),
+        "primary_currency": c.get("primary_currency", "TND"),
+        "taxes": c.get("taxes", []),
+        "banks": c.get("banks", []),
+        "numbering": c.get("numbering", {}),
+        "pdf_settings": c.get("pdf_settings", {}),
+        "fiscal_year": c.get("fiscal_year"),
+        "subscription": c.get("subscription", {}),
+        "created_at": c["created_at"].isoformat() if c.get("created_at") else None,
+        "updated_at": c["updated_at"].isoformat() if c.get("updated_at") else None
+    }
+
 @router.get("/")
 async def list_companies(current_user: dict = Depends(get_current_user)):
     companies = await db.companies.find(
@@ -78,12 +100,12 @@ async def list_companies(current_user: dict = Depends(get_current_user)):
         ]}
     ).to_list(100)
     
-    return [{"id": str(c["_id"]), **{k: v for k, v in c.items() if k != "_id"}} for c in companies]
+    return [serialize_company(c) for c in companies]
 
 @router.get("/{company_id}")
 async def get_company(company_id: str, current_user: dict = Depends(get_current_user)):
     company = await get_current_company(current_user, company_id)
-    return {"id": str(company["_id"]), **{k: v for k, v in company.items() if k != "_id"}}
+    return serialize_company(company)
 
 @router.put("/{company_id}")
 async def update_company(company_id: str, company_update: CompanyUpdate, current_user: dict = Depends(get_current_user)):
