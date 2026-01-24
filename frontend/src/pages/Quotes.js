@@ -315,6 +315,10 @@ const Quotes = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleDownloadPdf(quote)}>
+                                <Printer className="w-4 h-4 mr-2" />
+                                Télécharger PDF
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => openEditModal(quote)}>
                                 <Edit className="w-4 h-4 mr-2" />
                                 Modifier
