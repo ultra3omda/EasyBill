@@ -22,7 +22,7 @@ def get_auth_data():
     
     token = response.json()["access_token"]
     
-    # Get company
+    # Get company (note: trailing slash required to avoid redirect losing auth header)
     companies_response = requests.get(
         f"{BASE_URL}/api/companies/",
         headers={"Authorization": f"Bearer {token}"}
@@ -36,8 +36,9 @@ def get_auth_data():
 
 def get_or_create_customer(auth_data):
     """Get or create a test customer"""
+    # Note: trailing slash required to avoid redirect losing auth header
     response = requests.get(
-        f"{BASE_URL}/api/customers?company_id={auth_data['company_id']}",
+        f"{BASE_URL}/api/customers/?company_id={auth_data['company_id']}",
         headers={"Authorization": f"Bearer {auth_data['token']}"}
     )
     
@@ -52,7 +53,7 @@ def get_or_create_customer(auth_data):
     }
     
     create_response = requests.post(
-        f"{BASE_URL}/api/customers?company_id={auth_data['company_id']}",
+        f"{BASE_URL}/api/customers/?company_id={auth_data['company_id']}",
         headers={"Authorization": f"Bearer {auth_data['token']}"},
         json=customer_data
     )
