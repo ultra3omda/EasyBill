@@ -1,14 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import './App.css';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { Toaster } from './components/ui/sonner';
+import { companiesAPI } from './services/api';
 
 // Pages
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import CompanyOnboarding from './pages/CompanyOnboarding';
 import Dashboard from './pages/Dashboard';
 import Invoices from './pages/Invoices';
 import Quotes from './pages/Quotes';
@@ -25,8 +27,29 @@ import Settings from './pages/Settings';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
+  const [hasCompany, setHasCompany] = useState(null);
+  const [checkingCompany, setCheckingCompany] = useState(true);
 
-  if (loading) {
+  useEffect(() => {
+    const checkCompany = async () => {
+      if (user) {
+        try {
+          const response = await companiesAPI.list();
+          setHasCompany(response.data.length > 0);
+        } catch (error) {
+          console.error('Error checking company:', error);
+          setHasCompany(false);
+        }
+      }
+      setCheckingCompany(false);
+    };
+
+    if (!loading) {
+      checkCompany();
+    }
+  }, [user, loading]);
+
+  if (loading || checkingCompany) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
@@ -36,6 +59,10 @@ const ProtectedRoute = ({ children }) => {
 
   if (!user) {
     return <Navigate to="/login" />;
+  }
+
+  if (hasCompany === false) {
+    return <Navigate to="/onboarding" />;
   }
 
   return children;
