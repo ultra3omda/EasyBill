@@ -126,7 +126,7 @@ const AppLayout = ({ children }) => {
         { icon: Receipt, label: 'Factures', path: '/invoices' },
         { icon: FileInput, label: "Factures d'avoir", path: '/credit-notes' },
         { icon: ClipboardCheck, label: 'Notes de débours', path: '/expense-reports' },
-        { icon: CreditCard, label: 'Paiements', path: '/sales-payments' },
+        { icon: CreditCard, label: 'Paiements', path: '/payments' },
         { icon: AlertCircle, label: 'Rappels', path: '/reminders' },
         { icon: Store, label: 'Points de vente', path: '/pos' }
       ]
