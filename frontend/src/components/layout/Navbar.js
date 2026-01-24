@@ -24,33 +24,31 @@ const Navbar = () => {
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <Link to="/" className="flex items-center space-x-2">
-            <img 
-              src="https://finances.iberis.io/images/logo-iberis.png" 
-              alt="Iberis" 
-              className="h-8"
-            />
+          <Link to="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-violet-600 to-violet-700 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-lg">E</span>
+            </div>
+            <span className="text-xl font-bold bg-gradient-to-r from-violet-600 to-amber-500 bg-clip-text text-transparent">
+              EasyBill
+            </span>
           </Link>
 
           <div className="hidden md:flex items-center space-x-8">
-            <Link to="/features" className="text-gray-700 hover:text-teal-600 transition-colors">
+            <Link to="/features" className="text-gray-700 hover:text-violet-600 transition-colors">
               {t('nav.features')}
             </Link>
-            <Link to="/mobile" className="text-gray-700 hover:text-teal-600 transition-colors flex items-center gap-1">
+            <Link to="/mobile" className="text-gray-700 hover:text-violet-600 transition-colors flex items-center gap-1">
               {t('nav.mobile')}
-              <span className="bg-teal-100 text-teal-700 text-xs px-2 py-0.5 rounded-full font-medium">New</span>
+              <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-medium">New</span>
             </Link>
-            <Link to="/pricing" className="text-gray-700 hover:text-teal-600 transition-colors">
+            <Link to="/pricing" className="text-gray-700 hover:text-violet-600 transition-colors">
               {t('nav.pricing')}
             </Link>
-            <Link to="/blog" className="text-gray-700 hover:text-teal-600 transition-colors">
+            <Link to="/blog" className="text-gray-700 hover:text-violet-600 transition-colors">
               {t('nav.blog')}
             </Link>
-            <Link to="/help" className="text-gray-700 hover:text-teal-600 transition-colors">
+            <Link to="/help" className="text-gray-700 hover:text-violet-600 transition-colors">
               {t('nav.help')}
-            </Link>
-            <Link to="/sponsors" className="text-gray-700 hover:text-teal-600 transition-colors">
-              {t('nav.sponsors')}
             </Link>
           </div>
 
@@ -63,19 +61,19 @@ const Navbar = () => {
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center space-x-1 p-2 hover:bg-gray-100 rounded-lg transition-colors">
                   <img 
-                    src={language === 'fr' ? 'https://finances.iberis.io/images/flags/4x3/fr.svg' : 'https://finances.iberis.io/images/flags/4x3/gb.svg'}
+                    src={language === 'fr' ? 'https://flagcdn.com/w40/fr.png' : 'https://flagcdn.com/w40/gb.png'}
                     alt={language}
-                    className="w-5 h-4"
+                    className="w-5 h-4 object-cover rounded"
                   />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={() => changeLanguage('fr')}>
-                  <img src="https://finances.iberis.io/images/flags/4x3/fr.svg" alt="FR" className="w-5 h-4 mr-2" />
+                  <img src="https://flagcdn.com/w40/fr.png" alt="FR" className="w-5 h-4 mr-2 object-cover rounded" />
                   Français
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => changeLanguage('en')}>
-                  <img src="https://finances.iberis.io/images/flags/4x3/gb.svg" alt="EN" className="w-5 h-4 mr-2" />
+                  <img src="https://flagcdn.com/w40/gb.png" alt="EN" className="w-5 h-4 mr-2 object-cover rounded" />
                   English
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -87,7 +85,7 @@ const Navbar = () => {
               </Button>
             </Link>
             <Link to="/register">
-              <Button className="bg-teal-600 hover:bg-teal-700 text-white">
+              <Button className="bg-violet-600 hover:bg-violet-700 text-white">
                 {t('nav.register')}
               </Button>
             </Link>
