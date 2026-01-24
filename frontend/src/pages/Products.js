@@ -465,13 +465,54 @@ const Products = () => {
             <p className="text-gray-500 text-sm">Stock • {currentCompany?.name || 'Mycompany'}</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" className="text-gray-600">
-              Action
-              <ChevronDown className="w-4 h-4 ml-2" />
-            </Button>
-            <Button variant="outline" className="text-gray-600">
+            {/* Action Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="text-gray-600">
+                  Action
+                  <ChevronDown className="w-4 h-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={exportPriceList}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Exporter la liste des prix
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportStockState}>
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  Exporter l'état du stock
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => toast({ title: 'Info', description: 'Sélectionnez des articles à fusionner' })}>
+                  <Merge className="w-4 h-4 mr-2" />
+                  Fusionner
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={handleBulkDelete}
+                  disabled={selectedProducts.length === 0}
+                  className="text-red-600"
+                >
+                  <Trash className="w-4 h-4 mr-2" />
+                  Supprimer ({selectedProducts.length})
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDeleteAll} className="text-red-600">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Tout supprimer
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Import Button */}
+            <Button 
+              variant="outline" 
+              className="text-gray-600"
+              onClick={() => setImportModalOpen(true)}
+            >
+              <Upload className="w-4 h-4 mr-2" />
               Importer
             </Button>
+            
             <Button 
               onClick={openNewDialog}
               className="bg-violet-600 hover:bg-violet-700 text-white"
