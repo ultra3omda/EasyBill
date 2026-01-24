@@ -130,9 +130,9 @@ const Dashboard = () => {
             <h1 className="text-3xl font-bold text-gray-900">
               {t('dashboard.welcome')}, {user?.name?.split(' ')[0]}
             </h1>
-            <p className="text-gray-500 mt-1">Iberis</p>
+            <p className="text-gray-500 mt-1">EasyBill</p>
           </div>
-          <Button className="bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-2">
+          <Button className="bg-violet-600 hover:bg-violet-700 text-white flex items-center gap-2">
             <Filter className="w-4 h-4" />
             {t('dashboard.filter')}
           </Button>
