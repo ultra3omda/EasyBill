@@ -277,7 +277,7 @@ const CompanyOnboarding = () => {
           {/* Colonne droite - Informations générales */}
           <Card className="lg:col-span-2 p-6">
             <div className="flex items-center gap-2 mb-6">
-              <Building className="w-5 h-5 text-teal-600" />
+              <Building className="w-5 h-5 text-violet-600" />
               <h3 className="font-semibold text-gray-900">Informations générales</h3>
             </div>
 
