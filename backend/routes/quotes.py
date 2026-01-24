@@ -127,7 +127,7 @@ async def create_quote(
 async def list_quotes(
     company_id: str = Query(...),
     search: Optional[str] = None,
-    status: Optional[str] = None,
+    status_filter: Optional[str] = Query(None, alias="status"),
     current_user: dict = Depends(get_current_user)
 ):
     company = await get_current_company(current_user, company_id)
@@ -138,17 +138,21 @@ async def list_quotes(
             {"number": {"$regex": search, "$options": "i"}},
             {"subject": {"$regex": search, "$options": "i"}}
         ]
-    if status:
-        query["status"] = status
+    if status_filter:
+        query["status"] = status_filter
     
-    quotes = await db.quotes.find(query).sort("date", -1).to_list(1000)
+    quotes = await db.quotes.find(query).sort("created_at", -1).to_list(1000)
     
     # Populate customer names
     for quote in quotes:
-        customer = await db.customers.find_one({"_id": quote["customer_id"]})
-        quote["customer_name"] = customer["display_name"] if customer else "Unknown"
+        if quote.get("customer_id"):
+            customer = await db.customers.find_one({"_id": quote["customer_id"]})
+            quote["customer_name"] = customer.get("display_name", "Inconnu") if customer else "Inconnu"
+        else:
+            quote["customer_name"] = "Inconnu"
     
-    return [{"id": str(q["_id"]), **{k: v for k, v in q.items() if k != "_id"}} for q in quotes]
+    return [serialize_quote(q) for q in quotes]
+
 
 @router.get("/{quote_id}")
 async def get_quote(
@@ -167,30 +171,50 @@ async def get_quote(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quote not found")
     
     # Populate customer details
-    customer = await db.customers.find_one({"_id": quote["customer_id"]})
-    quote["customer"] = {"id": str(customer["_id"]), **{k: v for k, v in customer.items() if k != "_id"}} if customer else None
+    if quote.get("customer_id"):
+        customer = await db.customers.find_one({"_id": quote["customer_id"]})
+        if customer:
+            quote["customer_name"] = customer.get("display_name", "")
+            quote["customer"] = {
+                "id": str(customer["_id"]),
+                "display_name": customer.get("display_name"),
+                "email": customer.get("email"),
+                "phone": customer.get("phone"),
+                "address": customer.get("billing_address")
+            }
     
-    return {"id": str(quote["_id"]), **{k: v for k, v in quote.items() if k != "_id"}}
+    return serialize_quote(quote)
+
 
 @router.put("/{quote_id}")
 async def update_quote(
     quote_id: str,
     quote_update: QuoteUpdate,
+    request: Request,
     company_id: str = Query(...),
     current_user: dict = Depends(get_current_user)
 ):
     company = await get_current_company(current_user, company_id)
     
+    # Get existing quote for logging
+    existing = await db.quotes.find_one({"_id": ObjectId(quote_id)})
+    if not existing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quote not found")
+    
     update_data = {k: v for k, v in quote_update.dict(exclude_unset=True).items()}
     
     # Recalculate totals if items updated
-    if 'items' in update_data:
-        items = [item.dict() for item in update_data['items']]
+    if 'items' in update_data and update_data['items']:
+        items = [item.dict() if hasattr(item, 'dict') else item for item in update_data['items']]
         totals = calculate_document_totals(items)
         update_data.update(totals)
         update_data['items'] = items
     
-    update_data["updated_at"] = datetime.utcnow()
+    # Handle customer_id update
+    if 'customer_id' in update_data and update_data['customer_id']:
+        update_data['customer_id'] = ObjectId(update_data['customer_id'])
+    
+    update_data["updated_at"] = datetime.now(timezone.utc)
     
     result = await db.quotes.update_one(
         {"_id": ObjectId(quote_id), "company_id": ObjectId(company_id)},
@@ -200,15 +224,32 @@ async def update_quote(
     if result.matched_count == 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quote not found")
     
+    # Log action
+    await log_quote_action(
+        company_id, str(current_user["_id"]), current_user.get("full_name", ""),
+        "Modifier", existing.get("number", ""), request.client.host if request.client else None
+    )
+    
     return {"message": "Quote updated successfully"}
+
 
 @router.delete("/{quote_id}")
 async def delete_quote(
     quote_id: str,
+    request: Request,
     company_id: str = Query(...),
     current_user: dict = Depends(get_current_user)
 ):
     company = await get_current_company(current_user, company_id)
+    
+    # Get quote before deletion for logging
+    quote = await db.quotes.find_one({
+        "_id": ObjectId(quote_id),
+        "company_id": ObjectId(company_id)
+    })
+    
+    if not quote:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quote not found")
     
     result = await db.quotes.delete_one({
         "_id": ObjectId(quote_id),
@@ -218,7 +259,94 @@ async def delete_quote(
     if result.deleted_count == 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quote not found")
     
+    # Update customer stats if customer exists
+    if quote.get("customer_id"):
+        await db.customers.update_one(
+            {"_id": quote["customer_id"]},
+            {"$inc": {"quote_count": -1}}
+        )
+    
+    # Log action
+    await log_quote_action(
+        company_id, str(current_user["_id"]), current_user.get("full_name", ""),
+        "Supprimer", quote.get("number", ""), request.client.host if request.client else None
+    )
+    
     return {"message": "Quote deleted successfully"}
+
+
+@router.post("/{quote_id}/send")
+async def send_quote(
+    quote_id: str,
+    request: Request,
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Mark quote as sent."""
+    company = await get_current_company(current_user, company_id)
+    
+    quote = await db.quotes.find_one({
+        "_id": ObjectId(quote_id),
+        "company_id": ObjectId(company_id)
+    })
+    
+    if not quote:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quote not found")
+    
+    await db.quotes.update_one(
+        {"_id": ObjectId(quote_id)},
+        {
+            "$set": {
+                "status": "sent",
+                "sent_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    await log_quote_action(
+        company_id, str(current_user["_id"]), current_user.get("full_name", ""),
+        "Envoyer", quote.get("number", ""), request.client.host if request.client else None
+    )
+    
+    return {"message": "Quote marked as sent"}
+
+
+@router.post("/{quote_id}/accept")
+async def accept_quote(
+    quote_id: str,
+    request: Request,
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Mark quote as accepted."""
+    company = await get_current_company(current_user, company_id)
+    
+    quote = await db.quotes.find_one({
+        "_id": ObjectId(quote_id),
+        "company_id": ObjectId(company_id)
+    })
+    
+    if not quote:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quote not found")
+    
+    await db.quotes.update_one(
+        {"_id": ObjectId(quote_id)},
+        {
+            "$set": {
+                "status": "accepted",
+                "accepted_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    await log_quote_action(
+        company_id, str(current_user["_id"]), current_user.get("full_name", ""),
+        "Accepter", quote.get("number", ""), request.client.host if request.client else None
+    )
+    
+    return {"message": "Quote accepted"}
 
 @router.post("/{quote_id}/convert")
 async def convert_to_invoice(
