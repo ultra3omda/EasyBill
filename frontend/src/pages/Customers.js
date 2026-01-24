@@ -93,7 +93,7 @@ const Customers = () => {
             <h1 className="text-3xl font-bold text-gray-900">{t('nav.customers')}</h1>
             <p className="text-gray-500 mt-1">{filteredCustomers.length} clients au total</p>
           </div>
-          <Button className="bg-teal-600 hover:bg-teal-700 text-white" onClick={openCreateModal}>
+          <Button className="bg-violet-600 hover:bg-violet-700 text-white" onClick={openCreateModal}>
             <Plus className="w-4 h-4 mr-2" />
             Ajouter un client
           </Button>
@@ -143,7 +143,7 @@ const Customers = () => {
           </Card>
           <Card className="p-6">
             <p className="text-sm text-gray-600 mb-2">Factures Totales</p>
-            <p className="text-2xl font-bold text-teal-600">
+            <p className="text-2xl font-bold text-violet-600">
               {customers.reduce((acc, c) => acc + c.invoices, 0)}
             </p>
             <p className="text-xs text-gray-500 mt-1">Toutes périodes</p>
@@ -170,7 +170,7 @@ const Customers = () => {
                   <TableRow key={customer.id} className="hover:bg-gray-50">
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center text-teal-600 font-semibold">
+                        <div className="w-10 h-10 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 font-semibold">
                           {customer.display_name?.charAt(0)}
                         </div>
                         <div>

@@ -198,7 +198,7 @@ const CustomerFormModal = ({ open, onClose, onSuccess, customer = null }) => {
             <Button type="button" variant="outline" onClick={onClose}>
               Annuler
             </Button>
-            <Button type="submit" disabled={loading} className="bg-teal-600 hover:bg-teal-700">
+            <Button type="submit" disabled={loading} className="bg-violet-600 hover:bg-violet-700">
               {loading ? 'Enregistrement...' : 'Enregistrer'}
             </Button>
           </DialogFooter>
