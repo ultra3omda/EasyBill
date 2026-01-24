@@ -1200,10 +1200,12 @@ const Products = () => {
                           <Label>Entrepôt</Label>
                           <Select value={formData.warehouse_id} onValueChange={(v) => handleChange('warehouse_id', v)}>
                             <SelectTrigger className="mt-1">
-                              <SelectValue placeholder="Principal" />
+                              <SelectValue placeholder="Sélectionner un entrepôt" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="main">Entrepôt Principal</SelectItem>
+                              {warehouses.map(w => (
+                                <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
