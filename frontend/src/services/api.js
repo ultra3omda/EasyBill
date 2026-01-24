@@ -127,12 +127,12 @@ export const paymentsAPI = {
   delete: (companyId, id) => apiClient.delete(`/payments/${id}?company_id=${companyId}`),
 };
 
-// Projects API
+// Projects API - Note: trailing slash required to avoid 307 redirect losing auth header
 export const projectsAPI = {
-  create: (companyId, data) => apiClient.post(`/projects?company_id=${companyId}`, data),
+  create: (companyId, data) => apiClient.post(`/projects/?company_id=${companyId}`, data),
   list: (companyId, status = null) => {
     const params = status ? `?company_id=${companyId}&status=${status}` : `?company_id=${companyId}`;
-    return apiClient.get(`/projects${params}`);
+    return apiClient.get(`/projects/${params}`);
   },
   get: (companyId, id) => apiClient.get(`/projects/${id}?company_id=${companyId}`),
   update: (companyId, id, data) => apiClient.put(`/projects/${id}?company_id=${companyId}`, data),
