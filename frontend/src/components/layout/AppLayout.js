@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useCompany } from '../../hooks/useCompany';
 import {
   LayoutDashboard,
   Users,
@@ -51,10 +52,13 @@ import {
   BarChart3,
   Link2,
   Workflow,
-  DollarSign,
   TrendingUp,
   Activity,
-  PieChart
+  PieChart,
+  Check,
+  Clock,
+  Info,
+  CheckCircle
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -63,14 +67,63 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '../ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../ui/dialog';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { companiesAPI } from '../../services/api';
+import { toast } from '../../hooks/use-toast';
+
+// Legal Forms for Tunisia
+const LEGAL_FORMS = [
+  { value: 'SARL', label: 'SARL - Société à responsabilité limitée' },
+  { value: 'SA', label: 'SA - Société anonyme' },
+  { value: 'SUARL', label: 'SUARL - Société unipersonnelle' },
+  { value: 'SNC', label: 'SNC - Société en nom collectif' },
+  { value: 'SCS', label: 'SCS - Société en commandite simple' },
+  { value: 'GIE', label: 'GIE - Groupement d\'intérêt économique' },
+  { value: 'EI', label: 'Entreprise Individuelle' },
+  { value: 'OTHER', label: 'Autre' }
+];
 
 const AppLayout = ({ children }) => {
   const { user, logout } = useAuth();
   const { language, changeLanguage, t } = useLanguage();
+  const { companies, currentCompany, switchCompany, loadCompanies } = useCompany();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState({});
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [newCompanyModalOpen, setNewCompanyModalOpen] = useState(false);
+  const [creatingCompany, setCreatingCompany] = useState(false);
+  const [newCompanyData, setNewCompanyData] = useState({
+    name: '',
+    legal_form: 'SARL',
+    fiscal_id: '',
+    address: {
+      street: '',
+      city: '',
+      postal_code: '',
+      country: 'Tunisie'
+    }
+  });
+
+  // Mock notifications
+  const [notifications] = useState([
+    { id: 1, type: 'info', title: 'Bienvenue sur EasyBill', message: 'Commencez par créer votre première facture', time: 'Il y a 2h', read: false },
+    { id: 2, type: 'success', title: 'Paiement reçu', message: 'Le client ABC a payé la facture #001', time: 'Il y a 5h', read: false },
+    { id: 3, type: 'warning', title: 'Facture en retard', message: 'La facture #003 est en retard de 5 jours', time: 'Hier', read: true }
+  ]);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const handleLogout = () => {
     logout();
@@ -82,6 +135,39 @@ const AppLayout = ({ children }) => {
       ...prev,
       [menuKey]: !prev[menuKey]
     }));
+  };
+
+  const handleCompanySelect = (companyId) => {
+    switchCompany(companyId);
+    navigate('/dashboard');
+    toast({ title: 'Entreprise sélectionnée', description: 'Vous travaillez maintenant sur cette entreprise' });
+  };
+
+  const handleCreateCompany = async () => {
+    if (!newCompanyData.name.trim()) {
+      toast({ title: 'Erreur', description: 'Le nom de l\'entreprise est requis', variant: 'destructive' });
+      return;
+    }
+
+    setCreatingCompany(true);
+    try {
+      await companiesAPI.create(newCompanyData);
+      toast({ title: 'Succès', description: 'Entreprise créée avec succès' });
+      await loadCompanies();
+      setNewCompanyModalOpen(false);
+      setNewCompanyData({
+        name: '',
+        legal_form: 'SARL',
+        fiscal_id: '',
+        address: { street: '', city: '', postal_code: '', country: 'Tunisie' }
+      });
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error creating company:', error);
+      toast({ title: 'Erreur', description: 'Impossible de créer l\'entreprise', variant: 'destructive' });
+    } finally {
+      setCreatingCompany(false);
+    }
   };
 
   // Menu structure based on iberis.io with nested submenus
@@ -280,6 +366,14 @@ const AppLayout = ({ children }) => {
     );
   };
 
+  const getNotificationIcon = (type) => {
+    switch(type) {
+      case 'success': return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'warning': return <AlertCircle className="w-5 h-5 text-amber-500" />;
+      default: return <Info className="w-5 h-5 text-blue-500" />;
+    }
+  };
+
   return (
     <div className="h-screen flex overflow-hidden bg-gray-50">
       {/* Sidebar */}
@@ -308,15 +402,47 @@ const AppLayout = ({ children }) => {
           {/* Company Section */}
           <div className="p-3 border-b border-gray-200">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Mes Entreprises</p>
-            <div className="flex items-center gap-3 p-2 bg-violet-50 rounded-lg border-l-4 border-violet-600">
-              <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
-                <Building2 className="w-4 h-4 text-amber-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{user?.company || 'Mon Entreprise'}</p>
-              </div>
+            
+            {/* List of companies */}
+            <div className="space-y-1 max-h-32 overflow-y-auto">
+              {companies.map((company) => (
+                <button
+                  key={company.id}
+                  onClick={() => handleCompanySelect(company.id)}
+                  className={`flex items-center gap-3 w-full p-2 rounded-lg transition-colors ${
+                    currentCompany?.id === company.id
+                      ? 'bg-violet-50 border-l-4 border-violet-600'
+                      : 'hover:bg-gray-100'
+                  }`}
+                  data-testid={`company-${company.id}`}
+                >
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                    currentCompany?.id === company.id ? 'bg-amber-100' : 'bg-gray-100'
+                  }`}>
+                    <Building2 className={`w-4 h-4 ${
+                      currentCompany?.id === company.id ? 'text-amber-600' : 'text-gray-500'
+                    }`} />
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className={`text-sm font-medium truncate ${
+                      currentCompany?.id === company.id ? 'text-gray-900' : 'text-gray-700'
+                    }`}>
+                      {company.name}
+                    </p>
+                  </div>
+                  {currentCompany?.id === company.id && (
+                    <Check className="w-4 h-4 text-violet-600" />
+                  )}
+                </button>
+              ))}
             </div>
-            <button className="flex items-center gap-2 mt-2 w-full p-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">
+
+            {/* Add new company button */}
+            <button 
+              onClick={() => setNewCompanyModalOpen(true)}
+              className="flex items-center gap-2 mt-2 w-full p-2 text-sm text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"
+              data-testid="add-company-btn"
+            >
               <Plus className="w-4 h-4" />
               Nouvelle entreprise
             </button>
@@ -418,11 +544,65 @@ const AppLayout = ({ children }) => {
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="p-2 hover:bg-gray-100 rounded-lg relative">
-              <Bell className="w-5 h-5 text-gray-600" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+            {/* Notifications Dropdown */}
+            <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+              <DropdownMenuTrigger asChild>
+                <button 
+                  className="p-2 hover:bg-gray-100 rounded-lg relative"
+                  data-testid="notifications-btn"
+                >
+                  <Bell className="w-5 h-5 text-gray-600" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-medium">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80">
+                <div className="px-4 py-3 border-b">
+                  <h3 className="font-semibold text-gray-900">Notifications</h3>
+                  <p className="text-xs text-gray-500">{unreadCount} non lue{unreadCount > 1 ? 's' : ''}</p>
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500 text-sm">
+                      Aucune notification
+                    </div>
+                  ) : (
+                    notifications.map((notif) => (
+                      <div 
+                        key={notif.id} 
+                        className={`px-4 py-3 border-b hover:bg-gray-50 cursor-pointer ${
+                          !notif.read ? 'bg-blue-50/50' : ''
+                        }`}
+                      >
+                        <div className="flex gap-3">
+                          {getNotificationIcon(notif.type)}
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm ${!notif.read ? 'font-medium' : ''} text-gray-900`}>
+                              {notif.title}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-0.5">{notif.message}</p>
+                            <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {notif.time}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="p-2 border-t">
+                  <Button variant="ghost" className="w-full text-sm text-violet-600">
+                    Voir toutes les notifications
+                  </Button>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
+            {/* Language Selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center space-x-1 p-2 hover:bg-gray-100 rounded-lg">
@@ -445,18 +625,19 @@ const AppLayout = ({ children }) => {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-lg">
                   <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                    {user?.name?.charAt(0) || 'U'}
+                    {user?.name?.charAt(0) || user?.full_name?.charAt(0) || 'U'}
                   </div>
                   <ChevronDown className="w-4 h-4 text-gray-600" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <div className="px-2 py-1.5">
-                  <p className="text-sm font-semibold">{user?.name || 'Utilisateur'}</p>
+                  <p className="text-sm font-semibold">{user?.name || user?.full_name || 'Utilisateur'}</p>
                   <p className="text-xs text-gray-500">{user?.email}</p>
                 </div>
                 <DropdownMenuSeparator />
@@ -486,6 +667,110 @@ const AppLayout = ({ children }) => {
           onClick={() => setSidebarOpen(false)}
         />
       )}
+
+      {/* New Company Modal */}
+      <Dialog open={newCompanyModalOpen} onOpenChange={setNewCompanyModalOpen}>
+        <DialogContent className="max-w-lg" data-testid="new-company-modal">
+          <DialogHeader>
+            <DialogTitle>Créer une nouvelle entreprise</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Nom de l'entreprise *</Label>
+              <Input
+                value={newCompanyData.name}
+                onChange={(e) => setNewCompanyData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Ex: Ma Société SARL"
+                className="mt-1"
+                data-testid="new-company-name"
+              />
+            </div>
+
+            <div>
+              <Label>Forme juridique</Label>
+              <Select 
+                value={newCompanyData.legal_form} 
+                onValueChange={(v) => setNewCompanyData(prev => ({ ...prev, legal_form: v }))}
+              >
+                <SelectTrigger className="mt-1" data-testid="new-company-legal-form">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LEGAL_FORMS.map(lf => (
+                    <SelectItem key={lf.value} value={lf.value}>{lf.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Numéro d'identification fiscale</Label>
+              <Input
+                value={newCompanyData.fiscal_id}
+                onChange={(e) => setNewCompanyData(prev => ({ ...prev, fiscal_id: e.target.value }))}
+                placeholder="0000000/A/A/000"
+                className="mt-1"
+                data-testid="new-company-fiscal-id"
+              />
+            </div>
+
+            <div>
+              <Label>Adresse</Label>
+              <Input
+                value={newCompanyData.address.street}
+                onChange={(e) => setNewCompanyData(prev => ({ 
+                  ...prev, 
+                  address: { ...prev.address, street: e.target.value }
+                }))}
+                placeholder="Rue, avenue..."
+                className="mt-1"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Ville</Label>
+                <Input
+                  value={newCompanyData.address.city}
+                  onChange={(e) => setNewCompanyData(prev => ({ 
+                    ...prev, 
+                    address: { ...prev.address, city: e.target.value }
+                  }))}
+                  placeholder="Tunis"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>Code postal</Label>
+                <Input
+                  value={newCompanyData.address.postal_code}
+                  onChange={(e) => setNewCompanyData(prev => ({ 
+                    ...prev, 
+                    address: { ...prev.address, postal_code: e.target.value }
+                  }))}
+                  placeholder="1000"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewCompanyModalOpen(false)}>
+              Annuler
+            </Button>
+            <Button 
+              onClick={handleCreateCompany}
+              disabled={creatingCompany}
+              className="bg-violet-600 hover:bg-violet-700"
+              data-testid="create-company-btn"
+            >
+              {creatingCompany ? 'Création...' : 'Créer l\'entreprise'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
