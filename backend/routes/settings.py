@@ -1,8 +1,9 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Request
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timezone
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorClient
+from pydantic import BaseModel
 import os
 
 from utils.dependencies import get_current_user
@@ -13,6 +14,74 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ.get('DB_NAME', 'easybill')]
 
 router = APIRouter(prefix="/settings", tags=["settings"])
+
+
+# ==================== PYDANTIC MODELS ====================
+
+class TaxCreate(BaseModel):
+    name: str
+    rate: float
+    description: Optional[str] = None
+    is_default: bool = False
+
+class TaxUpdate(BaseModel):
+    name: Optional[str] = None
+    rate: Optional[float] = None
+    description: Optional[str] = None
+    is_default: Optional[bool] = None
+    is_active: Optional[bool] = None
+
+class AdditionalEntryCreate(BaseModel):
+    title: str
+    value: float
+    type: str = "fixed"
+    calculation: str = "after_tax"
+    sign: str = "positive"
+    usage: str = "everywhere"
+    country_condition: Optional[str] = None
+    currency_condition: Optional[str] = None
+
+class AdditionalEntryUpdate(BaseModel):
+    title: Optional[str] = None
+    value: Optional[float] = None
+    type: Optional[str] = None
+    calculation: Optional[str] = None
+    sign: Optional[str] = None
+    usage: Optional[str] = None
+    country_condition: Optional[str] = None
+    currency_condition: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class BankCreate(BaseModel):
+    name: str
+    rib: Optional[str] = None
+    iban: Optional[str] = None
+    bic: Optional[str] = None
+    is_default: bool = False
+
+class BankUpdate(BaseModel):
+    name: Optional[str] = None
+    rib: Optional[str] = None
+    iban: Optional[str] = None
+    bic: Optional[str] = None
+    is_default: Optional[bool] = None
+    is_active: Optional[bool] = None
+
+class PaymentMethodCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+class PurchaseCategoryCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+class WithholdingTypeCreate(BaseModel):
+    name: str
+    rate: float
+    description: Optional[str] = None
+
+
+# ==================== HELPER FUNCTIONS ====================
 
 
 # Helper function to log actions
