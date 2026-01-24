@@ -225,55 +225,101 @@ const Invoices = () => {
 
         {/* Invoices Table */}
         <Card>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('invoices.invoiceNumber')}</TableHead>
-                  <TableHead>{t('invoices.customer')}</TableHead>
-                  <TableHead>{t('invoices.date')}</TableHead>
-                  <TableHead>{t('invoices.dueDate')}</TableHead>
-                  <TableHead>{t('invoices.amount')}</TableHead>
-                  <TableHead>{t('invoices.status')}</TableHead>
-                  <TableHead className="text-right">{t('invoices.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredInvoices.map((invoice) => {
-                  const statusConfig = getStatusBadge(invoice.status);
-                  return (
-                    <TableRow key={invoice.id} className="hover:bg-gray-50">
-                      <TableCell className="font-medium">{invoice.number}</TableCell>
-                      <TableCell>{invoice.customer_name}</TableCell>
-                      <TableCell>{new Date(invoice.date).toLocaleDateString('fr-FR')}</TableCell>
-                      <TableCell>{new Date(invoice.due_date).toLocaleDateString('fr-FR')}</TableCell>
-                      <TableCell className="font-semibold">{invoice.total?.toFixed(2)} TND</TableCell>
-                      <TableCell>
-                        <Badge className={statusConfig.className}>
-                          {statusConfig.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(invoice.id)}>
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              {t('invoices.delete')}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+          {loading ? (
+            <div className="p-8 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600 mx-auto"></div>
+            </div>
+          ) : filteredInvoices.length === 0 ? (
+            <div className="p-8 text-center">
+              <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">Aucune facture trouvée</p>
+              <Button onClick={openCreateModal} className="mt-4 bg-violet-600 hover:bg-violet-700">
+                <Plus className="w-4 h-4 mr-2" />
+                Créer votre première facture
+              </Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('invoices.invoiceNumber')}</TableHead>
+                    <TableHead>{t('invoices.customer')}</TableHead>
+                    <TableHead>{t('invoices.date')}</TableHead>
+                    <TableHead>{t('invoices.dueDate')}</TableHead>
+                    <TableHead>{t('invoices.amount')}</TableHead>
+                    <TableHead>{t('invoices.status')}</TableHead>
+                    <TableHead className="text-right">{t('invoices.actions')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredInvoices.map((invoice) => {
+                    const statusConfig = getStatusBadge(invoice.status);
+                    return (
+                      <TableRow key={invoice.id} className="hover:bg-gray-50" data-testid={`invoice-row-${invoice.id}`}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-violet-100 rounded-lg flex items-center justify-center">
+                              <FileText className="w-5 h-5 text-violet-600" />
+                            </div>
+                            <span className="font-medium">{invoice.number}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{invoice.customer_name}</TableCell>
+                        <TableCell>{invoice.date ? new Date(invoice.date).toLocaleDateString('fr-FR') : '-'}</TableCell>
+                        <TableCell>{invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('fr-FR') : '-'}</TableCell>
+                        <TableCell>
+                          <div>
+                            <span className="font-semibold">{(invoice.total || 0).toFixed(2)} TND</span>
+                            {invoice.balance_due > 0 && invoice.balance_due < invoice.total && (
+                              <p className="text-xs text-orange-600">Reste: {invoice.balance_due.toFixed(2)} TND</p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={statusConfig.className}>
+                            {statusConfig.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" data-testid={`invoice-actions-${invoice.id}`}>
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openEditModal(invoice)}>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Modifier
+                              </DropdownMenuItem>
+                              {invoice.status === 'draft' && (
+                                <DropdownMenuItem onClick={() => handleSend(invoice.id)}>
+                                  <Send className="w-4 h-4 mr-2" />
+                                  Marquer envoyée
+                                </DropdownMenuItem>
+                              )}
+                              {invoice.status !== 'paid' && (
+                                <DropdownMenuItem onClick={() => handleMarkPaid(invoice.id)}>
+                                  <CheckCircle className="w-4 h-4 mr-2" />
+                                  Marquer payée
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(invoice.id)}>
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                {t('invoices.delete')}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </Card>
       </div>
 
@@ -281,6 +327,7 @@ const Invoices = () => {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSuccess={loadInvoices}
+        invoice={selectedInvoice}
       />
     </AppLayout>
   );
