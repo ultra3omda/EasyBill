@@ -156,8 +156,18 @@ const Products = () => {
   useEffect(() => {
     if (currentCompany?.id) {
       fetchProducts();
+      fetchWarehouses();
     }
   }, [currentCompany]);
+
+  const fetchWarehouses = async () => {
+    try {
+      const response = await warehousesAPI.list(currentCompany.id);
+      setWarehouses(response.data);
+    } catch (error) {
+      console.error('Error fetching warehouses:', error);
+    }
+  };
 
   const fetchProducts = async () => {
     try {
