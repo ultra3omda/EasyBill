@@ -1,12 +1,18 @@
-# Iberis.io Clone - Product Requirements Document
+# EasyBill - Product Requirements Document
 
 ## Original Problem Statement
-Clone complet du logiciel de facturation tunisien iberis.io avec:
+Clone complet du logiciel de facturation tunisien (inspiré d'iberis.io) rebaptisé **EasyBill** avec:
 - Toutes les fonctionnalités et modules
 - Support bilingue (Français/Anglais)
+- Thème violet/gold personnalisé
 - Authentification JWT et OAuth (Google/Facebook)
 - Données mock initiales
 - Flux d'onboarding obligatoire pour la création d'entreprise
+
+## Branding
+- **Nom**: EasyBill
+- **Couleurs principales**: Violet (#7c3aed) et Gold/Ambre (#f59e0b)
+- **Logo**: Icône "E" violet avec texte gradient
 
 ## User Personas
 - **Entrepreneurs tunisiens**: Petites et moyennes entreprises cherchant une solution de facturation
@@ -16,7 +22,13 @@ Clone complet du logiciel de facturation tunisien iberis.io avec:
 ## Core Requirements
 1. **Authentification**: JWT + OAuth (Google)
 2. **Onboarding obligatoire**: Création d'entreprise avant accès à l'application
-3. **Modules de gestion**: Factures, Devis, Clients, Fournisseurs, Produits, Achats, Dépenses, Trésorerie, Comptabilité, Projets, Rapports
+3. **Modules de gestion**: 
+   - Contacts (Clients, Fournisseurs)
+   - Stock (Articles, Entrepôts, Inventaire, Mouvements)
+   - Ventes (Bons de livraison, Bons de sortie, Devis, Factures, Factures d'avoir, Notes de débours, Paiements, Rappels, Points de vente)
+   - Achats (Bons de réception, Bons de commande, Factures fournisseur, Prestations de service, Paiements, Retenue à la source, Rappels)
+   - Comptabilité (Plan comptable, Écritures, Grands Livres, Balances, Journaux légaux, Exercices, États)
+   - Projets
 4. **Interface bilingue**: FR/EN avec sélecteur de langue
 5. **Devises et taxes**: Support multi-devises avec TVA tunisienne (19%)
 
@@ -37,27 +49,35 @@ Clone complet du logiciel de facturation tunisien iberis.io avec:
 
 ## What's Been Implemented (January 24, 2026)
 
-### Phase 1: Authentication & Onboarding ✅ COMPLETE
+### Phase 1: Rebranding - COMPLETE ✅
+- [x] Renommage de "Iberis" à "EasyBill" dans toute l'application
+- [x] Nouveau thème violet/gold (CSS variables)
+- [x] Logo EasyBill avec gradient violet/gold
+- [x] Nouveau menu hiérarchique avec sous-menus expansibles
+- [x] Routes pour tous les nouveaux modules (placeholder pages)
+
+### Phase 2: Authentication & Onboarding ✅ COMPLETE
 - [x] JWT-based authentication (login, register, logout)
 - [x] Protected routes with company verification
 - [x] Mandatory company onboarding flow
 - [x] Two-column onboarding form with pre-filled dropdowns
 - [x] API endpoints: `/api/auth/*`, `/api/companies/`
-- [x] ObjectId serialization bug fixed
-- [x] Trailing slash API consistency
-- [x] data-testid attributes for automated testing
 
-### Phase 2: Core Modules (SCAFFOLDED)
-- [x] Dashboard with mock KPIs
-- [x] Navigation sidebar with all modules
-- [x] Basic page layouts for all 11 modules
+### Phase 3: Core Modules (SCAFFOLDED)
+- [x] Dashboard with mock KPIs (violet/gold theme)
+- [x] Navigation sidebar with hierarchical menu
+- [x] Basic page layouts for all modules
+- [x] Placeholder pages for new modules
 
-### Phase 3: CRUD Operations (IN PROGRESS)
-- [ ] Full CRUD for Invoices
-- [ ] Full CRUD for Quotes
-- [ ] Full CRUD for Customers
-- [ ] Full CRUD for Suppliers
-- [ ] Full CRUD for Products
+## Menu Structure
+- Tableau de bord
+- Contacts → Clients, Fournisseurs
+- Stock → Articles, Entrepôts, Inventaire, Mouvements
+- Ventes → Bons de livraison, Bons de sortie, Devis, Factures, Factures d'avoir, Notes de débours, Paiements, Rappels, Points de vente
+- Achats → Bons de réception, Bons de commande, Factures fournisseur, Prestations de service, Paiements, Retenue à la source, Rappels d'achats
+- Comptabilité → Plan comptable, Écritures Comptables, Grands Livres, Balances, Journaux légaux, Exercices comptables, États comptables
+- Projets
+- Paramètres
 
 ## API Endpoints
 
@@ -90,7 +110,7 @@ Clone complet du logiciel de facturation tunisien iberis.io avec:
 - [ ] Quote creation and conversion to invoice
 - [ ] Supplier management
 - [ ] Purchase orders
-- [ ] Language selector (FR/EN toggle)
+- [ ] Language selector (FR/EN toggle) - functional but basic
 
 ### P2 - Medium Priority
 - [ ] PDF generation for documents
@@ -107,11 +127,13 @@ Clone complet du logiciel de facturation tunisien iberis.io avec:
 
 ## Known Issues
 - Dashboard shows mock data (not connected to real database)
-- Some modules are read-only (missing create/edit forms)
+- New modules use placeholder pages (not yet implemented)
 
 ## Files of Reference
 - `/app/contracts.md` - Full API and DB schema specification
 - `/app/backend/routes/companies.py` - Company API with serialization
+- `/app/frontend/src/components/layout/AppLayout.js` - New hierarchical menu
 - `/app/frontend/src/pages/CompanyOnboarding.js` - Onboarding form
-- `/app/frontend/src/App.js` - Protected routes logic
+- `/app/frontend/src/index.css` - Theme colors (violet/gold)
+- `/app/frontend/src/i18n/translations.js` - Translations (EasyBill)
 - `/app/test_reports/iteration_1.json` - Latest test results
