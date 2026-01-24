@@ -10,12 +10,14 @@ import { toast } from '../../hooks/use-toast';
 import { useCompany } from '../../hooks/useCompany';
 import { Plus, Trash2 } from 'lucide-react';
 
-const InvoiceFormModal = ({ open, onClose, onSuccess }) => {
+const InvoiceFormModal = ({ open, onClose, onSuccess, invoice }) => {
   const { currentCompany } = useCompany();
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
-  const [formData, setFormData] = useState({
+  const isEditing = !!invoice;
+  
+  const getInitialFormData = () => ({
     customer_id: '',
     date: new Date().toISOString().split('T')[0],
     due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -23,6 +25,8 @@ const InvoiceFormModal = ({ open, onClose, onSuccess }) => {
     items: [{ description: '', quantity: 1, unit_price: 0, tax_rate: 19, discount: 0, total: 0 }],
     notes: ''
   });
+  
+  const [formData, setFormData] = useState(getInitialFormData());
 
   useEffect(() => {
     if (open && currentCompany) {
