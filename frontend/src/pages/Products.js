@@ -47,7 +47,7 @@ import {
 } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
 import { useCompany } from '../hooks/useCompany';
-import { productsAPI } from '../services/api';
+import { productsAPI, warehousesAPI } from '../services/api';
 
 // Units
 const UNITS = [
