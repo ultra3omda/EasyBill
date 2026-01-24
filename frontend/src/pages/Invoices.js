@@ -170,11 +170,11 @@ const Invoices = () => {
                   const statusConfig = getStatusBadge(invoice.status);
                   return (
                     <TableRow key={invoice.id} className="hover:bg-gray-50">
-                      <TableCell className="font-medium">{invoice.id}</TableCell>
-                      <TableCell>{invoice.customer}</TableCell>
+                      <TableCell className="font-medium">{invoice.number}</TableCell>
+                      <TableCell>{invoice.customer_name}</TableCell>
                       <TableCell>{new Date(invoice.date).toLocaleDateString('fr-FR')}</TableCell>
-                      <TableCell>{new Date(invoice.dueDate).toLocaleDateString('fr-FR')}</TableCell>
-                      <TableCell className="font-semibold">{invoice.amount.toFixed(2)} TND</TableCell>
+                      <TableCell>{new Date(invoice.due_date).toLocaleDateString('fr-FR')}</TableCell>
+                      <TableCell className="font-semibold">{invoice.total?.toFixed(2)} TND</TableCell>
                       <TableCell>
                         <Badge className={statusConfig.className}>
                           {statusConfig.label}
