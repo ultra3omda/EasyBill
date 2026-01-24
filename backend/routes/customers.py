@@ -73,13 +73,15 @@ async def create_customer(
 ):
     company = await get_current_company(current_user, company_id)
     
-    # Generate display_name
-    if customer_data.company_name:
-        display_name = customer_data.company_name
-    elif customer_data.last_name:
-        display_name = f"{customer_data.last_name}, {customer_data.first_name}"
-    else:
-        display_name = customer_data.first_name
+    # Generate display_name if not provided
+    display_name = customer_data.display_name
+    if not display_name:
+        if customer_data.company_name:
+            display_name = customer_data.company_name
+        elif customer_data.last_name:
+            display_name = f"{customer_data.last_name}, {customer_data.first_name}"
+        else:
+            display_name = customer_data.first_name
     
     customer_dict = customer_data.dict(exclude_unset=True)
     customer_dict.update({
