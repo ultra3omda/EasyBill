@@ -144,6 +144,21 @@ const AppRoutes = () => {
           <Products />
         </ProtectedRoute>
       } />
+      <Route path="/purchase-orders" element={
+        <ProtectedRoute>
+          <PurchaseOrders />
+        </ProtectedRoute>
+      } />
+      <Route path="/supplier-invoices" element={
+        <ProtectedRoute>
+          <SupplierInvoices />
+        </ProtectedRoute>
+      } />
+      <Route path="/supplier-payments" element={
+        <ProtectedRoute>
+          <SupplierPayments />
+        </ProtectedRoute>
+      } />
       <Route path="/purchases" element={
         <ProtectedRoute>
           <Purchases />
