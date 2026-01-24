@@ -28,7 +28,7 @@ export const translations = {
     landing: {
       title: 'Le Logiciel de Facturation',
       titleHighlight: "qu'il vous faut",
-      subtitle: 'Iberis est spécialement conçue pour les dirigeants de TPME, avec une solution intuitive, pratique et parfaitement adaptée à leurs besoins.',
+      subtitle: 'EasyBill est spécialement conçue pour les dirigeants de TPME, avec une solution intuitive, pratique et parfaitement adaptée à leurs besoins.',
       requestDemo: 'Demander une Démo',
       watchDemo: 'Voir la Démo',
       createAccount: 'Créer un compte gratuit',
