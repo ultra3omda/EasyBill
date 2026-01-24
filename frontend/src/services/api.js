@@ -116,12 +116,12 @@ export const invoicesAPI = {
   delete: (companyId, id) => apiClient.delete(`/invoices/${id}?company_id=${companyId}`),
 };
 
-// Payments API
+// Payments API - Note: trailing slash required to avoid 307 redirect losing auth header
 export const paymentsAPI = {
-  create: (companyId, data) => apiClient.post(`/payments?company_id=${companyId}`, data),
+  create: (companyId, data) => apiClient.post(`/payments/?company_id=${companyId}`, data),
   list: (companyId, type = null) => {
     const params = type ? `?company_id=${companyId}&type=${type}` : `?company_id=${companyId}`;
-    return apiClient.get(`/payments${params}`);
+    return apiClient.get(`/payments/${params}`);
   },
   get: (companyId, id) => apiClient.get(`/payments/${id}?company_id=${companyId}`),
   delete: (companyId, id) => apiClient.delete(`/payments/${id}?company_id=${companyId}`),
