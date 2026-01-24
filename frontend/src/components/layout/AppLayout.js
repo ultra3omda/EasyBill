@@ -725,90 +725,207 @@ const AppLayout = ({ children }) => {
         />
       )}
 
-      {/* New Company Modal */}
+      {/* New Company Modal - Iberis Style */}
       <Dialog open={newCompanyModalOpen} onOpenChange={setNewCompanyModalOpen}>
-        <DialogContent className="max-w-lg" data-testid="new-company-modal">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="new-company-modal">
           <DialogHeader>
-            <DialogTitle>Créer une nouvelle entreprise</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">Créer une nouvelle entreprise</DialogTitle>
+            <p className="text-sm text-gray-500">Renseignez les informations de votre entreprise</p>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
-            <div>
-              <Label>Nom de l'entreprise *</Label>
-              <Input
-                value={newCompanyData.name}
-                onChange={(e) => setNewCompanyData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Ex: Ma Société SARL"
-                className="mt-1"
-                data-testid="new-company-name"
-              />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+            {/* Left Column - Logo & Accounting Info */}
+            <div className="space-y-6">
+              {/* Logo Upload */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-8 hover:border-violet-400 transition-colors cursor-pointer">
+                  <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center mb-3">
+                    <Building2 className="w-10 h-10 text-gray-400" />
+                  </div>
+                  <p className="text-sm text-gray-600 text-center">Glissez votre logo ici</p>
+                  <p className="text-xs text-gray-400 mt-1">ou cliquez pour parcourir</p>
+                  <Button variant="outline" size="sm" className="mt-3">
+                    Choisir un fichier
+                  </Button>
+                </div>
+              </div>
+
+              {/* Accounting Info */}
+              <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+                <div className="flex items-center gap-2 text-gray-700 font-medium">
+                  <Calculator className="w-4 h-4" />
+                  <span>Informations comptables</span>
+                </div>
+
+                <div>
+                  <Label>Numéro d'identification fiscale</Label>
+                  <Input
+                    value={newCompanyData.fiscal_id}
+                    onChange={(e) => setNewCompanyData(prev => ({ ...prev, fiscal_id: e.target.value }))}
+                    placeholder="0000000/A/A/000"
+                    className="mt-1"
+                    data-testid="new-company-fiscal-id"
+                  />
+                </div>
+
+                <div>
+                  <Label>Exercice</Label>
+                  <Select 
+                    value={newCompanyData.fiscal_year} 
+                    onValueChange={(v) => setNewCompanyData(prev => ({ ...prev, fiscal_year: v }))}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FISCAL_YEARS.map(fy => (
+                        <SelectItem key={fy.value} value={fy.value}>{fy.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Devise principale</Label>
+                  <Select 
+                    value={newCompanyData.currency} 
+                    onValueChange={(v) => setNewCompanyData(prev => ({ ...prev, currency: v }))}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CURRENCIES.map(c => (
+                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <Label>Forme juridique</Label>
-              <Select 
-                value={newCompanyData.legal_form} 
-                onValueChange={(v) => setNewCompanyData(prev => ({ ...prev, legal_form: v }))}
-              >
-                <SelectTrigger className="mt-1" data-testid="new-company-legal-form">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {LEGAL_FORMS.map(lf => (
-                    <SelectItem key={lf.value} value={lf.value}>{lf.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Right Column - General Info */}
+            <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+              <div className="flex items-center gap-2 text-gray-700 font-medium">
+                <Building2 className="w-4 h-4" />
+                <span>Informations générales</span>
+              </div>
 
-            <div>
-              <Label>Numéro d'identification fiscale</Label>
-              <Input
-                value={newCompanyData.fiscal_id}
-                onChange={(e) => setNewCompanyData(prev => ({ ...prev, fiscal_id: e.target.value }))}
-                placeholder="0000000/A/A/000"
-                className="mt-1"
-                data-testid="new-company-fiscal-id"
-              />
-            </div>
-
-            <div>
-              <Label>Adresse</Label>
-              <Input
-                value={newCompanyData.address.street}
-                onChange={(e) => setNewCompanyData(prev => ({ 
-                  ...prev, 
-                  address: { ...prev.address, street: e.target.value }
-                }))}
-                placeholder="Rue, avenue..."
-                className="mt-1"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Ville</Label>
+                <Label>Nom de l'entreprise *</Label>
                 <Input
-                  value={newCompanyData.address.city}
+                  value={newCompanyData.name}
+                  onChange={(e) => setNewCompanyData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Ex: Ma Société SARL"
+                  className="mt-1"
+                  data-testid="new-company-name"
+                />
+              </div>
+
+              <div>
+                <Label>Activité *</Label>
+                <Select 
+                  value={newCompanyData.activity} 
+                  onValueChange={(v) => setNewCompanyData(prev => ({ ...prev, activity: v }))}
+                >
+                  <SelectTrigger className="mt-1" data-testid="new-company-activity">
+                    <SelectValue placeholder="Sélectionner une activité" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ACTIVITIES.map(act => (
+                      <SelectItem key={act} value={act}>{act}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Téléphone</Label>
+                  <Input
+                    value={newCompanyData.phone}
+                    onChange={(e) => setNewCompanyData(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="+216 XX XXX XXX"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Site Internet</Label>
+                  <Input
+                    value={newCompanyData.website}
+                    onChange={(e) => setNewCompanyData(prev => ({ ...prev, website: e.target.value }))}
+                    placeholder="www.exemple.com"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label>Adresse</Label>
+                <Input
+                  value={newCompanyData.address.street}
                   onChange={(e) => setNewCompanyData(prev => ({ 
                     ...prev, 
-                    address: { ...prev.address, city: e.target.value }
+                    address: { ...prev.address, street: e.target.value }
                   }))}
-                  placeholder="Tunis"
+                  placeholder="Rue, avenue, boulevard..."
                   className="mt-1"
                 />
               </div>
-              <div>
-                <Label>Code postal</Label>
-                <Input
-                  value={newCompanyData.address.postal_code}
-                  onChange={(e) => setNewCompanyData(prev => ({ 
-                    ...prev, 
-                    address: { ...prev.address, postal_code: e.target.value }
-                  }))}
-                  placeholder="1000"
-                  className="mt-1"
-                />
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label>Gouvernorat</Label>
+                  <Select 
+                    value={newCompanyData.address.governorate} 
+                    onValueChange={(v) => setNewCompanyData(prev => ({ 
+                      ...prev, 
+                      address: { ...prev.address, governorate: v }
+                    }))}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Sélectionner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {GOVERNORATES.map(g => (
+                        <SelectItem key={g} value={g}>{g}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Code postal</Label>
+                  <Input
+                    value={newCompanyData.address.postal_code}
+                    onChange={(e) => setNewCompanyData(prev => ({ 
+                      ...prev, 
+                      address: { ...prev.address, postal_code: e.target.value }
+                    }))}
+                    placeholder="1000"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Pays</Label>
+                  <Select 
+                    value={newCompanyData.address.country} 
+                    onValueChange={(v) => setNewCompanyData(prev => ({ 
+                      ...prev, 
+                      address: { ...prev.address, country: v }
+                    }))}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Tunisie">Tunisie</SelectItem>
+                      <SelectItem value="France">France</SelectItem>
+                      <SelectItem value="Algérie">Algérie</SelectItem>
+                      <SelectItem value="Maroc">Maroc</SelectItem>
+                      <SelectItem value="Libye">Libye</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           </div>
