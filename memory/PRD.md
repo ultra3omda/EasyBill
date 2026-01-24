@@ -56,14 +56,20 @@ Clone complet du logiciel de facturation tunisien (inspiré d'iberis.io) rebapti
 - [x] Nouveau menu hiérarchique avec sous-menus expansibles
 - [x] Routes pour tous les nouveaux modules (placeholder pages)
 
-### Phase 2: Authentication & Onboarding ✅ COMPLETE
+### Phase 2: Menu Structure - COMPLETE ✅
+- [x] Menu Comptabilité avec sous-menus imbriqués (Balances, États comptables)
+- [x] Menu Paramètres complet (12 sous-items: Collaborateurs, Rôles, Taxes, Banques, etc.)
+- [x] 45+ routes configurées avec placeholder pages
+- [x] Navigation hiérarchique à 3 niveaux
+
+### Phase 3: Authentication & Onboarding ✅ COMPLETE
 - [x] JWT-based authentication (login, register, logout)
 - [x] Protected routes with company verification
 - [x] Mandatory company onboarding flow
 - [x] Two-column onboarding form with pre-filled dropdowns
 - [x] API endpoints: `/api/auth/*`, `/api/companies/`
 
-### Phase 3: Core Modules (SCAFFOLDED)
+### Phase 4: Core Modules (SCAFFOLDED)
 - [x] Dashboard with mock KPIs (violet/gold theme)
 - [x] Navigation sidebar with hierarchical menu
 - [x] Basic page layouts for all modules
