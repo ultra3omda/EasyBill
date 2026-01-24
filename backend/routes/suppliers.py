@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Query
+from fastapi import APIRouter, HTTPException, status, Depends, Query, Request
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 from typing import Optional
 from models.supplier import Supplier, SupplierCreate, SupplierUpdate
@@ -13,9 +13,51 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
+
+def serialize_supplier(s: dict) -> dict:
+    """Serialize supplier document for JSON response."""
+    return {
+        "id": str(s["_id"]),
+        "first_name": s.get("first_name"),
+        "last_name": s.get("last_name"),
+        "company_name": s.get("company_name"),
+        "display_name": s.get("display_name"),
+        "email": s.get("email"),
+        "phone": s.get("phone"),
+        "mobile": s.get("mobile"),
+        "fiscal_id": s.get("fiscal_id"),
+        "activity": s.get("activity"),
+        "currency": s.get("currency", "TND"),
+        "billing_address": s.get("billing_address"),
+        "notes": s.get("notes"),
+        "balance": s.get("balance", 0.0),
+        "total_purchased": s.get("total_purchased", 0.0),
+        "total_paid": s.get("total_paid", 0.0),
+        "purchases": s.get("purchase_order_count", 0),
+        "address": s.get("billing_address", {}).get("street", "") if s.get("billing_address") else "",
+        "created_at": s["created_at"].isoformat() if s.get("created_at") else None,
+        "updated_at": s["updated_at"].isoformat() if s.get("updated_at") else None
+    }
+
+
+async def log_supplier_action(company_id, user_id, user_name, action, element, ip_address=None):
+    """Log supplier action."""
+    await db.access_logs.insert_one({
+        "company_id": ObjectId(company_id),
+        "user_id": ObjectId(user_id),
+        "user_name": user_name,
+        "category": "Fournisseur",
+        "action": action,
+        "element": element,
+        "ip_address": ip_address,
+        "created_at": datetime.now(timezone.utc)
+    })
+
+
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_supplier(
     supplier_data: SupplierCreate,
+    request: Request,
     company_id: str = Query(...),
     current_user: dict = Depends(get_current_user)
 ):
@@ -37,13 +79,20 @@ async def create_supplier(
         "total_purchased": 0.0,
         "total_paid": 0.0,
         "purchase_order_count": 0,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
         "created_by": current_user["_id"]
     })
     
     result = await db.suppliers.insert_one(supplier_dict)
+    
+    await log_supplier_action(
+        company_id, str(current_user["_id"]), current_user.get("full_name", ""),
+        "Créer", display_name, request.client.host if request.client else None
+    )
+    
     return {"id": str(result.inserted_id), "message": "Supplier created successfully"}
+
 
 @router.get("/")
 async def list_suppliers(
@@ -63,7 +112,8 @@ async def list_suppliers(
         ]
     
     suppliers = await db.suppliers.find(query).to_list(1000)
-    return [{"id": str(s["_id"]), **{k: v for k, v in s.items() if k != "_id"}} for s in suppliers]
+    return [serialize_supplier(s) for s in suppliers]
+
 
 @router.get("/{supplier_id}")
 async def get_supplier(
@@ -81,19 +131,23 @@ async def get_supplier(
     if not supplier:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier not found")
     
-    return {"id": str(supplier["_id"]), **{k: v for k, v in supplier.items() if k != "_id"}}
+    return serialize_supplier(supplier)
+
 
 @router.put("/{supplier_id}")
 async def update_supplier(
     supplier_id: str,
     supplier_update: SupplierUpdate,
+    request: Request,
     company_id: str = Query(...),
     current_user: dict = Depends(get_current_user)
 ):
     company = await get_current_company(current_user, company_id)
     
     update_data = {k: v for k, v in supplier_update.dict(exclude_unset=True).items()}
-    update_data["updated_at"] = datetime.utcnow()
+    update_data["updated_at"] = datetime.now(timezone.utc)
+    
+    supplier = await db.suppliers.find_one({"_id": ObjectId(supplier_id)})
     
     result = await db.suppliers.update_one(
         {"_id": ObjectId(supplier_id), "company_id": ObjectId(company_id)},
@@ -103,15 +157,26 @@ async def update_supplier(
     if result.matched_count == 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier not found")
     
+    await log_supplier_action(
+        company_id, str(current_user["_id"]), current_user.get("full_name", ""),
+        "Mise à jour", supplier.get("display_name", ""), request.client.host if request.client else None
+    )
+    
     return {"message": "Supplier updated successfully"}
+
 
 @router.delete("/{supplier_id}")
 async def delete_supplier(
     supplier_id: str,
+    request: Request,
     company_id: str = Query(...),
     current_user: dict = Depends(get_current_user)
 ):
     company = await get_current_company(current_user, company_id)
+    
+    supplier = await db.suppliers.find_one({"_id": ObjectId(supplier_id)})
+    if not supplier:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier not found")
     
     result = await db.suppliers.delete_one({
         "_id": ObjectId(supplier_id),
@@ -120,5 +185,10 @@ async def delete_supplier(
     
     if result.deleted_count == 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier not found")
+    
+    await log_supplier_action(
+        company_id, str(current_user["_id"]), current_user.get("full_name", ""),
+        "Supprimer", supplier.get("display_name", ""), request.client.host if request.client else None
+    )
     
     return {"message": "Supplier deleted successfully"}
