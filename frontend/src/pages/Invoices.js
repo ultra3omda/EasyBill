@@ -142,7 +142,7 @@ const Invoices = () => {
             <h1 className="text-3xl font-bold text-gray-900">{t('invoices.title')}</h1>
             <p className="text-gray-500 mt-1">{filteredInvoices.length} factures au total</p>
           </div>
-          <Button className="bg-teal-600 hover:bg-teal-700 text-white" onClick={openCreateModal}>
+          <Button className="bg-violet-600 hover:bg-violet-700 text-white" onClick={openCreateModal} data-testid="create-invoice-btn">
             <Plus className="w-4 h-4 mr-2" />
             {t('invoices.createInvoice')}
           </Button>
