@@ -1,18 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/layout/AppLayout';
+import SupplierFormModal from '../components/modals/SupplierFormModal';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '../components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -27,7 +19,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
-import { Plus, Search, Filter, Download, Eye, Edit, Trash2, MoreVertical, Mail, Phone, Truck, Users } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+import { Plus, Search, Eye, Edit, Trash2, MoreVertical, Truck, Users, FileText, TrendingDown, UserPlus, ChevronDown } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
 import { useCompany } from '../hooks/useCompany';
 import { suppliersAPI } from '../services/api';
@@ -39,24 +38,7 @@ const Suppliers = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
-  const [formLoading, setFormLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
-    company_name: '',
-    email: '',
-    phone: '',
-    mobile: '',
-    fiscal_id: '',
-    activity: '',
-    billing_address: {
-      street: '',
-      city: '',
-      postal_code: '',
-      country: 'Tunisie'
-    },
-    notes: ''
-  });
+  const [itemsPerPage, setItemsPerPage] = useState(25);
 
   useEffect(() => {
     if (currentCompany?.id) {
@@ -79,73 +61,8 @@ const Suppliers = () => {
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      first_name: '',
-      last_name: '',
-      company_name: '',
-      email: '',
-      phone: '',
-      mobile: '',
-      fiscal_id: '',
-      activity: '',
-      billing_address: { street: '', city: '', postal_code: '', country: 'Tunisie' },
-      notes: ''
-    });
-  };
-
-  const handleChange = (field, value) => {
-    if (field.includes('.')) {
-      const [parent, child] = field.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: { ...prev[parent], [child]: value }
-      }));
-    } else {
-      setFormData(prev => ({ ...prev, [field]: value }));
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setFormLoading(true);
-    try {
-      if (editingSupplier) {
-        await suppliersAPI.update(currentCompany.id, editingSupplier.id, formData);
-        toast({ title: 'Succès', description: 'Fournisseur modifié avec succès' });
-      } else {
-        await suppliersAPI.create(currentCompany.id, formData);
-        toast({ title: 'Succès', description: 'Fournisseur créé avec succès' });
-      }
-      setIsDialogOpen(false);
-      setEditingSupplier(null);
-      resetForm();
-      fetchSuppliers();
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: error.response?.data?.detail || 'Erreur lors de l\'enregistrement',
-        variant: 'destructive'
-      });
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
   const handleEdit = (supplier) => {
     setEditingSupplier(supplier);
-    setFormData({
-      first_name: supplier.first_name || '',
-      last_name: supplier.last_name || '',
-      company_name: supplier.company_name || '',
-      email: supplier.email || '',
-      phone: supplier.phone || '',
-      mobile: supplier.mobile || '',
-      fiscal_id: supplier.fiscal_id || '',
-      activity: supplier.activity || '',
-      billing_address: supplier.billing_address || { street: '', city: '', postal_code: '', country: 'Tunisie' },
-      notes: supplier.notes || ''
-    });
     setIsDialogOpen(true);
   };
 
@@ -167,7 +84,6 @@ const Suppliers = () => {
 
   const openNewDialog = () => {
     setEditingSupplier(null);
-    resetForm();
     setIsDialogOpen(true);
   };
 
@@ -177,102 +93,142 @@ const Suppliers = () => {
     (supplier.company_name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Calculate KPIs
+  const totalSuppliers = suppliers.length;
+  const totalDebt = suppliers.reduce((acc, s) => acc + (s.balance || 0), 0);
+  const totalPurchases = suppliers.reduce((acc, s) => acc + (s.total_purchases || 0), 0);
+  const newThisMonth = suppliers.filter(s => {
+    if (!s.created_at) return false;
+    const createdDate = new Date(s.created_at);
+    const now = new Date();
+    return createdDate.getMonth() === now.getMonth() && createdDate.getFullYear() === now.getFullYear();
+  }).length;
+
   return (
     <AppLayout>
       <div className="space-y-6" data-testid="suppliers-page">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Fournisseurs</h1>
-            <p className="text-gray-500 mt-1">{filteredSuppliers.length} fournisseurs au total</p>
+            <h1 className="text-2xl font-semibold text-gray-900">Synthèse des fournisseurs</h1>
+            <p className="text-gray-500 text-sm">Fournisseurs • {currentCompany?.name || 'Mycompany'}</p>
           </div>
-          <Button 
-            onClick={openNewDialog}
-            className="bg-violet-600 hover:bg-violet-700 text-white"
-            data-testid="add-supplier-button"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Ajouter un fournisseur
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" className="text-gray-600">
+              Action
+              <ChevronDown className="w-4 h-4 ml-2" />
+            </Button>
+            <Button variant="outline" className="text-gray-600">
+              Importer
+            </Button>
+            <Button 
+              onClick={openNewDialog}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              data-testid="add-supplier-btn"
+            >
+              Nouveau fournisseur
+            </Button>
+          </div>
         </div>
 
-        {/* Filters */}
-        <Card className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        {/* KPI Cards - Iberis Style */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Fournisseurs */}
+          <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-0 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="p-3 bg-blue-500 rounded-lg">
+                <Users className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-600 font-medium">Fournisseurs</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-gray-900">{totalSuppliers}</span>
+                  <span className="text-sm text-green-600">(+0%)</span>
+                </div>
+                <p className="text-xs text-blue-600 mt-1">vs mois dernier</p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Impayé (Dettes) */}
+          <Card className="p-4 bg-gradient-to-br from-amber-50 to-amber-100 border-0 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="p-3 bg-amber-500 rounded-lg">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-600 font-medium">Impayé</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-bold text-gray-900">{totalDebt.toFixed(3)}</span>
+                  <span className="text-sm font-medium text-gray-600">TND</span>
+                </div>
+                <p className="text-xs text-amber-600 mt-1">{suppliers.filter(s => (s.balance || 0) > 0).length} fournisseurs</p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Factures fournisseur */}
+          <Card className="p-4 bg-gradient-to-br from-red-50 to-red-100 border-0 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="p-3 bg-red-500 rounded-lg">
+                <TrendingDown className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-600 font-medium">Factures fournisseur</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-bold text-gray-900">{totalPurchases.toFixed(3)}</span>
+                  <span className="text-sm font-medium text-gray-600">TND</span>
+                </div>
+                <p className="text-xs text-red-600 mt-1">{new Date().getFullYear()}</p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Nouveaux ce mois */}
+          <Card className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 border-0 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="p-3 bg-purple-500 rounded-lg">
+                <UserPlus className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-600 font-medium">Nouveaux ce mois</p>
+                <span className="text-2xl font-bold text-gray-900">{newThisMonth}</span>
+                <p className="text-xs text-purple-600 mt-1">vs mois dernier</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Filters & Table */}
+        <Card className="p-0 overflow-hidden">
+          {/* Table Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between p-4 border-b bg-gray-50">
+            <Button variant="outline" className="flex items-center gap-2 text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100">
+              Affichage des colonnes
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+            <div className="flex items-center gap-4 mt-4 md:mt-0">
+              <span className="text-sm text-gray-500">Rechercher:</span>
               <Input
-                placeholder="Rechercher..."
+                placeholder=""
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="w-48"
                 data-testid="search-suppliers"
               />
             </div>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Filter className="w-4 h-4" />
-              Filtrer
-            </Button>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Download className="w-4 h-4" />
-              Exporter
-            </Button>
           </div>
-        </Card>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-violet-100 rounded-lg">
-                <Users className="w-5 h-5 text-violet-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Total Fournisseurs</p>
-                <p className="text-2xl font-bold text-gray-900">{suppliers.length}</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Truck className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Actifs</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {suppliers.filter(s => s.purchases > 0).length}
-                </p>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-6">
-            <p className="text-sm text-gray-600 mb-2">Dettes Totales</p>
-            <p className="text-2xl font-bold text-red-600">
-              {suppliers.reduce((acc, s) => acc + (s.balance || 0), 0).toFixed(2)} TND
-            </p>
-            <p className="text-xs text-gray-500 mt-1">À payer</p>
-          </Card>
-          <Card className="p-6">
-            <p className="text-sm text-gray-600 mb-2">Achats Totaux</p>
-            <p className="text-2xl font-bold text-violet-600">
-              {suppliers.reduce((acc, s) => acc + (s.purchases || 0), 0)}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">Commandes</p>
-          </Card>
-        </div>
-
-        {/* Suppliers Table */}
-        <Card>
+          {/* Table */}
           {loading ? (
             <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600 mx-auto"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600 mx-auto"></div>
             </div>
           ) : filteredSuppliers.length === 0 ? (
-            <div className="p-8 text-center">
+            <div className="p-12 text-center">
               <Truck className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">Aucun fournisseur trouvé</p>
-              <Button onClick={openNewDialog} className="mt-4 bg-violet-600 hover:bg-violet-700">
+              <p className="text-gray-500 mb-2">Aucune donnée disponible dans le tableau</p>
+              <Button onClick={openNewDialog} className="mt-4 bg-amber-600 hover:bg-amber-700">
                 <Plus className="w-4 h-4 mr-2" />
                 Ajouter votre premier fournisseur
               </Button>
@@ -281,56 +237,60 @@ const Suppliers = () => {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Fournisseur</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Téléphone</TableHead>
-                    <TableHead>Achats</TableHead>
-                    <TableHead>Solde à payer</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="w-12">
+                      <input type="checkbox" className="rounded border-gray-300" />
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">REF</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">NOM AFFICHÉ</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">TYPE</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">ENTREPRISE</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">EMAIL</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">TÉLÉPHONE</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">
+                      SOLDE <ChevronDown className="w-3 h-3 inline" />
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">CHIFFRE D'AFFAIRE</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase text-right">ACTION</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredSuppliers.map((supplier) => (
                     <TableRow key={supplier.id} className="hover:bg-gray-50" data-testid={`supplier-row-${supplier.id}`}>
                       <TableCell>
+                        <input type="checkbox" className="rounded border-gray-300" />
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600">{supplier.reference || '-'}</TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 font-semibold">
+                          <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 font-semibold text-sm">
                             {(supplier.display_name || 'F').charAt(0)}
                           </div>
-                          <div>
-                            <p className="font-medium text-gray-900">{supplier.display_name}</p>
-                            {supplier.company_name && (
-                              <p className="text-sm text-gray-500">{supplier.company_name}</p>
-                            )}
-                          </div>
+                          <span className="font-medium text-gray-900">{supplier.display_name}</span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        {supplier.email ? (
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <Mail className="w-4 h-4" />
-                            {supplier.email}
-                          </div>
-                        ) : '-'}
+                        <Badge 
+                          variant="outline" 
+                          className={supplier.supplier_type === 'entreprise' 
+                            ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                            : 'bg-blue-50 text-blue-700 border-blue-200'}
+                        >
+                          {supplier.supplier_type === 'entreprise' ? 'Entreprise' : 'Particulier'}
+                        </Badge>
                       </TableCell>
-                      <TableCell>
-                        {supplier.phone ? (
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <Phone className="w-4 h-4" />
-                            {supplier.phone}
-                          </div>
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{supplier.purchases || 0} achats</Badge>
-                      </TableCell>
+                      <TableCell className="text-sm text-gray-600">{supplier.company_name || '-'}</TableCell>
+                      <TableCell className="text-sm text-gray-600">{supplier.email || '-'}</TableCell>
+                      <TableCell className="text-sm text-gray-600">{supplier.phone || '-'}</TableCell>
                       <TableCell>
                         <span className={`font-semibold ${
                           (supplier.balance || 0) > 0 ? 'text-red-600' : 'text-green-600'
                         }`}>
-                          {(supplier.balance || 0).toFixed(2)} TND
+                          {(supplier.balance || 0).toFixed(3)}
                         </span>
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-900 font-medium">
+                        {(supplier.total_purchases || 0).toFixed(3)} TND
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -341,8 +301,8 @@ const Suppliers = () => {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => handleEdit(supplier)}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              Modifier
+                              <Eye className="w-4 h-4 mr-2" />
+                              Voir / Modifier
                             </DropdownMenuItem>
                             <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(supplier.id)}>
                               <Trash2 className="w-4 h-4 mr-2" />
@@ -357,128 +317,43 @@ const Suppliers = () => {
               </Table>
             </div>
           )}
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between p-4 border-t bg-gray-50">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Afficher</span>
+              <Select value={String(itemsPerPage)} onValueChange={(v) => setItemsPerPage(Number(v))}>
+                <SelectTrigger className="w-20 h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-gray-600">éléments</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">
+                Affichage de l'élément {filteredSuppliers.length > 0 ? 1 : 0} à {Math.min(itemsPerPage, filteredSuppliers.length)} sur {filteredSuppliers.length} élément{filteredSuppliers.length > 1 ? 's' : ''}
+              </span>
+              <div className="flex gap-1">
+                <Button variant="outline" size="sm" disabled>Précédent</Button>
+                <Button variant="outline" size="sm" disabled>Suivant</Button>
+              </div>
+            </div>
+          </div>
         </Card>
-
-        {/* Form Dialog */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingSupplier ? 'Modifier le fournisseur' : 'Nouveau fournisseur'}</DialogTitle>
-            </DialogHeader>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Prénom *</Label>
-                  <Input
-                    value={formData.first_name}
-                    onChange={(e) => handleChange('first_name', e.target.value)}
-                    required
-                    data-testid="supplier-first-name"
-                  />
-                </div>
-                <div>
-                  <Label>Nom</Label>
-                  <Input
-                    value={formData.last_name}
-                    onChange={(e) => handleChange('last_name', e.target.value)}
-                    data-testid="supplier-last-name"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label>Entreprise</Label>
-                <Input
-                  value={formData.company_name}
-                  onChange={(e) => handleChange('company_name', e.target.value)}
-                  data-testid="supplier-company-name"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Email</Label>
-                  <Input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleChange('email', e.target.value)}
-                    data-testid="supplier-email"
-                  />
-                </div>
-                <div>
-                  <Label>Téléphone</Label>
-                  <Input
-                    value={formData.phone}
-                    onChange={(e) => handleChange('phone', e.target.value)}
-                    data-testid="supplier-phone"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Matricule fiscal</Label>
-                  <Input
-                    value={formData.fiscal_id}
-                    onChange={(e) => handleChange('fiscal_id', e.target.value)}
-                    data-testid="supplier-fiscal-id"
-                  />
-                </div>
-                <div>
-                  <Label>Activité</Label>
-                  <Input
-                    value={formData.activity}
-                    onChange={(e) => handleChange('activity', e.target.value)}
-                    data-testid="supplier-activity"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-2">Adresse</h3>
-                <div className="space-y-2">
-                  <Input
-                    placeholder="Rue"
-                    value={formData.billing_address.street}
-                    onChange={(e) => handleChange('billing_address.street', e.target.value)}
-                  />
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input
-                      placeholder="Ville"
-                      value={formData.billing_address.city}
-                      onChange={(e) => handleChange('billing_address.city', e.target.value)}
-                    />
-                    <Input
-                      placeholder="Code postal"
-                      value={formData.billing_address.postal_code}
-                      onChange={(e) => handleChange('billing_address.postal_code', e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <Label>Notes</Label>
-                <Textarea
-                  value={formData.notes}
-                  onChange={(e) => handleChange('notes', e.target.value)}
-                  rows={3}
-                />
-              </div>
-
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Annuler
-                </Button>
-                <Button type="submit" disabled={formLoading} className="bg-violet-600 hover:bg-violet-700">
-                  {formLoading ? 'Enregistrement...' : 'Enregistrer'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
       </div>
+
+      <SupplierFormModal
+        open={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        onSuccess={fetchSuppliers}
+        supplier={editingSupplier}
+      />
     </AppLayout>
   );
 };
