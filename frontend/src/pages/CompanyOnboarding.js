@@ -155,7 +155,6 @@ const CompanyOnboarding = () => {
         description: 'Votre entreprise a été créée avec succès',
       });
       navigate('/dashboard');
-      window.location.reload();
     } catch (error) {
       console.error('Error creating company:', error);
       toast({
