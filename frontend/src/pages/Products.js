@@ -371,23 +371,70 @@ const Products = () => {
     }
   };
 
-  const downloadTemplate = () => {
-    const token = localStorage.getItem('token');
-    const url = productsAPI.downloadTemplate(currentCompany.id);
-    window.open(`${url}&token=${token}`, '_blank');
+  const downloadTemplate = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(productsAPI.downloadTemplate(currentCompany.id), {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Erreur lors du téléchargement');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'modele_import_articles.csv';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch (error) {
+      toast({ title: 'Erreur', description: 'Impossible de télécharger le modèle', variant: 'destructive' });
+    }
   };
 
   // Export handlers
-  const exportPriceList = () => {
-    const token = localStorage.getItem('token');
-    const url = productsAPI.exportPrices(currentCompany.id);
-    window.open(`${url}&token=${token}`, '_blank');
+  const exportPriceList = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(productsAPI.exportPrices(currentCompany.id), {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Erreur lors de l\'export');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'liste_prix.csv';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      toast({ title: 'Succès', description: 'Liste des prix exportée' });
+    } catch (error) {
+      toast({ title: 'Erreur', description: 'Impossible d\'exporter la liste des prix', variant: 'destructive' });
+    }
   };
 
-  const exportStockState = () => {
-    const token = localStorage.getItem('token');
-    const url = productsAPI.exportStock(currentCompany.id);
-    window.open(`${url}&token=${token}`, '_blank');
+  const exportStockState = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(productsAPI.exportStock(currentCompany.id), {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Erreur lors de l\'export');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'etat_stock.csv';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      toast({ title: 'Succès', description: 'État du stock exporté' });
+    } catch (error) {
+      toast({ title: 'Erreur', description: 'Impossible d\'exporter l\'état du stock', variant: 'destructive' });
+    }
   };
 
   // Bulk delete
