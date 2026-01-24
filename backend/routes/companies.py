@@ -130,6 +130,33 @@ async def create_default_purchase_categories(company_id: ObjectId):
         await db.purchase_categories.insert_one(category_doc)
 
 
+async def create_default_warehouse(company_id: ObjectId, user_id: ObjectId, user_name: str):
+    """Create default principal warehouse for a new company."""
+    now = datetime.now(timezone.utc)
+    warehouse_doc = {
+        "reference": "ENT-001",
+        "name": "Entrepôt Principal",
+        "address": "",
+        "is_active": True,
+        "is_principal": True,
+        "company_id": company_id,
+        "created_at": now,
+        "updated_at": now
+    }
+    await db.warehouses.insert_one(warehouse_doc)
+    
+    # Log action
+    await db.access_logs.insert_one({
+        "company_id": company_id,
+        "user_id": user_id,
+        "user_name": user_name,
+        "category": "Entrepôt",
+        "action": "Créer",
+        "element": "Entrepôt Principal",
+        "created_at": now
+    })
+
+
 async def create_default_chart_of_accounts(company_id: ObjectId, user_id: ObjectId, user_name: str):
     """Create default Tunisian chart of accounts for a new company."""
     now = datetime.now(timezone.utc)
