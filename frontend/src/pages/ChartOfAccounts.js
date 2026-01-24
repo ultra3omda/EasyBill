@@ -35,11 +35,13 @@ import {
   RefreshCw,
   Edit,
   Trash2,
+  Download,
 } from 'lucide-react';
 
 const ChartOfAccounts = () => {
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [expandedNodes, setExpandedNodes] = useState(new Set(['1', '2', '3', '4', '5', '6', '7']));
