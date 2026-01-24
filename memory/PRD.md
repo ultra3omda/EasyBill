@@ -69,15 +69,34 @@ Clone complet du logiciel de facturation tunisien (inspiré d'iberis.io) rebapti
 - [x] Basic page layouts for all modules
 - [x] Placeholder pages for new modules
 
-## Menu Structure
+## Menu Structure (Complete - January 24, 2026)
 - Tableau de bord
 - Contacts → Clients, Fournisseurs
 - Stock → Articles, Entrepôts, Inventaire, Mouvements
 - Ventes → Bons de livraison, Bons de sortie, Devis, Factures, Factures d'avoir, Notes de débours, Paiements, Rappels, Points de vente
 - Achats → Bons de réception, Bons de commande, Factures fournisseur, Prestations de service, Paiements, Retenue à la source, Rappels d'achats
-- Comptabilité → Plan comptable, Écritures Comptables, Grands Livres, Balances, Journaux légaux, Exercices comptables, États comptables
+- Comptabilité →
+  - Plan comptable
+  - Écritures Comptables
+  - Grands Livres
+  - **Balances** → Balance tiers, Balance générale
+  - Journaux légaux
+  - Exercices comptables
+  - **États comptables** → Bilan, État de résultat, État des flux de trésorerie, États financiers
 - Projets
-- Paramètres
+- **Paramètres** →
+  - Collaborateurs
+  - Rôles & permissions
+  - Entrées supplémentaires
+  - Taxes
+  - Banques
+  - Personnalisation
+  - Calendrier
+  - Journal d'accès
+  - Mes Fichiers
+  - Mes Rapports
+  - Intégrations
+  - Workflows
 
 ## API Endpoints
 
