@@ -51,6 +51,7 @@ app.include_router(supplier_invoices.router)
 app.include_router(supplier_payments.router)
 app.include_router(warehouses.router)
 app.include_router(stock_movements.router)
+app.include_router(accounting.router)
 
 # Root endpoint
 @app.get("/")
