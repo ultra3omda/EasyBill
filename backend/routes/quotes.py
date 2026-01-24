@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Query
+from fastapi import APIRouter, HTTPException, status, Depends, Query, Request
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 from typing import Optional
 from models.quote import Quote, QuoteCreate, QuoteUpdate
@@ -14,18 +14,65 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
+
+def serialize_quote(q: dict) -> dict:
+    """Serialize quote document for JSON response."""
+    return {
+        "id": str(q["_id"]),
+        "company_id": str(q.get("company_id")) if q.get("company_id") else None,
+        "customer_id": str(q.get("customer_id")) if q.get("customer_id") else None,
+        "customer_name": q.get("customer_name", ""),
+        "number": q.get("number"),
+        "date": q["date"].isoformat() if isinstance(q.get("date"), datetime) else q.get("date"),
+        "valid_until": q["valid_until"].isoformat() if isinstance(q.get("valid_until"), datetime) else q.get("valid_until"),
+        "subject": q.get("subject"),
+        "items": q.get("items", []),
+        "subtotal": q.get("subtotal", 0),
+        "total_tax": q.get("total_tax", 0),
+        "total_discount": q.get("total_discount", 0),
+        "total": q.get("total", 0),
+        "status": q.get("status", "draft"),
+        "converted_to_invoice": q.get("converted_to_invoice", False),
+        "invoice_id": str(q.get("invoice_id")) if q.get("invoice_id") else None,
+        "notes": q.get("notes"),
+        "payment_terms": q.get("payment_terms"),
+        "created_at": q["created_at"].isoformat() if isinstance(q.get("created_at"), datetime) else q.get("created_at"),
+        "updated_at": q["updated_at"].isoformat() if isinstance(q.get("updated_at"), datetime) else q.get("updated_at")
+    }
+
+
+async def log_quote_action(company_id, user_id, user_name, action, element, ip_address=None):
+    """Log quote action."""
+    await db.access_logs.insert_one({
+        "company_id": ObjectId(company_id),
+        "user_id": ObjectId(user_id),
+        "user_name": user_name,
+        "category": "Devis",
+        "action": action,
+        "element": element,
+        "ip_address": ip_address,
+        "created_at": datetime.now(timezone.utc)
+    })
+
+
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_quote(
     quote_data: QuoteCreate,
+    request: Request,
     company_id: str = Query(...),
     current_user: dict = Depends(get_current_user)
 ):
     company = await get_current_company(current_user, company_id)
     
+    # Get numbering settings with defaults
+    numbering = company.get("numbering", {})
+    quote_prefix = numbering.get("quote_prefix", "DEV")
+    quote_next = numbering.get("quote_next", 1)
+    
     # Generate quote number
     quote_number = generate_document_number(
-        company["numbering"]["quote_prefix"],
-        company["numbering"]["quote_next"],
+        quote_prefix,
+        quote_next,
         datetime.now().year
     )
     
@@ -34,6 +81,13 @@ async def create_quote(
     totals = calculate_document_totals(items)
     
     quote_dict = quote_data.dict(exclude={'items'})
+    
+    # Convert date strings to datetime if needed
+    if isinstance(quote_dict.get('date'), str):
+        quote_dict['date'] = datetime.fromisoformat(quote_dict['date'].replace('Z', '+00:00'))
+    if isinstance(quote_dict.get('valid_until'), str):
+        quote_dict['valid_until'] = datetime.fromisoformat(quote_dict['valid_until'].replace('Z', '+00:00'))
+    
     quote_dict.update({
         "company_id": ObjectId(company_id),
         "customer_id": ObjectId(quote_data.customer_id),
@@ -42,8 +96,8 @@ async def create_quote(
         **totals,
         "status": "draft",
         "converted_to_invoice": False,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
         "created_by": current_user["_id"]
     })
     
@@ -59,6 +113,12 @@ async def create_quote(
     await db.customers.update_one(
         {"_id": ObjectId(quote_data.customer_id)},
         {"$inc": {"quote_count": 1}}
+    )
+    
+    # Log action
+    await log_quote_action(
+        company_id, str(current_user["_id"]), current_user.get("full_name", ""),
+        "Créer", quote_number, request.client.host if request.client else None
     )
     
     return {"id": str(result.inserted_id), "number": quote_number, "message": "Quote created successfully"}
