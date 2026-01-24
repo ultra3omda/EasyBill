@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 
 # Import all routes
-from routes import auth, companies, customers, suppliers, products, quotes, invoices, payments, projects
+from routes import auth, companies, customers, suppliers, products, quotes, invoices, payments, projects, settings
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -18,7 +18,7 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # Create the main app
-app = FastAPI(title="Iberis API", version="1.0.0")
+app = FastAPI(title="EasyBill API", version="1.0.0")
 
 # Add CORS middleware
 app.add_middleware(
@@ -39,15 +39,16 @@ app.include_router(quotes.router)
 app.include_router(invoices.router)
 app.include_router(payments.router)
 app.include_router(projects.router)
+app.include_router(settings.router, prefix="/api")
 
 # Root endpoint
 @app.get("/")
 async def root():
-    return {"message": "Iberis API - Full Stack Invoicing Solution", "version": "1.0.0"}
+    return {"message": "EasyBill API - Full Stack Invoicing Solution", "version": "1.0.0"}
 
 @app.get("/api/")
 async def api_root():
-    return {"message": "Iberis API is running", "status": "operational"}
+    return {"message": "EasyBill API is running", "status": "operational"}
 
 # Configure logging
 logging.basicConfig(
