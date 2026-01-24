@@ -243,11 +243,14 @@ const AppRoutes = () => {
       
       {/* Comptabilité Routes */}
       <Route path="/chart-of-accounts" element={<ProtectedRoute><ChartOfAccounts /></ProtectedRoute>} />
-      <Route path="/journal-entries" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/ledgers" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/balances" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/accounting-dashboard" element={<ProtectedRoute><AccountingDashboard /></ProtectedRoute>} />
+      <Route path="/journal-entries" element={<ProtectedRoute><JournalEntries /></ProtectedRoute>} />
+      <Route path="/general-ledger" element={<ProtectedRoute><GeneralLedger /></ProtectedRoute>} />
+      <Route path="/trial-balance" element={<ProtectedRoute><TrialBalance /></ProtectedRoute>} />
+      <Route path="/ledgers" element={<ProtectedRoute><GeneralLedger /></ProtectedRoute>} />
+      <Route path="/balances" element={<ProtectedRoute><TrialBalance /></ProtectedRoute>} />
       <Route path="/balance-tiers" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/balance-generale" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/balance-generale" element={<ProtectedRoute><TrialBalance /></ProtectedRoute>} />
       <Route path="/legal-journals" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/fiscal-years" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/financial-statements" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
