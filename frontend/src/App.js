@@ -106,6 +106,26 @@ const AppRoutes = () => {
           <Quotes />
         </ProtectedRoute>
       } />
+      <Route path="/delivery-notes" element={
+        <ProtectedRoute>
+          <DeliveryNotes />
+        </ProtectedRoute>
+      } />
+      <Route path="/credit-notes" element={
+        <ProtectedRoute>
+          <CreditNotes />
+        </ProtectedRoute>
+      } />
+      <Route path="/payments" element={
+        <ProtectedRoute>
+          <Payments />
+        </ProtectedRoute>
+      } />
+      <Route path="/reminders" element={
+        <ProtectedRoute>
+          <Reminders />
+        </ProtectedRoute>
+      } />
       <Route path="/customers" element={
         <ProtectedRoute>
           <Customers />
