@@ -174,24 +174,52 @@ const Invoices = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="p-6">
-            <p className="text-sm text-gray-600 mb-2">Total Facturé</p>
-            <p className="text-2xl font-bold text-gray-900">94,510 TND</p>
-            <p className="text-xs text-green-600 mt-1">+12% ce mois</p>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-violet-100 rounded-lg">
+                <FileText className="w-5 h-5 text-violet-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Total Facturé</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalInvoiced.toFixed(2)} TND</p>
+                <p className="text-xs text-gray-500">{filteredInvoices.length} factures</p>
+              </div>
+            </div>
           </Card>
           <Card className="p-6">
-            <p className="text-sm text-gray-600 mb-2">Payées</p>
-            <p className="text-2xl font-bold text-green-600">45,900 TND</p>
-            <p className="text-xs text-gray-500 mt-1">3 factures</p>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Payées</p>
+                <p className="text-2xl font-bold text-green-600">{stats.totalPaid.toFixed(2)} TND</p>
+                <p className="text-xs text-gray-500">{stats.paidCount} factures</p>
+              </div>
+            </div>
           </Card>
           <Card className="p-6">
-            <p className="text-sm text-gray-600 mb-2">En attente</p>
-            <p className="text-2xl font-bold text-orange-600">31,420 TND</p>
-            <p className="text-xs text-gray-500 mt-1">2 factures</p>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <CreditCard className="w-5 h-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">En attente</p>
+                <p className="text-2xl font-bold text-orange-600">{stats.totalPending.toFixed(2)} TND</p>
+                <p className="text-xs text-gray-500">{stats.pendingCount} factures</p>
+              </div>
+            </div>
           </Card>
           <Card className="p-6">
-            <p className="text-sm text-gray-600 mb-2">En retard</p>
-            <p className="text-2xl font-bold text-red-600">15,420 TND</p>
-            <p className="text-xs text-gray-500 mt-1">1 facture</p>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <FileText className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">En retard</p>
+                <p className="text-2xl font-bold text-red-600">{stats.totalOverdue.toFixed(2)} TND</p>
+                <p className="text-xs text-gray-500">{stats.overdueCount} factures</p>
+              </div>
+            </div>
           </Card>
         </div>
 
