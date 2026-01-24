@@ -351,6 +351,7 @@ async def accept_quote(
 @router.post("/{quote_id}/convert")
 async def convert_to_invoice(
     quote_id: str,
+    request: Request,
     company_id: str = Query(...),
     current_user: dict = Depends(get_current_user)
 ):
@@ -367,10 +368,15 @@ async def convert_to_invoice(
     if quote.get("converted_to_invoice"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Quote already converted")
     
+    # Get numbering settings with defaults
+    numbering = company.get("numbering", {})
+    invoice_prefix = numbering.get("invoice_prefix", "FAC")
+    invoice_next = numbering.get("invoice_next", 1)
+    
     # Generate invoice number
     invoice_number = generate_document_number(
-        company["numbering"]["invoice_prefix"],
-        company["numbering"]["invoice_next"],
+        invoice_prefix,
+        invoice_next,
         datetime.now().year
     )
     
@@ -378,8 +384,8 @@ async def convert_to_invoice(
     invoice_dict = {
         "company_id": quote["company_id"],
         "number": invoice_number,
-        "date": datetime.utcnow(),
-        "due_date": datetime.utcnow(),  # Default: same day
+        "date": datetime.now(timezone.utc),
+        "due_date": datetime.now(timezone.utc),  # Default: same day
         "customer_id": quote["customer_id"],
         "subject": quote.get("subject"),
         "items": quote["items"],
@@ -395,8 +401,8 @@ async def convert_to_invoice(
         "status": "draft",
         "is_recurring": False,
         "quote_id": quote["_id"],
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
         "created_by": current_user["_id"]
     }
     
@@ -405,13 +411,35 @@ async def convert_to_invoice(
     # Update quote
     await db.quotes.update_one(
         {"_id": ObjectId(quote_id)},
-        {"$set": {"converted_to_invoice": True, "invoice_id": result.inserted_id, "status": "accepted"}}
+        {"$set": {
+            "converted_to_invoice": True, 
+            "invoice_id": result.inserted_id, 
+            "status": "accepted",
+            "updated_at": datetime.now(timezone.utc)
+        }}
     )
     
     # Update company numbering
     await db.companies.update_one(
         {"_id": ObjectId(company_id)},
         {"$inc": {"numbering.invoice_next": 1}}
+    )
+    
+    # Update customer invoice count
+    await db.customers.update_one(
+        {"_id": quote["customer_id"]},
+        {"$inc": {
+            "invoice_count": 1,
+            "total_invoiced": quote["total"],
+            "balance": quote["total"]
+        }}
+    )
+    
+    # Log action
+    await log_quote_action(
+        company_id, str(current_user["_id"]), current_user.get("full_name", ""),
+        "Convertir en facture", f"{quote.get('number', '')} -> {invoice_number}",
+        request.client.host if request.client else None
     )
     
     return {"id": str(result.inserted_id), "number": invoice_number, "message": "Quote converted to invoice"}
