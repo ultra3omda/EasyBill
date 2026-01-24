@@ -307,19 +307,31 @@ async def import_products(
     current_user: dict = Depends(get_current_user)
 ):
     """Import products from CSV/Excel file."""
-    from fastapi import UploadFile, File, Form
     
     company = await get_current_company(current_user, company_id)
     
     form = await request.form()
     file = form.get("file")
-    delimiter = form.get("delimiter", ";")
+    delimiter = form.get("delimiter", ";") or ";"
+    encoding = form.get("encoding", "utf-8") or "utf-8"
     
     if not file:
         raise HTTPException(status_code=400, detail="Fichier requis")
     
     content = await file.read()
-    content_str = content.decode('utf-8-sig')  # Handle BOM
+    
+    # Try different encodings
+    try:
+        content_str = content.decode(encoding)
+    except UnicodeDecodeError:
+        try:
+            content_str = content.decode('utf-8-sig')
+        except UnicodeDecodeError:
+            content_str = content.decode('latin-1')
+    
+    # Remove BOM if present
+    if content_str.startswith('\ufeff'):
+        content_str = content_str[1:]
     
     lines = content_str.strip().split('\n')
     if len(lines) < 2:
