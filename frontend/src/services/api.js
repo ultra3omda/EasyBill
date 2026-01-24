@@ -185,4 +185,20 @@ export const journalEntriesAPI = {
   getStats: (companyId) => apiClient.get(`/journal-entries/stats?company_id=${companyId}`),
 };
 
+// PDF API
+export const pdfAPI = {
+  getInvoicePdfUrl: (companyId, invoiceId) => 
+    `${API_BASE_URL}/pdf/invoice/${invoiceId}?company_id=${companyId}`,
+  getQuotePdfUrl: (companyId, quoteId) => 
+    `${API_BASE_URL}/pdf/quote/${quoteId}?company_id=${companyId}`,
+  getDeliveryNotePdfUrl: (companyId, deliveryId) => 
+    `${API_BASE_URL}/pdf/delivery-note/${deliveryId}?company_id=${companyId}`,
+  downloadInvoice: (companyId, invoiceId) => 
+    apiClient.get(`/pdf/invoice/${invoiceId}?company_id=${companyId}`, { responseType: 'blob' }),
+  downloadQuote: (companyId, quoteId) => 
+    apiClient.get(`/pdf/quote/${quoteId}?company_id=${companyId}`, { responseType: 'blob' }),
+  downloadDeliveryNote: (companyId, deliveryId) => 
+    apiClient.get(`/pdf/delivery-note/${deliveryId}?company_id=${companyId}`, { responseType: 'blob' }),
+};
+
 export default apiClient;
