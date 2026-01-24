@@ -91,12 +91,12 @@ export const productsAPI = {
   delete: (companyId, id) => apiClient.delete(`/products/${id}?company_id=${companyId}`),
 };
 
-// Quotes API
+// Quotes API - Note: trailing slash required to avoid 307 redirect losing auth header
 export const quotesAPI = {
-  create: (companyId, data) => apiClient.post(`/quotes?company_id=${companyId}`, data),
+  create: (companyId, data) => apiClient.post(`/quotes/?company_id=${companyId}`, data),
   list: (companyId, params = {}) => {
     const queryParams = new URLSearchParams({ company_id: companyId, ...params }).toString();
-    return apiClient.get(`/quotes?${queryParams}`);
+    return apiClient.get(`/quotes/?${queryParams}`);
   },
   get: (companyId, id) => apiClient.get(`/quotes/${id}?company_id=${companyId}`),
   update: (companyId, id, data) => apiClient.put(`/quotes/${id}?company_id=${companyId}`, data),
