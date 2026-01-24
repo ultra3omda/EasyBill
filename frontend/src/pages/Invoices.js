@@ -188,23 +188,7 @@ const Invoices = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <Eye className="w-4 h-4 mr-2" />
-                              {t('invoices.view')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Edit className="w-4 h-4 mr-2" />
-                              {t('invoices.edit')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Send className="w-4 h-4 mr-2" />
-                              {t('invoices.send')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Download className="w-4 h-4 mr-2" />
-                              {t('invoices.download')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(invoice.id)}>
                               <Trash2 className="w-4 h-4 mr-2" />
                               {t('invoices.delete')}
                             </DropdownMenuItem>
@@ -219,6 +203,12 @@ const Invoices = () => {
           </div>
         </Card>
       </div>
+
+      <InvoiceFormModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSuccess={loadInvoices}
+      />
     </AppLayout>
   );
 };
