@@ -143,4 +143,18 @@ export const projectsAPI = {
     apiClient.get(`/projects/${projectId}/timesheets?company_id=${companyId}`),
 };
 
+// Accounting API
+export const accountingAPI = {
+  // Chart of Accounts
+  listAccounts: (companyId, params = {}) => {
+    const queryParams = new URLSearchParams({ company_id: companyId, ...params }).toString();
+    return apiClient.get(`/accounting/accounts?${queryParams}`);
+  },
+  getAccount: (companyId, id) => apiClient.get(`/accounting/accounts/${id}?company_id=${companyId}`),
+  createAccount: (companyId, data) => apiClient.post(`/accounting/accounts?company_id=${companyId}`, data),
+  updateAccount: (companyId, id, data) => apiClient.put(`/accounting/accounts/${id}?company_id=${companyId}`, data),
+  deleteAccount: (companyId, id) => apiClient.delete(`/accounting/accounts/${id}?company_id=${companyId}`),
+  getAccountTypes: () => apiClient.get('/accounting/account-types'),
+};
+
 export default apiClient;
