@@ -149,11 +149,16 @@ const AppLayout = ({ children }) => {
   const [creatingCompany, setCreatingCompany] = useState(false);
   const [newCompanyData, setNewCompanyData] = useState({
     name: '',
-    legal_form: 'SARL',
+    activity: '',
+    phone: '',
+    website: '',
     fiscal_id: '',
+    fiscal_year: 'jan-dec',
+    currency: 'TND',
+    logo: null,
     address: {
       street: '',
-      city: '',
+      governorate: '',
       postal_code: '',
       country: 'Tunisie'
     }
