@@ -32,8 +32,31 @@ const InvoiceFormModal = ({ open, onClose, onSuccess, invoice }) => {
     if (open && currentCompany) {
       loadCustomers();
       loadProducts();
+      
+      // If editing, populate form with invoice data
+      if (invoice) {
+        setFormData({
+          customer_id: invoice.customer_id || '',
+          date: invoice.date ? invoice.date.split('T')[0] : new Date().toISOString().split('T')[0],
+          due_date: invoice.due_date ? invoice.due_date.split('T')[0] : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          subject: invoice.subject || '',
+          items: invoice.items && invoice.items.length > 0 
+            ? invoice.items.map(item => ({
+                description: item.description || '',
+                quantity: item.quantity || 1,
+                unit_price: item.unit_price || 0,
+                tax_rate: item.tax_rate || 19,
+                discount: item.discount || 0,
+                total: item.total || 0
+              }))
+            : [{ description: '', quantity: 1, unit_price: 0, tax_rate: 19, discount: 0, total: 0 }],
+          notes: invoice.notes || ''
+        });
+      } else {
+        setFormData(getInitialFormData());
+      }
     }
-  }, [open, currentCompany]);
+  }, [open, currentCompany, invoice]);
 
   const loadCustomers = async () => {
     try {
