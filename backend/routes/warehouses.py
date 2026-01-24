@@ -88,6 +88,23 @@ async def list_warehouses(company_id: str = Query(...), current_user: dict = Dep
     company = await get_current_company(current_user, company_id)
     warehouses = await db.warehouses.find({"company_id": ObjectId(company_id)}).sort("name", 1).to_list(100)
     
+    # Auto-create default warehouse if none exists
+    if len(warehouses) == 0:
+        default_warehouse = {
+            "company_id": ObjectId(company_id),
+            "name": "Entrepôt Principal",
+            "code": "ENT001",
+            "address": "",
+            "is_default": True,
+            "is_active": True,
+            "product_count": 0,
+            "total_value": 0,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        }
+        await db.warehouses.insert_one(default_warehouse)
+        warehouses = await db.warehouses.find({"company_id": ObjectId(company_id)}).sort("name", 1).to_list(100)
+    
     # Calculate stats for each warehouse
     for w in warehouses:
         stock = await db.stock_levels.find({"warehouse_id": w["_id"]}).to_list(1000)
