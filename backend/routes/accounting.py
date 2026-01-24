@@ -197,3 +197,272 @@ async def seed_chart_of_accounts(company_id: str = Query(...), current_user: dic
     })
     
     return {"message": f"Plan comptable tunisien créé avec succès", "count": len(accounts_to_insert), "seeded": True}
+
+
+@router.get("/dashboard")
+async def get_accounting_dashboard(company_id: str = Query(...), current_user: dict = Depends(get_current_user)):
+    """Get accounting dashboard data with balances by account class"""
+    company = await get_current_company(current_user, company_id)
+    
+    # Get balances grouped by account class (first digit of code)
+    pipeline = [
+        {"$match": {"company_id": ObjectId(company_id), "code": {"$regex": "^[1-7]$"}}},
+        {"$project": {
+            "code": 1,
+            "name": 1,
+            "type": 1,
+            "balance": 1
+        }}
+    ]
+    
+    class_accounts = await db.chart_of_accounts.aggregate(pipeline).to_list(10)
+    
+    # Get totals by type
+    type_pipeline = [
+        {"$match": {"company_id": ObjectId(company_id)}},
+        {"$group": {
+            "_id": "$type",
+            "total_balance": {"$sum": "$balance"},
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    type_totals = await db.chart_of_accounts.aggregate(type_pipeline).to_list(10)
+    type_map = {t["_id"]: {"balance": t["total_balance"], "count": t["count"]} for t in type_totals}
+    
+    # Get journal entry stats
+    entry_pipeline = [
+        {"$match": {"company_id": ObjectId(company_id), "status": "posted"}},
+        {"$group": {
+            "_id": None,
+            "total_entries": {"$sum": 1},
+            "total_debit": {"$sum": "$total_debit"},
+            "total_credit": {"$sum": "$total_credit"}
+        }}
+    ]
+    
+    entry_stats = await db.journal_entries.aggregate(entry_pipeline).to_list(1)
+    
+    # Get recent entries
+    recent_entries = await db.journal_entries.find(
+        {"company_id": ObjectId(company_id)}
+    ).sort("created_at", -1).limit(5).to_list(5)
+    
+    return {
+        "classes": [
+            {
+                "code": a["code"],
+                "name": a["name"],
+                "type": a["type"],
+                "balance": a.get("balance", 0)
+            } for a in class_accounts
+        ],
+        "by_type": {
+            "equity": type_map.get("equity", {"balance": 0, "count": 0}),
+            "asset": type_map.get("asset", {"balance": 0, "count": 0}),
+            "liability": type_map.get("liability", {"balance": 0, "count": 0}),
+            "expense": type_map.get("expense", {"balance": 0, "count": 0}),
+            "income": type_map.get("income", {"balance": 0, "count": 0})
+        },
+        "entries": {
+            "total": entry_stats[0]["total_entries"] if entry_stats else 0,
+            "total_debit": entry_stats[0]["total_debit"] if entry_stats else 0,
+            "total_credit": entry_stats[0]["total_credit"] if entry_stats else 0
+        },
+        "recent_entries": [
+            {
+                "id": str(e["_id"]),
+                "entry_number": e.get("entry_number"),
+                "date": e.get("date").isoformat() if e.get("date") else None,
+                "description": e.get("description"),
+                "total_debit": e.get("total_debit", 0),
+                "status": e.get("status")
+            } for e in recent_entries
+        ]
+    }
+
+
+@router.get("/general-ledger")
+async def get_general_ledger(
+    company_id: str = Query(...),
+    account_code: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get general ledger (grand livre) - transactions by account"""
+    company = await get_current_company(current_user, company_id)
+    
+    # Build query for journal entries
+    query = {"company_id": ObjectId(company_id), "status": "posted"}
+    
+    if date_from:
+        query["date"] = {"$gte": datetime.fromisoformat(date_from)}
+    if date_to:
+        if "date" in query:
+            query["date"]["$lte"] = datetime.fromisoformat(date_to)
+        else:
+            query["date"] = {"$lte": datetime.fromisoformat(date_to)}
+    
+    if account_code:
+        query["lines.account_code"] = account_code
+    
+    entries = await db.journal_entries.find(query).sort("date", 1).to_list(2000)
+    
+    # Group by account
+    ledger = {}
+    for entry in entries:
+        for line in entry.get("lines", []):
+            code = line.get("account_code")
+            if account_code and code != account_code:
+                continue
+            
+            if code not in ledger:
+                ledger[code] = {
+                    "account_code": code,
+                    "account_name": line.get("account_name"),
+                    "transactions": [],
+                    "total_debit": 0,
+                    "total_credit": 0,
+                    "balance": 0
+                }
+            
+            debit = line.get("debit", 0)
+            credit = line.get("credit", 0)
+            
+            ledger[code]["transactions"].append({
+                "entry_id": str(entry["_id"]),
+                "entry_number": entry.get("entry_number"),
+                "date": entry.get("date").isoformat() if entry.get("date") else None,
+                "description": entry.get("description"),
+                "line_description": line.get("description"),
+                "debit": debit,
+                "credit": credit
+            })
+            
+            ledger[code]["total_debit"] += debit
+            ledger[code]["total_credit"] += credit
+    
+    # Calculate running balances and get account types
+    result = []
+    for code, data in sorted(ledger.items()):
+        # Get account type
+        account = await db.chart_of_accounts.find_one({
+            "company_id": ObjectId(company_id),
+            "code": code
+        })
+        
+        account_type = account.get("type") if account else "asset"
+        
+        # Calculate balance based on account type
+        if account_type in ["asset", "expense"]:
+            data["balance"] = data["total_debit"] - data["total_credit"]
+        else:
+            data["balance"] = data["total_credit"] - data["total_debit"]
+        
+        data["account_type"] = account_type
+        result.append(data)
+    
+    return result
+
+
+@router.get("/trial-balance")
+async def get_trial_balance(
+    company_id: str = Query(...),
+    date_to: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get trial balance (balance des comptes)"""
+    company = await get_current_company(current_user, company_id)
+    
+    # Get all accounts with their balances
+    accounts = await db.chart_of_accounts.find({
+        "company_id": ObjectId(company_id),
+        "is_group": False  # Only detail accounts
+    }).sort("code", 1).to_list(2000)
+    
+    # Calculate balances from journal entries if date filter is provided
+    if date_to:
+        query = {
+            "company_id": ObjectId(company_id),
+            "status": "posted",
+            "date": {"$lte": datetime.fromisoformat(date_to)}
+        }
+        
+        entries = await db.journal_entries.find(query).to_list(5000)
+        
+        # Recalculate balances
+        account_balances = {}
+        for entry in entries:
+            for line in entry.get("lines", []):
+                code = line.get("account_code")
+                if code not in account_balances:
+                    account_balances[code] = {"debit": 0, "credit": 0}
+                account_balances[code]["debit"] += line.get("debit", 0)
+                account_balances[code]["credit"] += line.get("credit", 0)
+        
+        balance_data = []
+        total_debit = 0
+        total_credit = 0
+        
+        for account in accounts:
+            code = account["code"]
+            bal = account_balances.get(code, {"debit": 0, "credit": 0})
+            
+            account_type = account.get("type")
+            if account_type in ["asset", "expense"]:
+                balance = bal["debit"] - bal["credit"]
+                debit_balance = balance if balance > 0 else 0
+                credit_balance = -balance if balance < 0 else 0
+            else:
+                balance = bal["credit"] - bal["debit"]
+                credit_balance = balance if balance > 0 else 0
+                debit_balance = -balance if balance < 0 else 0
+            
+            if debit_balance != 0 or credit_balance != 0:
+                balance_data.append({
+                    "code": code,
+                    "name": account.get("name"),
+                    "type": account_type,
+                    "debit": debit_balance,
+                    "credit": credit_balance
+                })
+                total_debit += debit_balance
+                total_credit += credit_balance
+    else:
+        # Use current balances from accounts
+        balance_data = []
+        total_debit = 0
+        total_credit = 0
+        
+        for account in accounts:
+            balance = account.get("balance", 0)
+            account_type = account.get("type")
+            
+            if balance != 0:
+                if account_type in ["asset", "expense"]:
+                    debit_balance = balance if balance > 0 else 0
+                    credit_balance = -balance if balance < 0 else 0
+                else:
+                    credit_balance = balance if balance > 0 else 0
+                    debit_balance = -balance if balance < 0 else 0
+                
+                balance_data.append({
+                    "code": account["code"],
+                    "name": account.get("name"),
+                    "type": account_type,
+                    "debit": debit_balance,
+                    "credit": credit_balance
+                })
+                total_debit += debit_balance
+                total_credit += credit_balance
+    
+    return {
+        "accounts": balance_data,
+        "totals": {
+            "debit": total_debit,
+            "credit": total_credit,
+            "balanced": abs(total_debit - total_credit) < 0.01
+        },
+        "date": date_to
+    }
