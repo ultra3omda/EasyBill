@@ -122,6 +122,9 @@ const Products = () => {
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef(null);
   
+  // Warehouses state
+  const [warehouses, setWarehouses] = useState([]);
+  
   const [formData, setFormData] = useState({
     name: '',
     reference: '',
