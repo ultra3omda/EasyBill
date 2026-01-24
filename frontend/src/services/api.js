@@ -156,6 +156,33 @@ export const accountingAPI = {
   deleteAccount: (companyId, id) => apiClient.delete(`/accounting/accounts/${id}?company_id=${companyId}`),
   getAccountTypes: () => apiClient.get('/accounting/account-types'),
   seedChartOfAccounts: (companyId) => apiClient.post(`/accounting/seed-chart-of-accounts?company_id=${companyId}`),
+  // Dashboard
+  getDashboard: (companyId) => apiClient.get(`/accounting/dashboard?company_id=${companyId}`),
+  // General Ledger
+  getGeneralLedger: (companyId, params = {}) => {
+    const queryParams = new URLSearchParams({ company_id: companyId, ...params }).toString();
+    return apiClient.get(`/accounting/general-ledger?${queryParams}`);
+  },
+  // Trial Balance
+  getTrialBalance: (companyId, params = {}) => {
+    const queryParams = new URLSearchParams({ company_id: companyId, ...params }).toString();
+    return apiClient.get(`/accounting/trial-balance?${queryParams}`);
+  },
+};
+
+// Journal Entries API
+export const journalEntriesAPI = {
+  list: (companyId, params = {}) => {
+    const queryParams = new URLSearchParams({ company_id: companyId, ...params }).toString();
+    return apiClient.get(`/journal-entries/?${queryParams}`);
+  },
+  get: (companyId, id) => apiClient.get(`/journal-entries/${id}?company_id=${companyId}`),
+  create: (companyId, data) => apiClient.post(`/journal-entries/?company_id=${companyId}`, data),
+  update: (companyId, id, data) => apiClient.put(`/journal-entries/${id}?company_id=${companyId}`, data),
+  delete: (companyId, id) => apiClient.delete(`/journal-entries/${id}?company_id=${companyId}`),
+  post: (companyId, id) => apiClient.post(`/journal-entries/${id}/post?company_id=${companyId}`),
+  cancel: (companyId, id) => apiClient.post(`/journal-entries/${id}/cancel?company_id=${companyId}`),
+  getStats: (companyId) => apiClient.get(`/journal-entries/stats?company_id=${companyId}`),
 };
 
 export default apiClient;
