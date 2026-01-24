@@ -32,6 +32,9 @@ import DeliveryNotes from './pages/DeliveryNotes';
 import CreditNotes from './pages/CreditNotes';
 import Payments from './pages/Payments';
 import Reminders from './pages/Reminders';
+import PurchaseOrders from './pages/PurchaseOrders';
+import SupplierInvoices from './pages/SupplierInvoices';
+import SupplierPayments from './pages/SupplierPayments';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
