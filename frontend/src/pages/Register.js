@@ -38,7 +38,7 @@ const Register = () => {
       if (result.success) {
         toast({
           title: 'Inscription réussie',
-          description: 'Bienvenue sur Iberis!',
+          description: 'Bienvenue sur EasyBill!',
         });
         navigate('/dashboard');
       }
@@ -60,7 +60,7 @@ const Register = () => {
       if (result.success) {
         toast({
           title: 'Connexion réussie',
-          description: 'Bienvenue sur Iberis!',
+          description: 'Bienvenue sur EasyBill!',
         });
         navigate('/dashboard');
       }
@@ -76,14 +76,17 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-violet-50 to-amber-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md p-8 shadow-xl">
         <div className="text-center mb-8">
-          <img 
-            src="https://finances.iberis.io/images/logo-iberis.png" 
-            alt="Iberis" 
-            className="h-10 mx-auto mb-4"
-          />
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-violet-700 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-xl">E</span>
+            </div>
+            <span className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-amber-500 bg-clip-text text-transparent">
+              EasyBill
+            </span>
+          </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('auth.registerTitle')}</h1>
           <p className="text-gray-600">Commencez votre essai gratuit</p>
         </div>
@@ -176,7 +179,7 @@ const Register = () => {
 
           <Button 
             type="submit" 
-            className="w-full bg-teal-600 hover:bg-teal-700 text-white py-6"
+            className="w-full bg-violet-600 hover:bg-violet-700 text-white py-6"
             disabled={loading}
             data-testid="register-submit-button"
           >
@@ -196,9 +199,10 @@ const Register = () => {
         <Button
           type="button"
           variant="outline"
-          className="w-full py-6 border-2"
+          className="w-full py-6 border-2 hover:bg-violet-50"
           onClick={handleGoogleLogin}
           disabled={loading}
+          data-testid="register-google-button"
         >
           <Chrome className="w-5 h-5 mr-2" />
           {t('auth.googleLogin')}
@@ -206,7 +210,7 @@ const Register = () => {
 
         <p className="text-center mt-6 text-gray-600">
           {t('auth.hasAccount')}{' '}
-          <Link to="/login" className="text-teal-600 hover:text-teal-700 font-semibold">
+          <Link to="/login" className="text-violet-600 hover:text-violet-700 font-semibold">
             {t('auth.loginButton')}
           </Link>
         </p>
