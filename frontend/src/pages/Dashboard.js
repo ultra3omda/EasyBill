@@ -176,7 +176,7 @@ const Dashboard = () => {
           {businessMetrics.map((metric, index) => {
             const Icon = metric.icon;
             return (
-              <Card key={index} className="p-6 border-l-4 border-l-teal-500">
+              <Card key={index} className="p-6 border-l-4 border-l-violet-500">
                 <div className="flex items-center justify-between mb-4">
                   <div className={`p-3 rounded-lg ${metric.bgColor}`}>
                     <Icon className={`w-5 h-5 ${metric.iconColor}`} />
