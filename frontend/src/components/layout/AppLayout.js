@@ -196,6 +196,10 @@ const AppLayout = ({ children }) => {
       toast({ title: 'Erreur', description: 'Le nom de l\'entreprise est requis', variant: 'destructive' });
       return;
     }
+    if (!newCompanyData.activity) {
+      toast({ title: 'Erreur', description: 'L\'activité est requise', variant: 'destructive' });
+      return;
+    }
 
     setCreatingCompany(true);
     try {
@@ -205,9 +209,14 @@ const AppLayout = ({ children }) => {
       setNewCompanyModalOpen(false);
       setNewCompanyData({
         name: '',
-        legal_form: 'SARL',
+        activity: '',
+        phone: '',
+        website: '',
         fiscal_id: '',
-        address: { street: '', city: '', postal_code: '', country: 'Tunisie' }
+        fiscal_year: 'jan-dec',
+        currency: 'TND',
+        logo: null,
+        address: { street: '', governorate: '', postal_code: '', country: 'Tunisie' }
       });
       navigate('/dashboard');
     } catch (error) {
