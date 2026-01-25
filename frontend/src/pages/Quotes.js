@@ -120,13 +120,11 @@ const Quotes = () => {
   };
 
   const openCreateModal = () => {
-    setSelectedQuote(null);
-    setModalOpen(true);
+    navigate('/sales/quotes/new');
   };
 
   const openEditModal = (quote) => {
-    setSelectedQuote(quote);
-    setModalOpen(true);
+    navigate(`/sales/quotes/${quote.id}/edit`);
   };
 
   const getStatusBadge = (status) => {
