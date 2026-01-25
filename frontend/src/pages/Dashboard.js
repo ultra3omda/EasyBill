@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { useCompany } from '../hooks/useCompany';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { mockDashboardStats, mockChartData } from '../data/mockData';
@@ -13,9 +14,13 @@ import {
   DollarSign,
   CreditCard,
   AlertCircle,
-  Filter
+  Filter,
+  Database,
+  Loader2
 } from 'lucide-react';
 import AppLayout from '../components/layout/AppLayout';
+import { seedAPI } from '../services/api';
+import { toast } from '../hooks/use-toast';
 import {
   BarChart,
   Bar,
@@ -34,6 +39,29 @@ import {
 const Dashboard = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { currentCompany } = useCompany();
+  const [seeding, setSeeding] = useState(false);
+
+  const handleSeedData = async () => {
+    if (!currentCompany?.id) {
+      toast({ title: 'Erreur', description: 'Aucune entreprise sélectionnée', variant: 'destructive' });
+      return;
+    }
+    
+    setSeeding(true);
+    try {
+      const response = await seedAPI.generateTestData(currentCompany.id);
+      const { created } = response.data;
+      toast({ 
+        title: 'Données créées avec succès!', 
+        description: `${created.products} produits, ${created.customers} clients, ${created.suppliers} fournisseurs, ${created.invoices} factures, ${created.quotes} devis`
+      });
+    } catch (error) {
+      toast({ title: 'Erreur', description: error.response?.data?.detail || 'Erreur lors de la création', variant: 'destructive' });
+    } finally {
+      setSeeding(false);
+    }
+  };
 
   const stats = [
     {
