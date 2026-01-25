@@ -56,6 +56,7 @@ app.include_router(accounting.router)
 app.include_router(journal_entries.router)
 app.include_router(pdf.router)
 app.include_router(seed.router)
+app.include_router(dashboard.router)
 
 # Root endpoint
 @app.get("/")
