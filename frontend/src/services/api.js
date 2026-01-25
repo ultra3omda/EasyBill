@@ -114,6 +114,11 @@ export const seedAPI = {
   generateTestData: (companyId) => apiClient.post(`/seed/test-data?company_id=${companyId}`),
 };
 
+// Dashboard API - Real statistics
+export const dashboardAPI = {
+  getStats: (companyId) => apiClient.get(`/dashboard/stats?company_id=${companyId}`),
+};
+
 // Quotes API - Note: trailing slash required to avoid 307 redirect losing auth header
 export const quotesAPI = {
   create: (companyId, data) => apiClient.post(`/quotes/?company_id=${companyId}`, data),
