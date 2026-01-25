@@ -11,6 +11,14 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
+def make_aware(dt):
+    """Convert naive datetime to UTC aware datetime"""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
 @router.get("/stats")
 async def get_dashboard_stats(
     company_id: str = Query(...),
@@ -54,7 +62,7 @@ async def get_dashboard_stats(
     # Customers stats
     customers = await db.customers.find({"company_id": company_oid}).to_list(10000)
     customers_count = len(customers)
-    new_customers_month = len([c for c in customers if c.get("created_at") and c["created_at"] >= start_of_month])
+    new_customers_month = len([c for c in customers if c.get("created_at") and make_aware(c["created_at"]) >= start_of_month])
     
     # Suppliers stats
     suppliers = await db.suppliers.find({"company_id": company_oid}).to_list(10000)
