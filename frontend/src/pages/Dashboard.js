@@ -160,10 +160,22 @@ const Dashboard = () => {
             </h1>
             <p className="text-gray-500 mt-1">EasyBill</p>
           </div>
-          <Button className="bg-violet-600 hover:bg-violet-700 text-white flex items-center gap-2">
-            <Filter className="w-4 h-4" />
-            {t('dashboard.filter')}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              onClick={handleSeedData}
+              disabled={seeding}
+              variant="outline"
+              className="flex items-center gap-2 border-violet-300 text-violet-600 hover:bg-violet-50"
+              data-testid="seed-data-btn"
+            >
+              {seeding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Database className="w-4 h-4" />}
+              {seeding ? 'Création...' : 'Générer données de test'}
+            </Button>
+            <Button className="bg-violet-600 hover:bg-violet-700 text-white flex items-center gap-2">
+              <Filter className="w-4 h-4" />
+              {t('dashboard.filter')}
+            </Button>
+          </div>
         </div>
 
         {/* Top Stats */}
