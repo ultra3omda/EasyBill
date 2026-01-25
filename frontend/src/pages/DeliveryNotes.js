@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useCompany } from '../hooks/useCompany';
 import AppLayout from '../components/layout/AppLayout';
@@ -12,32 +13,20 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from '../components/ui/dialog';
-import { Label } from '../components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Textarea } from '../components/ui/textarea';
-import { Plus, Search, Truck, Edit, Trash2, MoreVertical, CheckCircle } from 'lucide-react';
+import { Plus, Search, Truck, Edit, Trash2, MoreVertical, CheckCircle, Download, Eye, Filter, Calendar } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
 
 const DeliveryNotes = () => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const { currentCompany } = useCompany();
   const [docs, setDocs] = useState([]);
-  const [customers, setCustomers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedDoc, setSelectedDoc] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState({
-    customer_id: '', date: new Date().toISOString().split('T')[0],
-    items: [{ description: '', quantity: 1, unit_price: 0, tax_rate: 0, discount: 0, total: 0 }],
-    notes: '', delivery_person: ''
-  });
+  const [selectedDocs, setSelectedDocs] = useState([]);
 
   useEffect(() => {
-    if (currentCompany) { loadData(); loadCustomers(); }
+    if (currentCompany) { loadData(); }
   }, [currentCompany]);
 
   const loadData = async () => {
