@@ -92,11 +92,13 @@ async def get_dashboard_stats(
     # DSO (Days Sales Outstanding)
     dso = 0
     if total_invoiced > 0 and invoices_count > 0:
-        avg_invoice_age = sum(
-            (now - inv.get("date", now)).days 
-            for inv in invoices if inv.get("status") != "paid"
-        ) / max(1, len([i for i in invoices if i.get("status") != "paid"]))
-        dso = int(avg_invoice_age)
+        unpaid_invoices = [i for i in invoices if i.get("status") != "paid"]
+        if unpaid_invoices:
+            avg_invoice_age = sum(
+                (now - make_aware(inv.get("date", now))).days 
+                for inv in unpaid_invoices if inv.get("date")
+            ) / len(unpaid_invoices)
+            dso = int(avg_invoice_age)
     
     # Monthly revenue chart data
     monthly_data = []
@@ -104,7 +106,7 @@ async def get_dashboard_stats(
         month_start = (now - timedelta(days=30*i)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(seconds=1)
         
-        month_invoices = [inv for inv in invoices if month_start <= inv.get("date", now) <= month_end]
+        month_invoices = [inv for inv in invoices if inv.get("date") and month_start <= make_aware(inv.get("date")) <= month_end]
         month_revenue = sum(inv.get("total", 0) for inv in month_invoices)
         
         month_name = month_start.strftime("%b")
