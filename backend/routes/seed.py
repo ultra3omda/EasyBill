@@ -153,28 +153,37 @@ async def seed_test_data(
             
             tax = subtotal * 0.19
             fiscal_stamp = 1.000
+            invoice_total = subtotal + tax + fiscal_stamp
             status = random.choice(["draft", "sent", "paid", "partial", "overdue"])
-            paid = subtotal + tax + fiscal_stamp if status == "paid" else (random.uniform(0, subtotal) if status == "partial" else 0)
+            
+            # Calculer le montant payé selon le statut
+            if status == "paid":
+                paid = invoice_total
+            elif status == "partial":
+                paid = round(random.uniform(invoice_total * 0.3, invoice_total * 0.7), 3)
+            else:
+                paid = 0
             
             result = await db.invoices.insert_one({
                 "company_id": company_oid, "customer_id": customer, "invoice_number": f"FAC-{now.year}-{random.randint(1000, 9999)}",
                 "date": now - timedelta(days=random.randint(1, 60)), "due_date": now + timedelta(days=random.randint(-30, 30)),
                 "items": items, "subtotal": subtotal, "tax_amount": tax, "fiscal_stamp": fiscal_stamp,
-                "total": subtotal + tax + fiscal_stamp, "amount_paid": paid, "status": status, "notes": "Facture de test", "created_at": now, "updated_at": now
+                "total": invoice_total, "amount_paid": paid, "balance_due": invoice_total - paid, "status": status, "notes": "Facture de test", "created_at": now, "updated_at": now
             })
-            invoice_ids.append(result.inserted_id)
+            invoice_ids.append({"id": result.inserted_id, "customer": customer, "paid": paid, "total": invoice_total})
             results["invoices"] += 1
     
-    # ============ PAYMENTS ============
-    if invoice_ids and customer_ids:
-        for i in range(6):
-            await db.payments.insert_one({
-                "company_id": company_oid, "invoice_id": random.choice(invoice_ids), "customer_id": random.choice(customer_ids),
-                "payment_number": f"PAY-{now.year}-{random.randint(1000, 9999)}", "date": now - timedelta(days=random.randint(1, 30)),
-                "amount": random.uniform(500, 5000), "payment_method": random.choice(["cash", "check", "bank_transfer", "card"]),
-                "reference": f"REF{random.randint(1000, 9999)}", "type": "received", "notes": "Paiement de test", "created_at": now
-            })
-            results["payments"] += 1
+    # ============ PAYMENTS (liés aux factures payées) ============
+    if invoice_ids:
+        for inv_data in invoice_ids:
+            if inv_data["paid"] > 0:
+                await db.payments.insert_one({
+                    "company_id": company_oid, "invoice_id": inv_data["id"], "customer_id": inv_data["customer"],
+                    "payment_number": f"PAY-{now.year}-{random.randint(1000, 9999)}", "date": now - timedelta(days=random.randint(1, 30)),
+                    "amount": inv_data["paid"], "payment_method": random.choice(["cash", "check", "bank_transfer", "card"]),
+                    "reference": f"REF{random.randint(1000, 9999)}", "type": "received", "notes": "Paiement de test", "created_at": now
+                })
+                results["payments"] += 1
     
     # ============ PURCHASE ORDERS ============
     if supplier_ids and product_ids:
