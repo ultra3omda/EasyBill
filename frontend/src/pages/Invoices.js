@@ -110,13 +110,11 @@ const Invoices = () => {
   };
 
   const openCreateModal = () => {
-    setSelectedInvoice(null);
-    setModalOpen(true);
+    navigate('/sales/invoices/new');
   };
 
   const openEditModal = (invoice) => {
-    setSelectedInvoice(invoice);
-    setModalOpen(true);
+    navigate(`/sales/invoices/${invoice.id}/edit`);
   };
 
   const getStatusBadge = (status) => {
