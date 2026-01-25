@@ -28,11 +28,10 @@ import { toast } from '../hooks/use-toast';
 
 const Invoices = () => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const { currentCompany } = useCompany();
   const [invoices, setInvoices] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
