@@ -3,10 +3,14 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
 from datetime import datetime, timezone
 import os
+import logging
 from typing import Optional
 from models.credit_note import CreditNote, CreditNoteCreate, CreditNoteUpdate
+from services.accounting_sync_service import accounting_sync_service
 from utils.dependencies import get_current_user, get_current_company
 from utils.helpers import generate_document_number, calculate_document_totals
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/credit-notes", tags=["Credit Notes"])
 
@@ -103,6 +107,13 @@ async def create_credit_note(
     
     await log_action(company_id, str(current_user["_id"]), current_user.get("full_name", ""), "Créer", number, request.client.host if request.client else None)
     
+    # Synchronisation comptable automatique si statut validated
+    if doc_dict.get("status") == "validated":
+        try:
+            await accounting_sync_service.sync_credit_note(str(result.inserted_id))
+        except Exception as e:
+            logger.error(f"Erreur synchronisation comptable avoir {result.inserted_id}: {str(e)}")
+    
     return {"id": str(result.inserted_id), "number": number, "message": "Credit note created"}
 
 
@@ -195,6 +206,15 @@ async def update_credit_note(
     )
     
     await log_action(company_id, str(current_user["_id"]), current_user.get("full_name", ""), "Modifier", existing.get("number", ""), request.client.host if request.client else None)
+    
+    # Synchronisation comptable automatique si changement de statut vers validated
+    old_status = existing.get("status")
+    new_status = update_data.get("status")
+    if new_status == "validated" and old_status != new_status:
+        try:
+            await accounting_sync_service.sync_credit_note(doc_id)
+        except Exception as e:
+            logger.error(f"Erreur synchronisation comptable avoir {doc_id}: {str(e)}")
     
     return {"message": "Credit note updated"}
 

@@ -63,6 +63,27 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithFacebook = async () => {
+    try {
+      // Mock Facebook OAuth for now - in production this would use actual Facebook OAuth
+      const response = await authAPI.facebookLogin({ 
+        email: 'user@facebook.com',
+        name: 'Facebook User'
+      });
+      
+      const { access_token, user: userData } = response.data;
+      
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('token', access_token);
+      
+      return { success: true, user: userData };
+    } catch (error) {
+      console.error('Facebook login error:', error);
+      throw error;
+    }
+  };
+
   const register = async (name, email, password, company) => {
     try {
       const response = await authAPI.register({
@@ -92,7 +113,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, loginWithFacebook, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

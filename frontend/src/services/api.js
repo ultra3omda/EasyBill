@@ -44,6 +44,11 @@ export const authAPI = {
   register: (data) => apiClient.post('/auth/register', data),
   login: (data) => apiClient.post('/auth/login', data),
   googleLogin: (data) => apiClient.post('/auth/google', data),
+  facebookLogin: (data) => apiClient.post('/auth/facebook', data),
+  forgotPassword: (data) => apiClient.post('/auth/forgot-password', data),
+  resetPassword: (data) => apiClient.post('/auth/reset-password', data),
+  verifyEmail: (token) => apiClient.post(`/auth/verify-email/${token}`),
+  resendVerification: (data) => apiClient.post('/auth/resend-verification', data),
   getMe: () => apiClient.get('/auth/me'),
   updateProfile: (data) => apiClient.put('/auth/me', data),
   updatePassword: (data) => apiClient.put('/auth/password', data),
@@ -167,6 +172,7 @@ export const deliveryNotesAPI = {
 
 // Projects API - Note: trailing slash required to avoid 307 redirect losing auth header
 export const projectsAPI = {
+  // Projects
   create: (companyId, data) => apiClient.post(`/projects/?company_id=${companyId}`, data),
   list: (companyId, status = null) => {
     const params = status ? `?company_id=${companyId}&status=${status}` : `?company_id=${companyId}`;
@@ -175,10 +181,25 @@ export const projectsAPI = {
   get: (companyId, id) => apiClient.get(`/projects/${id}?company_id=${companyId}`),
   update: (companyId, id, data) => apiClient.put(`/projects/${id}?company_id=${companyId}`, data),
   delete: (companyId, id) => apiClient.delete(`/projects/${id}?company_id=${companyId}`),
-  createTimesheet: (companyId, projectId, data) => 
-    apiClient.post(`/projects/${projectId}/timesheets?company_id=${companyId}`, data),
+  getStats: (companyId) => apiClient.get(`/projects/stats?company_id=${companyId}`),
+  
+  // Tasks
+  listTasks: (companyId, projectId) => 
+    apiClient.get(`/projects/${projectId}/tasks?company_id=${companyId}`),
+  createTask: (companyId, projectId, data) => 
+    apiClient.post(`/projects/${projectId}/tasks?company_id=${companyId}`, data),
+  updateTask: (companyId, projectId, taskId, data) => 
+    apiClient.put(`/projects/${projectId}/tasks/${taskId}?company_id=${companyId}`, data),
+  deleteTask: (companyId, projectId, taskId) => 
+    apiClient.delete(`/projects/${projectId}/tasks/${taskId}?company_id=${companyId}`),
+  
+  // Timesheets
   listTimesheets: (companyId, projectId) => 
     apiClient.get(`/projects/${projectId}/timesheets?company_id=${companyId}`),
+  createTimesheet: (companyId, projectId, data) => 
+    apiClient.post(`/projects/${projectId}/timesheets?company_id=${companyId}`, data),
+  deleteTimesheet: (companyId, projectId, timesheetId) => 
+    apiClient.delete(`/projects/${projectId}/timesheets/${timesheetId}?company_id=${companyId}`),
 };
 
 // Accounting API

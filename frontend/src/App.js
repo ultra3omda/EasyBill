@@ -10,6 +10,10 @@ import { companiesAPI } from './services/api';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import VerifyEmail from './pages/VerifyEmail';
+import ClientPortal from './pages/ClientPortal';
 import CompanyOnboarding from './pages/CompanyOnboarding';
 import Dashboard from './pages/Dashboard';
 import Invoices from './pages/Invoices';
@@ -98,6 +102,10 @@ const AppRoutes = () => {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/portal/:token" element={<ClientPortal />} />
       
       {/* Onboarding - requires auth but not company */}
       <Route path="/onboarding" element={

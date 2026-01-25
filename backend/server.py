@@ -11,7 +11,7 @@ from routes import auth, companies, customers, suppliers, products, quotes, invo
 from routes import delivery_notes, credit_notes, reminders
 from routes import purchase_orders, supplier_invoices, supplier_payments
 from routes import warehouses, stock_movements, accounting
-from routes import journal_entries, pdf, seed, dashboard, inventories
+from routes import journal_entries, pdf, seed, dashboard, inventories, recurring_invoices, accounting_sync, client_portal
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -41,6 +41,7 @@ app.include_router(suppliers.router)
 app.include_router(products.router)
 app.include_router(quotes.router)
 app.include_router(invoices.router)
+app.include_router(recurring_invoices.router)
 app.include_router(payments.router)
 app.include_router(projects.router)
 app.include_router(settings.router, prefix="/api")
@@ -53,6 +54,8 @@ app.include_router(supplier_payments.router)
 app.include_router(warehouses.router)
 app.include_router(stock_movements.router)
 app.include_router(accounting.router)
+app.include_router(accounting_sync.router)
+app.include_router(client_portal.router)
 app.include_router(journal_entries.router)
 app.include_router(pdf.router)
 app.include_router(seed.router)

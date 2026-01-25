@@ -3,10 +3,14 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
 from datetime import datetime, timezone
 import os
+import logging
 from typing import Optional
 from models.supplier_invoice import SupplierInvoice, SupplierInvoiceCreate, SupplierInvoiceUpdate
+from services.accounting_sync_service import accounting_sync_service
 from utils.dependencies import get_current_user, get_current_company
 from utils.helpers import generate_document_number, calculate_document_totals
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/supplier-invoices", tags=["Supplier Invoices"])
 
@@ -122,6 +126,14 @@ async def create_supplier_invoice(data: SupplierInvoiceCreate, request: Request,
                     )
     
     await log_action(company_id, str(current_user["_id"]), current_user.get("full_name", ""), "Créer", number, request.client.host if request.client else None)
+    
+    # Synchronisation comptable automatique si statut validated
+    if doc_dict.get("status") == "validated":
+        try:
+            await accounting_sync_service.sync_supplier_invoice(str(result.inserted_id))
+        except Exception as e:
+            logger.error(f"Erreur synchronisation comptable facture fournisseur {result.inserted_id}: {str(e)}")
+    
     return {"id": str(result.inserted_id), "number": number, "message": "Supplier invoice created"}
 
 
@@ -199,6 +211,16 @@ async def update_supplier_invoice(doc_id: str, data: SupplierInvoiceUpdate, requ
     
     await db.supplier_invoices.update_one({"_id": ObjectId(doc_id), "company_id": ObjectId(company_id)}, {"$set": update_data})
     await log_action(company_id, str(current_user["_id"]), current_user.get("full_name", ""), "Modifier", existing.get("number", ""), request.client.host if request.client else None)
+    
+    # Synchronisation comptable automatique si changement de statut vers validated
+    old_status = existing.get("status")
+    new_status = update_data.get("status")
+    if new_status == "validated" and old_status != new_status:
+        try:
+            await accounting_sync_service.sync_supplier_invoice(doc_id)
+        except Exception as e:
+            logger.error(f"Erreur synchronisation comptable facture fournisseur {doc_id}: {str(e)}")
+    
     return {"message": "Supplier invoice updated"}
 
 

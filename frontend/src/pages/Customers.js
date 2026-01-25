@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
-import { Plus, Search, Filter, Download, Eye, Edit, Trash2, MoreVertical, Mail, Phone, Users, FileText, TrendingUp, UserPlus, ChevronDown } from 'lucide-react';
+import { Plus, Search, Filter, Download, Eye, Edit, Trash2, MoreVertical, Mail, Phone, Users, FileText, TrendingUp, UserPlus, ChevronDown, ExternalLink } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
 
 const Customers = () => {
@@ -70,6 +70,36 @@ const Customers = () => {
       loadCustomers();
     } catch (error) {
       toast({ title: 'Erreur', description: 'Erreur lors de la suppression', variant: 'destructive' });
+    }
+  };
+
+  const handleSendPortalLink = async (customerId) => {
+    try {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${API_URL}/api/client-portal/create-access?customer_id=${customerId}&company_id=${currentCompany.id}&send_email=true`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        toast({ 
+          title: 'Succès', 
+          description: data.email_sent ? 'Lien du portail envoyé par email' : 'Lien du portail créé (email non envoyé)' 
+        });
+      } else {
+        throw new Error('Erreur lors de l\'envoi');
+      }
+    } catch (error) {
+      console.error('Error sending portal link:', error);
+      toast({ 
+        title: 'Erreur', 
+        description: 'Impossible d\'envoyer le lien du portail', 
+        variant: 'destructive' 
+      });
     }
   };
 
@@ -303,6 +333,10 @@ const Customers = () => {
                             <DropdownMenuItem onClick={() => openEditModal(customer)}>
                               <Eye className="w-4 h-4 mr-2" />
                               Voir / Modifier
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleSendPortalLink(customer.id)}>
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              Envoyer lien portail
                             </DropdownMenuItem>
                             <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(customer.id)}>
                               <Trash2 className="w-4 h-4 mr-2" />

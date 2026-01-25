@@ -3,9 +3,13 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
 from datetime import datetime, timezone
 import os
+import logging
 from typing import Optional, List
 from pydantic import BaseModel, Field
+from services.accounting_sync_service import accounting_sync_service
 from utils.dependencies import get_current_user, get_current_company
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/supplier-payments", tags=["Supplier Payments"])
 
@@ -101,6 +105,13 @@ async def create_supplier_payment(data: SupplierPaymentCreate, request: Request,
             await db.suppliers.update_one({"_id": invoice["supplier_id"]}, {"$inc": {"total_paid": allocation.amount, "balance": -allocation.amount}})
     
     await log_action(company_id, str(current_user["_id"]), current_user.get("full_name", ""), "Créer", number, request.client.host if request.client else None)
+    
+    # Synchronisation comptable automatique
+    try:
+        await accounting_sync_service.sync_supplier_payment(str(result.inserted_id))
+    except Exception as e:
+        logger.error(f"Erreur synchronisation comptable paiement fournisseur {result.inserted_id}: {str(e)}")
+    
     return {"id": str(result.inserted_id), "number": number, "message": "Supplier payment recorded"}
 
 

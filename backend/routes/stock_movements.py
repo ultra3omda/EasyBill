@@ -3,9 +3,13 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
 from datetime import datetime, timezone
 import os
+import logging
 from typing import Optional, List
 from pydantic import BaseModel, Field
+from services.accounting_sync_service import accounting_sync_service
 from utils.dependencies import get_current_user, get_current_company
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/stock-movements", tags=["Stock Movements"])
 
@@ -143,6 +147,12 @@ async def create_movement(data: StockMovementCreate, company_id: str = Query(...
         {"_id": ObjectId(data.product_id)}, 
         {"$set": {"quantity_in_stock": total_stock, "stock_quantity": total_stock, "updated_at": datetime.now(timezone.utc)}}
     )
+    
+    # Synchronisation comptable automatique
+    try:
+        await accounting_sync_service.sync_stock_movement(str(result.inserted_id))
+    except Exception as e:
+        logger.error(f"Erreur synchronisation comptable mouvement stock {result.inserted_id}: {str(e)}")
     
     return {"id": str(result.inserted_id), "message": "Stock movement recorded", "stock_after": stock_after}
 

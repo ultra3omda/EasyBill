@@ -7,13 +7,13 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card } from '../components/ui/card';
 import { toast } from '../hooks/use-toast';
-import { Mail, Lock, Chrome } from 'lucide-react';
+import { Mail, Lock, Chrome, Facebook } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, loginWithGoogle } = useAuth();
+  const { login, loginWithGoogle, loginWithFacebook } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
 
@@ -56,6 +56,28 @@ const Login = () => {
       toast({
         title: 'Erreur',
         description: 'Erreur lors de la connexion avec Google',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFacebookLogin = async () => {
+    setLoading(true);
+    try {
+      const result = await loginWithFacebook();
+      if (result.success) {
+        toast({
+          title: 'Connexion réussie',
+          description: 'Bienvenue sur EasyBill!',
+        });
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      toast({
+        title: 'Erreur',
+        description: 'Erreur lors de la connexion avec Facebook',
         variant: 'destructive',
       });
     } finally {
@@ -143,17 +165,31 @@ const Login = () => {
           </div>
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full py-6 border-2 hover:bg-violet-50"
-          onClick={handleGoogleLogin}
-          disabled={loading}
-          data-testid="login-google-button"
-        >
-          <Chrome className="w-5 h-5 mr-2" />
-          {t('auth.googleLogin')}
-        </Button>
+        <div className="space-y-3">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full py-6 border-2 hover:bg-violet-50"
+            onClick={handleGoogleLogin}
+            disabled={loading}
+            data-testid="login-google-button"
+          >
+            <Chrome className="w-5 h-5 mr-2" />
+            {t('auth.googleLogin')}
+          </Button>
+          
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full py-6 border-2 hover:bg-blue-50"
+            onClick={handleFacebookLogin}
+            disabled={loading}
+            data-testid="login-facebook-button"
+          >
+            <Facebook className="w-5 h-5 mr-2" />
+            Continuer avec Facebook
+          </Button>
+        </div>
 
         <p className="text-center mt-6 text-gray-600">
           {t('auth.noAccount')}{' '}
