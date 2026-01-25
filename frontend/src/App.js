@@ -115,14 +115,44 @@ const AppRoutes = () => {
           <Invoices />
         </ProtectedRoute>
       } />
+      <Route path="/invoices/new" element={
+        <ProtectedRoute>
+          <InvoiceForm />
+        </ProtectedRoute>
+      } />
+      <Route path="/invoices/:id/edit" element={
+        <ProtectedRoute>
+          <InvoiceForm />
+        </ProtectedRoute>
+      } />
       <Route path="/quotes" element={
         <ProtectedRoute>
           <Quotes />
         </ProtectedRoute>
       } />
+      <Route path="/quotes/new" element={
+        <ProtectedRoute>
+          <QuoteForm />
+        </ProtectedRoute>
+      } />
+      <Route path="/quotes/:id/edit" element={
+        <ProtectedRoute>
+          <QuoteForm />
+        </ProtectedRoute>
+      } />
       <Route path="/delivery-notes" element={
         <ProtectedRoute>
           <DeliveryNotes />
+        </ProtectedRoute>
+      } />
+      <Route path="/delivery-notes/new" element={
+        <ProtectedRoute>
+          <DeliveryNoteForm />
+        </ProtectedRoute>
+      } />
+      <Route path="/delivery-notes/:id/edit" element={
+        <ProtectedRoute>
+          <DeliveryNoteForm />
         </ProtectedRoute>
       } />
       <Route path="/credit-notes" element={
