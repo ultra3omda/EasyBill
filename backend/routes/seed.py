@@ -210,17 +210,84 @@ async def seed_test_data(
                 })
                 results["purchase_orders"] += 1
     
+    # ============ SUPPLIER INVOICES (Factures fournisseurs) ============
+    if supplier_ids and product_ids:
+        results["supplier_invoices"] = 0
+        results["supplier_payments"] = 0
+        for i in range(5):
+            supplier = random.choice(supplier_ids)
+            items = []
+            subtotal = 0
+            for j in range(random.randint(1, 3)):
+                prod_idx = random.randint(0, len(products_data) - 1)
+                qty = random.randint(5, 15)
+                price = products_data[prod_idx]["purchase_price"]
+                if price > 0:
+                    total = qty * price
+                    subtotal += total
+                    items.append({"product_id": str(product_ids[prod_idx]), "product_name": products_data[prod_idx]["name"], "quantity": qty, "unit_price": price, "tax_rate": 19, "total": total})
+            
+            if items:
+                tax = subtotal * 0.19
+                si_total = subtotal + tax
+                status = random.choice(["received", "paid", "partial"])
+                
+                if status == "paid":
+                    paid = si_total
+                elif status == "partial":
+                    paid = round(random.uniform(si_total * 0.3, si_total * 0.7), 3)
+                else:
+                    paid = 0
+                
+                si_result = await db.supplier_invoices.insert_one({
+                    "company_id": company_oid, "supplier_id": supplier, 
+                    "number": f"FF-{now.year}-{random.randint(1000, 9999)}",
+                    "supplier_number": f"FEXT-{random.randint(100, 999)}",
+                    "date": now - timedelta(days=random.randint(1, 45)), 
+                    "due_date": now + timedelta(days=random.randint(1, 30)),
+                    "items": items, "subtotal": subtotal, "total_tax": tax, "total": si_total,
+                    "amount_paid": paid, "balance_due": si_total - paid,
+                    "status": status, "notes": "Facture fournisseur de test", 
+                    "created_at": now, "updated_at": now
+                })
+                results["supplier_invoices"] += 1
+                
+                # Créer un paiement fournisseur si payé
+                if paid > 0:
+                    await db.supplier_payments.insert_one({
+                        "company_id": company_oid, "supplier_id": supplier,
+                        "supplier_invoice_id": si_result.inserted_id,
+                        "payment_number": f"PF-{now.year}-{random.randint(1000, 9999)}",
+                        "date": now - timedelta(days=random.randint(1, 20)),
+                        "amount": paid, "payment_method": random.choice(["bank_transfer", "check"]),
+                        "reference": f"REFFR{random.randint(1000, 9999)}", 
+                        "notes": "Paiement fournisseur de test", "created_at": now
+                    })
+                    results["supplier_payments"] += 1
+    
     # ============ STOCK MOVEMENTS ============
     if product_ids:
         for i in range(10):
             prod_idx = random.randint(0, len(product_ids) - 1)
+            product = products_data[prod_idx]
+            current_stock = product.get("quantity_in_stock", 0)
             movement_type = random.choice(["in", "out"])
-            qty = random.randint(1, 10)
+            qty = random.randint(1, 5)
+            
+            if movement_type == "out":
+                new_stock = max(0, current_stock - qty)
+            else:
+                new_stock = current_stock + qty
             
             await db.stock_movements.insert_one({
                 "company_id": company_oid, "product_id": product_ids[prod_idx], "warehouse_id": warehouse_id,
-                "type": movement_type, "quantity": qty, "reason": random.choice(["Vente", "Achat", "Ajustement", "Retour", "Inventaire"]),
-                "reference": f"MVT-{random.randint(1000, 9999)}", "previous_stock": random.randint(10, 50), "new_stock": random.randint(5, 60),
+                "product_name": product["name"], "warehouse_name": "Entrepôt Principal",
+                "type": movement_type, "quantity": qty, 
+                "unit_cost": product.get("purchase_price", 0),
+                "total_value": qty * product.get("purchase_price", 0),
+                "reason": "Achat" if movement_type == "in" else "Vente",
+                "reference": f"MVT-{random.randint(1000, 9999)}", 
+                "stock_before": current_stock, "stock_after": new_stock,
                 "created_at": now - timedelta(days=random.randint(1, 30))
             })
             results["stock_movements"] += 1
