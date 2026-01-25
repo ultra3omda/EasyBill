@@ -138,7 +138,7 @@ class AccountingSyncService:
             
             # Calculer les montants
             subtotal = invoice.get("subtotal", 0)
-            tax_amount = invoice.get("tax_amount", 0)
+            tax_amount = invoice.get("total_tax", invoice.get("tax_amount", 0))
             total = invoice.get("total", 0)
             discount = invoice.get("discount", 0)
             
@@ -320,7 +320,7 @@ class AccountingSyncService:
             
             # Calculer les montants
             subtotal = invoice.get("subtotal", 0)
-            tax_amount = invoice.get("tax_amount", 0)
+            tax_amount = invoice.get("total_tax", invoice.get("tax_amount", 0))
             total = invoice.get("total", 0)
             
             # Déterminer le compte d'achat

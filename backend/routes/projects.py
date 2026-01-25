@@ -113,22 +113,6 @@ async def get_project_stats(
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_project(
-    company_id: str = Query(...),
-    current_user: dict = Depends(get_current_user),
-    name: str = None,
-    description: str = None,
-    customer_id: str = None,
-    start_date: str = None,
-    end_date: str = None,
-    budget: float = None,
-    hourly_rate: float = None
-):
-    from fastapi import Body
-    pass
-
-
-@router.post("/", status_code=status.HTTP_201_CREATED)
-async def create_project_body(
     data: dict,
     company_id: str = Query(...),
     current_user: dict = Depends(get_current_user)

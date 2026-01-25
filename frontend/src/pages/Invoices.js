@@ -342,12 +342,7 @@ const Invoices = () => {
         </Card>
       </div>
 
-      <InvoiceFormModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSuccess={loadInvoices}
-        invoice={selectedInvoice}
-      />
+
     </AppLayout>
   );
 };
