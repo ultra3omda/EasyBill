@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { quotesAPI, pdfAPI } from '../services/api';
 import { useCompany } from '../hooks/useCompany';
 import AppLayout from '../components/layout/AppLayout';
-import QuoteFormModal from '../components/modals/QuoteFormModal';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -28,11 +28,10 @@ import { toast } from '../hooks/use-toast';
 
 const Quotes = () => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const { currentCompany } = useCompany();
   const [quotes, setQuotes] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedQuote, setSelectedQuote] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
