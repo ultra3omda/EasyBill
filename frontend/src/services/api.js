@@ -109,6 +109,11 @@ export const warehousesAPI = {
   delete: (companyId, id) => apiClient.delete(`/warehouses/${id}?company_id=${companyId}`),
 };
 
+// Seed API - Generate test data
+export const seedAPI = {
+  generateTestData: (companyId) => apiClient.post(`/seed/test-data?company_id=${companyId}`),
+};
+
 // Quotes API - Note: trailing slash required to avoid 307 redirect losing auth header
 export const quotesAPI = {
   create: (companyId, data) => apiClient.post(`/quotes/?company_id=${companyId}`, data),
