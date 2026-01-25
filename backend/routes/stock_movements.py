@@ -135,11 +135,14 @@ async def create_movement(data: StockMovementCreate, company_id: str = Query(...
     
     result = await db.stock_movements.insert_one(movement_dict)
     
-    # Update product total stock
+    # Update product total stock (quantity_in_stock field)
     total_stock = 0
     all_levels = await db.stock_levels.find({"product_id": ObjectId(data.product_id)}).to_list(100)
     total_stock = sum(l.get("quantity", 0) for l in all_levels)
-    await db.products.update_one({"_id": ObjectId(data.product_id)}, {"$set": {"stock_quantity": total_stock}})
+    await db.products.update_one(
+        {"_id": ObjectId(data.product_id)}, 
+        {"$set": {"quantity_in_stock": total_stock, "stock_quantity": total_stock, "updated_at": datetime.now(timezone.utc)}}
+    )
     
     return {"id": str(result.inserted_id), "message": "Stock movement recorded", "stock_after": stock_after}
 
