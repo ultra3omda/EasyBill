@@ -213,6 +213,14 @@ export const journalEntriesAPI = {
   getStats: (companyId) => apiClient.get(`/journal-entries/stats?company_id=${companyId}`),
 };
 
+// Taxes API
+export const taxesAPI = {
+  list: (companyId) => apiClient.get(`/settings/taxes?company_id=${companyId}`),
+  create: (companyId, data) => apiClient.post(`/settings/taxes?company_id=${companyId}`, data),
+  update: (companyId, id, data) => apiClient.put(`/settings/taxes/${id}?company_id=${companyId}`, data),
+  delete: (companyId, id) => apiClient.delete(`/settings/taxes/${id}?company_id=${companyId}`),
+};
+
 // PDF API
 export const pdfAPI = {
   getInvoicePdfUrl: (companyId, invoiceId) => 
