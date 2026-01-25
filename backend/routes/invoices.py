@@ -297,7 +297,7 @@ async def send_invoice(
     company_id: str = Query(...),
     current_user: dict = Depends(get_current_user)
 ):
-    """Mark invoice as sent."""
+    """Mark invoice as sent and update stock."""
     company = await get_current_company(current_user, company_id)
     
     invoice = await db.invoices.find_one({
@@ -307,6 +307,51 @@ async def send_invoice(
     
     if not invoice:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
+    
+    # Only update stock if going from draft to sent
+    if invoice.get("status") == "draft":
+        # Get default warehouse
+        warehouse = await db.warehouses.find_one({"company_id": ObjectId(company_id), "is_default": True})
+        if not warehouse:
+            warehouse = await db.warehouses.find_one({"company_id": ObjectId(company_id)})
+        
+        if warehouse:
+            # Decrement stock for each item
+            for item in invoice.get("items", []):
+                product_id = item.get("product_id")
+                if product_id:
+                    # Get current product stock
+                    product = await db.products.find_one({"_id": ObjectId(product_id)})
+                    if product and product.get("type") != "service":
+                        current_stock = product.get("quantity_in_stock", 0)
+                        qty = item.get("quantity", 0)
+                        new_stock = max(0, current_stock - qty)
+                        
+                        # Create stock movement
+                        await db.stock_movements.insert_one({
+                            "company_id": ObjectId(company_id),
+                            "product_id": ObjectId(product_id),
+                            "product_name": product.get("name"),
+                            "warehouse_id": warehouse["_id"],
+                            "warehouse_name": warehouse.get("name"),
+                            "type": "out",
+                            "quantity": qty,
+                            "unit_cost": product.get("purchase_price", 0),
+                            "total_value": qty * product.get("purchase_price", 0),
+                            "reason": "Vente",
+                            "reference": invoice.get("number"),
+                            "stock_before": current_stock,
+                            "stock_after": new_stock,
+                            "created_at": datetime.now(timezone.utc),
+                            "created_by": current_user["_id"],
+                            "created_by_name": current_user.get("full_name", "")
+                        })
+                        
+                        # Update product stock
+                        await db.products.update_one(
+                            {"_id": ObjectId(product_id)},
+                            {"$set": {"quantity_in_stock": new_stock, "updated_at": datetime.now(timezone.utc)}}
+                        )
     
     await db.invoices.update_one(
         {"_id": ObjectId(invoice_id)},
@@ -324,7 +369,7 @@ async def send_invoice(
         "Envoyer", invoice.get("number", ""), request.client.host if request.client else None
     )
     
-    return {"message": "Invoice marked as sent"}
+    return {"message": "Invoice marked as sent and stock updated"}
 
 
 @router.post("/{invoice_id}/mark-paid")
