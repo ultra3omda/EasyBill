@@ -80,6 +80,47 @@ async def create_supplier_invoice(data: SupplierInvoiceCreate, request: Request,
     # Update supplier stats
     await db.suppliers.update_one({"_id": ObjectId(data.supplier_id)}, {"$inc": {"invoice_count": 1, "total_invoiced": totals["total"], "balance": totals["total"]}})
     
+    # Update stock - increase for purchased items
+    warehouse = await db.warehouses.find_one({"company_id": ObjectId(company_id), "is_default": True})
+    if not warehouse:
+        warehouse = await db.warehouses.find_one({"company_id": ObjectId(company_id)})
+    
+    if warehouse:
+        for item in items:
+            product_id = item.get("product_id")
+            if product_id:
+                product = await db.products.find_one({"_id": ObjectId(product_id)})
+                if product and product.get("type") != "service":
+                    current_stock = product.get("quantity_in_stock", 0)
+                    qty = item.get("quantity", 0)
+                    new_stock = current_stock + qty
+                    
+                    # Create stock movement (entrée)
+                    await db.stock_movements.insert_one({
+                        "company_id": ObjectId(company_id),
+                        "product_id": ObjectId(product_id),
+                        "product_name": product.get("name"),
+                        "warehouse_id": warehouse["_id"],
+                        "warehouse_name": warehouse.get("name"),
+                        "type": "in",
+                        "quantity": qty,
+                        "unit_cost": item.get("unit_price", product.get("purchase_price", 0)),
+                        "total_value": qty * item.get("unit_price", product.get("purchase_price", 0)),
+                        "reason": "Achat",
+                        "reference": number,
+                        "stock_before": current_stock,
+                        "stock_after": new_stock,
+                        "created_at": datetime.now(timezone.utc),
+                        "created_by": current_user["_id"],
+                        "created_by_name": current_user.get("full_name", "")
+                    })
+                    
+                    # Update product stock
+                    await db.products.update_one(
+                        {"_id": ObjectId(product_id)},
+                        {"$set": {"quantity_in_stock": new_stock, "updated_at": datetime.now(timezone.utc)}}
+                    )
+    
     await log_action(company_id, str(current_user["_id"]), current_user.get("full_name", ""), "Créer", number, request.client.host if request.client else None)
     return {"id": str(result.inserted_id), "number": number, "message": "Supplier invoice created"}
 
