@@ -256,6 +256,26 @@ const AppRoutes = () => {
       <Route path="/inventory" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/stock-movements" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       
+      {/* Sales Routes with /sales prefix */}
+      <Route path="/sales/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
+      <Route path="/sales/invoices/new" element={<ProtectedRoute><InvoiceForm /></ProtectedRoute>} />
+      <Route path="/sales/invoices/:id/edit" element={<ProtectedRoute><InvoiceForm /></ProtectedRoute>} />
+      <Route path="/sales/quotes" element={<ProtectedRoute><Quotes /></ProtectedRoute>} />
+      <Route path="/sales/quotes/new" element={<ProtectedRoute><QuoteForm /></ProtectedRoute>} />
+      <Route path="/sales/quotes/:id/edit" element={<ProtectedRoute><QuoteForm /></ProtectedRoute>} />
+      <Route path="/sales/delivery-notes" element={<ProtectedRoute><DeliveryNotes /></ProtectedRoute>} />
+      <Route path="/sales/delivery-notes/new" element={<ProtectedRoute><DeliveryNoteForm /></ProtectedRoute>} />
+      <Route path="/sales/delivery-notes/:id/edit" element={<ProtectedRoute><DeliveryNoteForm /></ProtectedRoute>} />
+      <Route path="/sales/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
+      <Route path="/sales/credit-notes" element={<ProtectedRoute><CreditNotes /></ProtectedRoute>} />
+      <Route path="/sales/reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
+      
+      {/* Stock Routes with /stock prefix */}
+      <Route path="/stock/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
+      <Route path="/stock/warehouses" element={<ProtectedRoute><Warehouses /></ProtectedRoute>} />
+      <Route path="/stock/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+      <Route path="/stock/movements" element={<ProtectedRoute><StockMovements /></ProtectedRoute>} />
+      
       {/* Ventes Routes */}
       <Route path="/delivery-notes" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/exit-vouchers" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
