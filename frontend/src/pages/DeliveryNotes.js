@@ -96,8 +96,20 @@ const DeliveryNotes = () => {
     }
   };
 
-  const openCreate = () => { setSelectedDoc(null); setFormData({ customer_id: '', date: new Date().toISOString().split('T')[0], items: [{ description: '', quantity: 1, unit_price: 0, tax_rate: 0, discount: 0, total: 0 }], notes: '', delivery_person: '' }); setModalOpen(true); };
-  const openEdit = (doc) => { setSelectedDoc(doc); setFormData({ customer_id: doc.customer_id || '', date: doc.date?.split('T')[0] || '', items: doc.items || [{ description: '', quantity: 1, unit_price: 0, tax_rate: 0, discount: 0, total: 0 }], notes: doc.notes || '', delivery_person: doc.delivery_person || '' }); setModalOpen(true); };
+  const openCreate = () => { navigate('/sales/delivery-notes/new'); };
+  const openEdit = (doc) => { navigate(`/sales/delivery-notes/${doc.id}/edit`); };
+
+  const toggleSelectAll = () => {
+    if (selectedDocs.length === filteredDocs.length) {
+      setSelectedDocs([]);
+    } else {
+      setSelectedDocs(filteredDocs.map(d => d.id));
+    }
+  };
+
+  const toggleSelectDoc = (id) => {
+    setSelectedDocs(prev => prev.includes(id) ? prev.filter(d => d !== id) : [...prev, id]);
+  };
 
   const getStatusBadge = (status) => {
     const config = { draft: { label: 'Brouillon', className: 'bg-gray-100 text-gray-800' }, delivered: { label: 'Livré', className: 'bg-green-100 text-green-800' }, cancelled: { label: 'Annulé', className: 'bg-red-100 text-red-800' } };
@@ -110,14 +122,19 @@ const DeliveryNotes = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6" data-testid="delivery-notes-page">
+      <div className="space-y-6 p-6" data-testid="delivery-notes-page">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Bons de livraison</h1>
-            <p className="text-gray-500 mt-1">{filteredDocs.length} bons au total</p>
+            <h1 className="text-2xl font-bold text-gray-900">Bons de livraison</h1>
+            <p className="text-gray-500">{filteredDocs.length} bons au total</p>
           </div>
-          <Button className="bg-violet-600 hover:bg-violet-700 text-white" onClick={openCreate} data-testid="create-delivery-note-btn">
-            <Plus className="w-4 h-4 mr-2" /> Créer un bon de livraison
+          <div className="flex items-center gap-2">
+            <Button variant="outline">
+              <Filter className="w-4 h-4 mr-2" />
+              Filtres
+            </Button>
+            <Button className="bg-violet-600 hover:bg-violet-700 text-white" onClick={openCreate} data-testid="create-delivery-note-btn">
+              <Plus className="w-4 h-4 mr-2" /> Nouveau bon de livraison
           </Button>
         </div>
 
