@@ -60,6 +60,39 @@ def print_section(title: str):
     print(f"{'='*80}{Colors.END}\n")
 
 
+async def register_and_login() -> tuple[Optional[str], Optional[str]]:
+    """Register new user and login to get auth token and company_id"""
+    print_section("🔐 REGISTRATION & AUTHENTICATION")
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # Register
+        try:
+            response = await client.post(
+                f"{BASE_URL}/auth/register",
+                json={
+                    "email": TEST_EMAIL,
+                    "password": TEST_PASSWORD,
+                    "full_name": "Accounting Test User",
+                    "company_name": "Test Accounting Company"
+                }
+            )
+            
+            if response.status_code in [200, 201]:
+                data = response.json()
+                token = data.get("access_token")
+                company_id = data.get("company_id")
+                log_test("Registration", "PASS", f"User registered successfully")
+                log_test("Login", "PASS", f"Token obtained successfully")
+                return token, company_id
+            else:
+                log_test("Registration", "FAIL", f"Status: {response.status_code}, Response: {response.text}")
+                return None, None
+                
+        except Exception as e:
+            log_test("Registration", "FAIL", f"Exception: {str(e)}")
+            return None, None
+
+
 async def login() -> Optional[str]:
     """Login and get auth token"""
     print_section("🔐 AUTHENTICATION - LOGIN")
