@@ -155,9 +155,10 @@ async def phase1_setup():
                 if response.status_code in [200, 201]:
                     customer = response.json()
                     test_data["customers"].append(customer)
-                    print_success(f"Client créé: {customer_data['name']}")
+                    customer_display = customer.get("display_name") or customer.get("company_name") or f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip()
+                    print_success(f"Client créé: {customer_display}")
                 else:
-                    print_error(f"Échec création client {customer_data['name']}: {response.status_code}")
+                    print_error(f"Échec création client {customer_data.get('company_name', customer_data.get('first_name'))}: {response.status_code} - {response.text[:200]}")
             except Exception as e:
                 print_error(f"Exception création client: {str(e)}")
         
