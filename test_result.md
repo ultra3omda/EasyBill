@@ -734,3 +734,108 @@ agent_communication:
       
       NEXT STEPS:
       Once issues #1 and #2 are fixed, re-run e2e_accounting_sync_simple_test.py
+  
+  - agent: "testing"
+    message: |
+      ✅ E2E TEST Q1 2025 FINAL - PARTIAL SUCCESS WITH CRITICAL FINDINGS
+      
+      TEST OBJECTIVE:
+      Comprehensive Q1 2025 accounting cycle simulation with verification at each step
+      
+      TEST EXECUTION:
+      ✅ Phase 1: Setup Entreprise - COMPLETE
+        - User registration and login successful
+        - Company created with 490 Tunisian chart of accounts
+        - 3 customers, 2 suppliers, 5 products created
+        - All key accounts verified (411, 707, 4351, 607, 4362, 401, 521)
+      
+      ✅ Phase 2: Cycle Ventes (Janvier-Mars) - COMPLETE
+        - Quote #1 created (no accounting impact - expected)
+        - Invoice #1 created and sent → Journal entry created ✓
+        - Payment #1 (partial 1500 TND) → Journal entry created ✓
+        - Invoice #2 created and sent → Journal entry created ✓
+        - Payment #2 (complete 1844.5 TND) → Journal entry created ✓
+        - Invoice #3 created and sent → Journal entry created ✓
+        - Payment #3 (complete 1481.55 TND) → Journal entry created ✓
+      
+      ⚠️ Phase 3: Cycle Achats (Février-Mars) - PARTIAL
+        - Supplier Invoice #1 created (validated) → NO journal entry ❌
+        - Supplier Payment #1 (12971 TND) → Journal entry created ✓
+        - Supplier Invoice #2 created (validated) → NO journal entry ❌
+        - Supplier Payment #2 (297.5 TND) → Journal entry created ✓
+      
+      ⚠️ Phase 4: Correction (Mars) - PARTIAL
+        - Credit Note #1 created (validated) → NO journal entry ❌
+      
+      ✅ Phase 5: Clôture Q1 2025 - COMPLETE
+        - Trial balance retrieved: 6 accounts used
+        - Total Debit: 16,344.05 TND = Total Credit: 16,344.05 TND ✓
+        - All 8 journal entries balanced ✓
+        - Financial report generated successfully
+      
+      CRITICAL FINDINGS:
+      
+      ✅ WORKING CORRECTLY:
+      1. Chart of accounts initialization (490 accounts)
+      2. Customer invoice accounting sync (3/3 invoices)
+      3. Customer payment accounting sync (3/3 payments)
+      4. Supplier payment accounting sync (2/2 payments)
+      5. All journal entries balanced (debit = credit)
+      6. Trial balance balanced
+      
+      ❌ NOT WORKING:
+      1. Supplier invoice accounting sync (0/2 invoices synced)
+      2. Credit note accounting sync (0/1 credit notes synced)
+      
+      EXPECTED vs ACTUAL:
+      - Expected: 11 journal entries
+        * 3 customer invoices
+        * 3 customer payments
+        * 2 supplier invoices
+        * 2 supplier payments
+        * 1 credit note
+      - Actual: 8 journal entries
+        * 3 customer invoices ✓
+        * 3 customer payments ✓
+        * 0 supplier invoices ❌
+        * 2 supplier payments ✓
+        * 0 credit notes ❌
+      
+      ROOT CAUSE ANALYSIS:
+      - Accounting sync hooks ARE being called:
+        * routes/supplier_invoices.py line 133: sync_supplier_invoice() called
+        * routes/credit_notes.py: sync_credit_note() called
+      - Methods ARE executing (no errors in logs)
+      - Journal entries ARE NOT being created
+      - Possible causes:
+        1. Silent validation failures in _create_journal_entry()
+        2. Account code validation failing
+        3. Balance validation failing
+        4. Exception being caught and logged but not visible
+      
+      RECOMMENDATIONS FOR MAIN AGENT:
+      1. HIGH PRIORITY: Debug sync_supplier_invoice() method
+         - Add detailed logging at each step
+         - Check if _create_journal_entry() is being called
+         - Verify account codes exist for supplier invoices (607, 4362, 401)
+         - Check if balance validation is passing
+      
+      2. HIGH PRIORITY: Debug sync_credit_note() method
+         - Add detailed logging
+         - Verify account codes exist for credit notes (707, 4351, 411)
+         - Check if method is being called with correct parameters
+      
+      3. MEDIUM PRIORITY: Add error handling
+         - Make sync failures more visible
+         - Return error messages instead of None
+         - Log detailed error information
+      
+      TEST FILES CREATED:
+      - /app/e2e_q1_2025_final_test.py - Complete Q1 2025 simulation
+      - /app/rapport_financier_q1_2025.md - Financial report
+      
+      DELIVERABLES:
+      ✅ Comprehensive financial report generated
+      ✅ All test data created successfully
+      ✅ Partial accounting synchronization verified
+      ❌ Supplier invoice and credit note sync requires fixing
