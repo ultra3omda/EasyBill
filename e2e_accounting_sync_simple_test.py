@@ -151,11 +151,11 @@ async def main():
         await asyncio.sleep(3)
         
         # 5. Vérifier si l'écriture comptable a été créée
-        print("\n5. Vérification de la création de l'écriture comptable...")
+        print("\n6. Vérification de la création de l'écriture comptable...")
         
         response = await client.get(
             f"{BASE_URL}/journal-entries/",
-            params={"company_id": COMPANY_ID},
+            params={"company_id": company_id},
             headers=headers
         )
         
