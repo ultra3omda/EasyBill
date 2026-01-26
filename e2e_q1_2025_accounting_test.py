@@ -280,10 +280,6 @@ async def phase2_sales_cycle():
         # Get customer display name
         customer_name = customer_pro.get("display_name") or f"{customer_pro.get('first_name', '')} {customer_pro.get('last_name', '')}".strip() or customer_pro.get("company_name", "")
         
-        # Helper function to get product field
-        def get_product_field(product, field_name, default=""):
-            return product.get(field_name) or product.get(field_name.replace("_", "")) or default
-        
         quote_data = {
             "customer_id": customer_pro["id"],
             "customer_name": customer_name,
