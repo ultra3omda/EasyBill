@@ -523,7 +523,7 @@ async def phase2_sales_cycle():
                 payment_data = {
                     "invoice_id": invoice_id,
                     "customer_id": customer_part["id"],
-                    "customer_name": customer_part["name"],
+                    "customer_name": customer_part_name,
                     "amount": invoice.get("total", 0),
                     "date": "2025-02-15",
                     "payment_method": "bank",
