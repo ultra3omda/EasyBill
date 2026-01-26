@@ -438,13 +438,8 @@ async def forgot_password(forgot_data: ForgotPassword):
         # Log error but don't reveal to user
         print(f"Failed to send reset email to {user['email']}")
     
-    # For development: return link in response (remove in production)
-    reset_link = f"http://localhost:3000/reset-password?token={reset_token}"
-    
     return {
-        "message": "If the email exists, a reset link has been sent",
-        "reset_link": reset_link,  # Remove in production
-        "token": reset_token  # Remove in production
+        "message": "If the email exists, a reset link has been sent"
     }
 
 @router.post("/reset-password")
