@@ -114,19 +114,32 @@ async def phase1_setup():
         print_info("\n2. Création des clients...")
         customers_data = [
             {
-                "name": "Client Pro SA",
+                "first_name": "Client",
+                "last_name": "Pro",
+                "company_name": "Client Pro SA",
                 "email": "contact@clientpro.tn",
                 "phone": "+216 71 123 456",
-                "address": "Avenue Habib Bourguiba, Tunis",
-                "tax_id": "1234567A",
-                "type": "company"
+                "billing_address": {
+                    "street": "Avenue Habib Bourguiba",
+                    "city": "Tunis",
+                    "postal_code": "1000",
+                    "country": "Tunisia"
+                },
+                "fiscal_id": "1234567A",
+                "client_type": "entreprise"
             },
             {
-                "name": "Client Particulier",
+                "first_name": "Client",
+                "last_name": "Particulier",
                 "email": "particulier@email.tn",
                 "phone": "+216 98 765 432",
-                "address": "Rue de la République, Sfax",
-                "type": "individual"
+                "billing_address": {
+                    "street": "Rue de la République",
+                    "city": "Sfax",
+                    "postal_code": "3000",
+                    "country": "Tunisia"
+                },
+                "client_type": "particulier"
             }
         ]
         
