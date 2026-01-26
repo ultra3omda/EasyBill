@@ -240,7 +240,7 @@ async def phase1_setup():
                 if response.status_code in [200, 201]:
                     product = response.json()
                     test_data["products"].append(product)
-                    print_success(f"Produit créé: {product_data['name']} - {product_data['price']} TND")
+                    print_success(f"Produit créé: {product_data['name']} - {product_data['unit_price']} TND")
                 else:
                     print_error(f"Échec création produit {product_data['name']}: {response.status_code}")
             except Exception as e:
