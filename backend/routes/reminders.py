@@ -144,6 +144,148 @@ async def list_reminders(
     return [serialize_reminder(r) for r in docs]
 
 
+# ==================== TEMPLATES DE RAPPELS ====================
+
+class ReminderTemplateCreate(BaseModel):
+    name: str
+    subject: str
+    body: str
+    days_after_due: int
+    reminder_level: int = 1
+    is_active: bool = True
+
+
+@router.get("/templates/list")
+async def list_reminder_templates(
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Liste les templates de rappel"""
+    templates = await db.reminder_templates.find({
+        "company_id": ObjectId(company_id)
+    }).sort("reminder_level", 1).to_list(None)
+    
+    for t in templates:
+        t["id"] = str(t["_id"])
+    
+    return {"items": templates}
+
+
+@router.post("/templates/create")
+async def create_reminder_template(
+    template: ReminderTemplateCreate,
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Crée un nouveau template de rappel"""
+    service = ReminderService(db)
+    result = await service.create_reminder_template(
+        company_id=company_id,
+        name=template.name,
+        subject=template.subject,
+        body=template.body,
+        days_after_due=template.days_after_due,
+        reminder_level=template.reminder_level,
+        is_active=template.is_active
+    )
+    return result
+
+
+@router.post("/templates/initialize-defaults")
+async def initialize_default_templates(
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Initialise les templates par défaut"""
+    existing = await db.reminder_templates.count_documents({
+        "company_id": ObjectId(company_id)
+    })
+    
+    if existing > 0:
+        raise HTTPException(status_code=400, detail="Des templates existent déjà")
+    
+    service = ReminderService(db)
+    templates = await service.initialize_default_templates(company_id)
+    
+    return {
+        "message": f"{len(templates)} templates créés",
+        "templates": templates
+    }
+
+
+# ==================== FACTURES EN RETARD ====================
+
+@router.get("/overdue-invoices")
+async def get_overdue_invoices(
+    company_id: str = Query(...),
+    min_days_overdue: int = 0,
+    max_days_overdue: Optional[int] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Liste les factures en retard"""
+    service = ReminderService(db)
+    invoices = await service.get_overdue_invoices(
+        company_id=company_id,
+        min_days_overdue=min_days_overdue,
+        max_days_overdue=max_days_overdue
+    )
+    return {"items": invoices, "total": len(invoices)}
+
+
+# ==================== ENVOI AUTOMATIQUE ====================
+
+@router.post("/send-automatic/{invoice_id}")
+async def send_automatic_reminder(
+    invoice_id: str,
+    template_id: Optional[str] = None,
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Envoie un rappel automatique pour une facture"""
+    service = ReminderService(db)
+    try:
+        result = await service.send_reminder(
+            invoice_id=invoice_id,
+            company_id=company_id,
+            template_id=template_id
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/process-automatic")
+async def process_automatic_reminders(
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Traite les rappels automatiques"""
+    service = ReminderService(db)
+    result = await service.process_automatic_reminders(company_id)
+    return result
+
+
+@router.get("/history")
+async def get_reminder_history(
+    company_id: str = Query(...),
+    invoice_id: Optional[str] = None,
+    customer_id: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
+    current_user: dict = Depends(get_current_user)
+):
+    """Récupère l'historique des rappels envoyés"""
+    service = ReminderService(db)
+    result = await service.get_reminder_history(
+        company_id=company_id,
+        invoice_id=invoice_id,
+        customer_id=customer_id,
+        skip=skip,
+        limit=limit
+    )
+    return result
+
+
 @router.get("/{doc_id}")
 async def get_reminder(
     doc_id: str,
