@@ -266,9 +266,12 @@ async def phase2_sales_cycle():
         laptop = test_data["products"][0]
         support = test_data["products"][1]
         
+        # Get customer display name
+        customer_name = customer_pro.get("display_name") or f"{customer_pro.get('first_name', '')} {customer_pro.get('last_name', '')}".strip() or customer_pro.get("company_name", "")
+        
         quote_data = {
             "customer_id": customer_pro["id"],
-            "customer_name": customer_pro["name"],
+            "customer_name": customer_name,
             "date": "2025-01-15",
             "valid_until": "2025-02-15",
             "items": [
@@ -277,7 +280,7 @@ async def phase2_sales_cycle():
                     "product_name": laptop["name"],
                     "description": laptop["description"],
                     "quantity": 2,
-                    "unit_price": laptop["price"],
+                    "unit_price": laptop["unit_price"],
                     "tax_rate": laptop["tax_rate"]
                 },
                 {
@@ -285,7 +288,7 @@ async def phase2_sales_cycle():
                     "product_name": support["name"],
                     "description": support["description"],
                     "quantity": 1,
-                    "unit_price": support["price"],
+                    "unit_price": support["unit_price"],
                     "tax_rate": support["tax_rate"]
                 }
             ],
