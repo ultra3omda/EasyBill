@@ -188,7 +188,7 @@ async def create_test_data() -> bool:
                 if response.status_code in [200, 201]:
                     supplier = response.json()
                     test_data["suppliers"].append(supplier)
-                    log_success(f"Fournisseur créé: {supplier_data['name']}")
+                    log_success(f"Fournisseur créé: {supplier_data['company_name']}")
                 else:
                     log_error(f"Erreur création fournisseur: {response.status_code}")
             except Exception as e:
