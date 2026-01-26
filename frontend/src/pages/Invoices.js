@@ -308,6 +308,12 @@ const Invoices = () => {
                                 <Printer className="w-4 h-4 mr-2" />
                                 Télécharger PDF
                               </DropdownMenuItem>
+                              {invoice.status === 'draft' && (
+                                <DropdownMenuItem onClick={() => handleSendByEmail(invoice.id)}>
+                                  <Send className="w-4 h-4 mr-2" />
+                                  Envoyer par email
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem onClick={() => openEditModal(invoice)}>
                                 <Edit className="w-4 h-4 mr-2" />
                                 Modifier
