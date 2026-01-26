@@ -242,7 +242,11 @@ async def phase1_setup():
                 if response.status_code in [200, 201]:
                     product = response.json()
                     test_data["products"].append(product)
-                    print_success(f"Produit créé: {product_data['name']} - {product_data['unit_price']} TND")
+                    # Debug: print product keys
+                    # print(f"DEBUG: Product keys: {list(product.keys())}")
+                    product_name = product.get("name") or product.get("product_name") or product_data["name"]
+                    product_price = product.get("unit_price") or product.get("price") or product_data["unit_price"]
+                    print_success(f"Produit créé: {product_name} - {product_price} TND")
                 else:
                     print_error(f"Échec création produit {product_data['name']}: {response.status_code}")
             except Exception as e:
