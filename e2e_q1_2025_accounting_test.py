@@ -164,11 +164,19 @@ async def phase1_setup():
         # 3. Créer 1 fournisseur
         print_info("\n3. Création du fournisseur...")
         supplier_data = {
-            "name": "Fournisseur Tech",
+            "first_name": "Fournisseur",
+            "last_name": "Tech",
+            "company_name": "Fournisseur Tech SARL",
             "email": "contact@fournisseurtech.tn",
             "phone": "+216 71 987 654",
-            "address": "Zone Industrielle, Ariana",
-            "tax_id": "9876543B"
+            "billing_address": {
+                "street": "Zone Industrielle",
+                "city": "Ariana",
+                "postal_code": "2080",
+                "country": "Tunisia"
+            },
+            "fiscal_id": "9876543B",
+            "supplier_type": "entreprise"
         }
         
         try:
