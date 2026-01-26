@@ -296,7 +296,7 @@ const AppLayout = ({ children }) => {
         { icon: PenLine, label: 'Écritures Comptables', path: '/journal-entries' },
         { icon: BookMarked, label: 'Grand Livre', path: '/general-ledger' },
         { icon: Scale, label: 'Balance des comptes', path: '/trial-balance' },
-        { icon: Percent, label: 'Retenues à la source', path: '/withholding-taxes' },
+        { icon: Percent, label: 'Retenues à la source', path: '/accounting/withholding-taxes' },
         { icon: FileText, label: 'Journaux légaux', path: '/legal-journals' },
         { icon: Calendar, label: 'Exercices comptables', path: '/fiscal-years' },
         { 
