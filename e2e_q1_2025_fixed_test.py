@@ -215,7 +215,7 @@ async def create_test_data() -> bool:
                 if response.status_code in [200, 201]:
                     product = response.json()
                     test_data["products"].append(product)
-                    log_success(f"Produit créé: {product_data['name']}")
+                    log_success(f"Produit créé: {product_data['name']} (ID: {product.get('id', 'N/A')})")
                 else:
                     log_error(f"Erreur création produit: {response.status_code}")
             except Exception as e:
