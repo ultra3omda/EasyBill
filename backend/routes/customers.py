@@ -235,12 +235,26 @@ async def get_customer_stats(
         "customer_id": ObjectId(customer_id)
     }).to_list(1000)
     
+    # Calculate monthly revenue for chart (last 12 months)
+    from collections import defaultdict
+    from datetime import timedelta
+    
+    monthly_revenue = defaultdict(float)
+    for inv in invoices:
+        if inv.get("date"):
+            month_key = inv["date"].strftime("%Y-%m")
+            monthly_revenue[month_key] += inv.get("total", 0)
+    
+    # Sort by month
+    sorted_months = sorted(monthly_revenue.items())[-12:]  # Last 12 months
+    
     return {
         "customer": {"id": str(customer["_id"]), **{k: v for k, v in customer.items() if k != "_id"}},
         "invoices": {
             "count": len(invoices),
             "total": sum(inv.get("total", 0) for inv in invoices),
-            "paid": sum(inv.get("amount_paid", 0) for inv in invoices)
+            "paid": sum(inv.get("amount_paid", 0) for inv in invoices),
+            "unpaid": sum(inv.get("balance_due", 0) for inv in invoices)
         },
         "quotes": {
             "count": len(quotes),
@@ -249,5 +263,27 @@ async def get_customer_stats(
         "payments": {
             "count": len(payments),
             "total": sum(p.get("amount", 0) for p in payments)
+        },
+        "monthly_revenue": [{"month": m, "amount": a} for m, a in sorted_months],
+        "transactions": {
+            "invoices": [
+                {
+                    "id": str(inv["_id"]),
+                    "number": inv.get("number"),
+                    "date": inv["date"].isoformat() if inv.get("date") else None,
+                    "total": inv.get("total", 0),
+                    "status": inv.get("status")
+                }
+                for inv in sorted(invoices, key=lambda x: x.get("date", datetime.min), reverse=True)[:10]
+            ],
+            "payments": [
+                {
+                    "id": str(p["_id"]),
+                    "date": p["date"].isoformat() if p.get("date") else None,
+                    "amount": p.get("amount", 0),
+                    "reference": p.get("reference")
+                }
+                for p in sorted(payments, key=lambda x: x.get("date", datetime.min), reverse=True)[:10]
+            ]
         }
     }
