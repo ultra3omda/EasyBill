@@ -287,35 +287,42 @@ class AccountingReportsService:
         # Create Excel with one sheet per third party
         output = BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            for third_party_id, data in third_parties.items():
-                if not data["transactions"]:
-                    continue
-                
-                df = pd.DataFrame(data["transactions"])
-                
-                # Add totals
-                totals = {
-                    "Date": "",
-                    "Référence": "",
-                    "Description": "TOTAL",
-                    "Débit": df["Débit"].sum(),
-                    "Crédit": df["Crédit"].sum()
-                }
-                df = pd.concat([df, pd.DataFrame([totals])], ignore_index=True)
-                
-                # Add balance
-                balance_value = df.iloc[-1]["Débit"] - df.iloc[-1]["Crédit"]
-                balance = {
-                    "Date": "",
-                    "Référence": "",
-                    "Description": "SOLDE",
-                    "Débit": balance_value if balance_value > 0 else 0,
-                    "Crédit": -balance_value if balance_value < 0 else 0
-                }
-                df = pd.concat([df, pd.DataFrame([balance])], ignore_index=True)
-                
-                sheet_name = data["name"][:30]  # Excel sheet name limit
-                df.to_excel(writer, sheet_name=sheet_name, index=False)
+            # Handle empty data case
+            if not third_parties:
+                df_empty = pd.DataFrame([{
+                    "Message": f"Aucune transaction pour les {ledger_type} sur la période sélectionnée"
+                }])
+                df_empty.to_excel(writer, sheet_name='Aucune donnée', index=False)
+            else:
+                for third_party_id, data in third_parties.items():
+                    if not data["transactions"]:
+                        continue
+                    
+                    df = pd.DataFrame(data["transactions"])
+                    
+                    # Add totals
+                    totals = {
+                        "Date": "",
+                        "Référence": "",
+                        "Description": "TOTAL",
+                        "Débit": df["Débit"].sum(),
+                        "Crédit": df["Crédit"].sum()
+                    }
+                    df = pd.concat([df, pd.DataFrame([totals])], ignore_index=True)
+                    
+                    # Add balance
+                    balance_value = df.iloc[-1]["Débit"] - df.iloc[-1]["Crédit"]
+                    balance = {
+                        "Date": "",
+                        "Référence": "",
+                        "Description": "SOLDE",
+                        "Débit": balance_value if balance_value > 0 else 0,
+                        "Crédit": -balance_value if balance_value < 0 else 0
+                    }
+                    df = pd.concat([df, pd.DataFrame([balance])], ignore_index=True)
+                    
+                    sheet_name = data["name"][:30]  # Excel sheet name limit
+                    df.to_excel(writer, sheet_name=sheet_name, index=False)
         
         return output.getvalue()
 
