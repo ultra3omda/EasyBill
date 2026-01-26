@@ -653,7 +653,7 @@ async def phase3_purchase_cycle():
                 supplier_payment_data = {
                     "supplier_invoice_id": supplier_invoice_id,
                     "supplier_id": supplier["id"],
-                    "supplier_name": supplier["name"],
+                    "supplier_name": supplier_name,
                     "amount": supplier_invoice.get("total", 0),
                     "date": "2025-02-05",
                     "payment_method": "bank",
