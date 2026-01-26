@@ -263,15 +263,14 @@ const AppLayout = ({ children }) => {
       icon: ShoppingBag,
       label: 'Ventes',
       items: [
-        { icon: Truck, label: 'Bons de livraison', path: '/delivery-notes' },
-        { icon: FileOutput, label: 'Bons de sortie', path: '/exit-vouchers' },
-        { icon: FileText, label: 'Devis', path: '/quotes' },
-        { icon: Receipt, label: 'Factures', path: '/invoices' },
-        { icon: FileInput, label: "Factures d'avoir", path: '/credit-notes' },
-        { icon: ClipboardCheck, label: 'Notes de débours', path: '/disbursements' },
-        { icon: CreditCard, label: 'Paiements', path: '/payments' },
-        { icon: AlertCircle, label: 'Rappels', path: '/reminders' },
-        { icon: Store, label: 'Points de vente', path: '/pos' }
+        { icon: Truck, label: 'Bons de livraison', path: '/sales/delivery-notes' },
+        { icon: FileOutput, label: 'Bons de sortie', path: '/sales/exit-vouchers' },
+        { icon: FileText, label: 'Devis', path: '/sales/quotes' },
+        { icon: Receipt, label: 'Factures', path: '/sales/invoices' },
+        { icon: FileInput, label: "Factures d'avoir", path: '/sales/credit-notes' },
+        { icon: ClipboardCheck, label: 'Notes de débours', path: '/sales/disbursements' },
+        { icon: CreditCard, label: 'Paiements', path: '/sales/payments' },
+        { icon: AlertCircle, label: 'Rappels', path: '/sales/reminders' }
       ]
     },
     {
@@ -280,13 +279,10 @@ const AppLayout = ({ children }) => {
       icon: ShoppingCart,
       label: 'Achats',
       items: [
-        { icon: FileText, label: 'Bons de commande', path: '/purchase-orders' },
-        { icon: FileInput, label: 'Bons de réception', path: '/receipts' },
-        { icon: Receipt, label: 'Factures fournisseur', path: '/supplier-invoices' },
-        { icon: CreditCard, label: 'Paiements', path: '/supplier-payments' },
-        { icon: ClipboardCheck, label: 'Bons de réception', path: '/reception-notes' },
-        { icon: Briefcase, label: 'Prestations de service', path: '/services' },
-        { icon: Percent, label: 'Retenue à la source', path: '/withholding-tax' }
+        { icon: FileText, label: 'Bons de commande', path: '/purchases/purchase-orders' },
+        { icon: FileInput, label: 'Bons de réception', path: '/purchases/receipts' },
+        { icon: Receipt, label: 'Factures fournisseur', path: '/purchases/supplier-invoices' },
+        { icon: CreditCard, label: 'Paiements', path: '/purchases/supplier-payments' }
       ]
     },
     {
