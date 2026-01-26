@@ -13,7 +13,7 @@ from typing import Dict, List, Optional
 BASE_URL = "https://test-et-implement.preview.emergentagent.com/api"
 TEST_EMAIL = "demo@test.com"
 TEST_PASSWORD = "Demo123!"
-COMPANY_ID = "69750647d138aa95c3cad9f5"
+COMPANY_ID = "69774d5d277076b4c53b1e13"
 
 # Global variables
 auth_token = None
