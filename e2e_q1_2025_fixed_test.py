@@ -148,9 +148,9 @@ async def create_test_data() -> bool:
         # Créer 3 clients
         log_info("Création de 3 clients...")
         customers_data = [
-            {"name": "Client Alpha SARL", "email": "alpha@client.tn", "phone": "+216 71 111 111", "address": "Tunis"},
-            {"name": "Client Beta SA", "email": "beta@client.tn", "phone": "+216 71 222 222", "address": "Sfax"},
-            {"name": "Client Gamma SUARL", "email": "gamma@client.tn", "phone": "+216 71 333 333", "address": "Sousse"}
+            {"first_name": "Alpha", "last_name": "Client", "company_name": "Client Alpha SARL", "email": "alpha@client.tn", "phone": "+216 71 111 111", "billing_address": {"street": "Tunis", "city": "Tunis", "postal_code": "1000", "country": "TN"}},
+            {"first_name": "Beta", "last_name": "Client", "company_name": "Client Beta SA", "email": "beta@client.tn", "phone": "+216 71 222 222", "billing_address": {"street": "Sfax", "city": "Sfax", "postal_code": "3000", "country": "TN"}},
+            {"first_name": "Gamma", "last_name": "Client", "company_name": "Client Gamma SUARL", "email": "gamma@client.tn", "phone": "+216 71 333 333", "billing_address": {"street": "Sousse", "city": "Sousse", "postal_code": "4000", "country": "TN"}}
         ]
         
         for customer_data in customers_data:
