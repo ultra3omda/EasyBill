@@ -617,7 +617,8 @@ class AccountingSyncService:
             
             # Calculer les montants
             subtotal = credit_note.get("subtotal", 0)
-            tax_amount = credit_note.get("tax_amount", 0)
+            # Le champ peut être 'tax_amount' ou 'total_tax' selon le document
+            tax_amount = credit_note.get("tax_amount", credit_note.get("total_tax", 0))
             total = credit_note.get("total", 0)
             
             logger.info(f"[SYNC] Credit note amounts - Subtotal: {subtotal}, Tax: {tax_amount}, Total: {total}")
