@@ -3,7 +3,7 @@
 
 **Entreprise:** EasyBill E2E Test Fixed
 **Période:** 01/01/2025 - 31/03/2025
-**Date de génération:** 26/01/2026 16:26:18
+**Date de génération:** 26/01/2026 16:27:16
 
 ## RÉSUMÉ DES OPÉRATIONS
 
