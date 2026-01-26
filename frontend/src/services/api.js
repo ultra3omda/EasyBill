@@ -255,11 +255,11 @@ export const taxesAPI = {
 // PDF API
 export const pdfAPI = {
   getInvoicePdfUrl: (companyId, invoiceId) => 
-    `${API_BASE_URL}/pdf/invoice/${invoiceId}?company_id=${companyId}`,
+    `${BACKEND_URL}/pdf/invoice/${invoiceId}?company_id=${companyId}`,
   getQuotePdfUrl: (companyId, quoteId) => 
-    `${API_BASE_URL}/pdf/quote/${quoteId}?company_id=${companyId}`,
+    `${BACKEND_URL}/pdf/quote/${quoteId}?company_id=${companyId}`,
   getDeliveryNotePdfUrl: (companyId, deliveryId) => 
-    `${API_BASE_URL}/pdf/delivery-note/${deliveryId}?company_id=${companyId}`,
+    `${BACKEND_URL}/pdf/delivery-note/${deliveryId}?company_id=${companyId}`,
   downloadInvoice: (companyId, invoiceId) => 
     apiClient.get(`/pdf/invoice/${invoiceId}?company_id=${companyId}`, { responseType: 'blob' }),
   downloadQuote: (companyId, quoteId) => 
