@@ -310,20 +310,24 @@ class AccountingSyncService:
         """
         
         try:
+            logger.info(f"[SYNC] === DÉBUT sync_supplier_invoice {invoice_id} ===")
+            
             invoice = await self.db.supplier_invoices.find_one({"_id": ObjectId(invoice_id)})
             
             if not invoice:
-                logger.error(f"Facture fournisseur {invoice_id} non trouvée")
+                logger.error(f"[SYNC] ❌ Facture fournisseur {invoice_id} non trouvée")
                 return None
+            
+            logger.info(f"[SYNC] Facture trouvée, status: {invoice.get('status')}")
             
             # Ne synchroniser que les factures validées
             if invoice.get("status") != "validated":
-                logger.info(f"Facture fournisseur {invoice_id} en statut {invoice.get('status')}, pas de synchronisation")
+                logger.info(f"[SYNC] ⏭️ Facture fournisseur {invoice_id} en statut {invoice.get('status')}, pas de synchronisation")
                 return None
             
             # Vérifier si déjà synchronisée
             if invoice.get("accounting_entry_id"):
-                logger.info(f"Facture fournisseur {invoice_id} déjà synchronisée")
+                logger.info(f"[SYNC] ⏭️ Facture fournisseur {invoice_id} déjà synchronisée")
                 return invoice.get("accounting_entry_id")
             
             company_id = str(invoice["company_id"])
@@ -332,6 +336,8 @@ class AccountingSyncService:
             subtotal = invoice.get("subtotal", 0)
             tax_amount = invoice.get("total_tax", invoice.get("tax_amount", 0))
             total = invoice.get("total", 0)
+            
+            logger.info(f"[SYNC] Montants - Subtotal: {subtotal}, Tax: {tax_amount}, Total: {total}")
             
             # Déterminer le compte d'achat
             # Par défaut 607 (Achats de marchandises)
@@ -347,6 +353,8 @@ class AccountingSyncService:
                 # Si c'est une matière première, utiliser 601
                 elif "matière" in first_item.get("description", "").lower():
                     purchase_account = "601"
+            
+            logger.info(f"[SYNC] Compte d'achat déterminé: {purchase_account}")
             
             # Construire les lignes d'écriture
             lines = []
@@ -380,6 +388,10 @@ class AccountingSyncService:
                 "description": f"Facture fournisseur {invoice.get('number', '')}"
             })
             
+            logger.info(f"[SYNC] {len(lines)} lignes créées")
+            for i, line in enumerate(lines):
+                logger.info(f"[SYNC] Ligne {i+1}: {line['account_code']} - Débit: {line['debit']}, Crédit: {line['credit']}")
+            
             # Créer l'écriture
             entry_id = await self._create_journal_entry(
                 company_id=company_id,
@@ -392,16 +404,22 @@ class AccountingSyncService:
             )
             
             if entry_id:
+                logger.info(f"[SYNC] ✅ Écriture créée avec ID: {entry_id}")
                 # Mettre à jour la facture avec l'ID de l'écriture
                 await self.db.supplier_invoices.update_one(
                     {"_id": ObjectId(invoice_id)},
                     {"$set": {"accounting_entry_id": entry_id}}
                 )
+            else:
+                logger.error(f"[SYNC] ❌ Échec création écriture pour facture fournisseur {invoice_id}")
             
+            logger.info(f"[SYNC] === FIN sync_supplier_invoice {invoice_id} ===")
             return entry_id
             
         except Exception as e:
-            logger.error(f"Erreur sync facture fournisseur {invoice_id}: {str(e)}")
+            logger.error(f"[SYNC] ❌ Erreur sync facture fournisseur {invoice_id}: {str(e)}")
+            import traceback
+            logger.error(f"[SYNC] Traceback: {traceback.format_exc()}")
             return None
     
     async def sync_supplier_payment(self, payment_id: str) -> Optional[str]:
