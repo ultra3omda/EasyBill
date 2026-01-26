@@ -191,9 +191,10 @@ async def phase1_setup():
             if response.status_code in [200, 201]:
                 supplier = response.json()
                 test_data["suppliers"].append(supplier)
-                print_success(f"Fournisseur créé: {supplier_data['name']}")
+                supplier_display = supplier.get("display_name") or supplier.get("company_name") or f"{supplier.get('first_name', '')} {supplier.get('last_name', '')}".strip()
+                print_success(f"Fournisseur créé: {supplier_display}")
             else:
-                print_error(f"Échec création fournisseur: {response.status_code}")
+                print_error(f"Échec création fournisseur: {response.status_code} - {response.text[:200]}")
         except Exception as e:
             print_error(f"Exception création fournisseur: {str(e)}")
         
