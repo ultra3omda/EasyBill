@@ -9,6 +9,7 @@ from models.invoice import Invoice, InvoiceCreate, InvoiceUpdate
 from utils.dependencies import get_current_user, get_current_company
 from utils.helpers import generate_document_number, calculate_document_totals
 from services.accounting_sync_service import accounting_sync_service
+from services.email_service import email_service
 
 logger = logging.getLogger(__name__)
 
