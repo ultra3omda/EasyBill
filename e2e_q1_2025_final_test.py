@@ -226,15 +226,21 @@ async def create_suppliers():
     
     suppliers_data = [
         {
+            "first_name": "TechParts",
+            "last_name": "Distribution",
+            "company_name": "TechParts Distribution",
             "display_name": "TechParts Distribution",
             "email": "contact@techparts.tn",
-            "type": "company",
+            "supplier_type": "entreprise",
             "billing_address": {"country": "Tunisia"}
         },
         {
+            "first_name": "CloudServices",
+            "last_name": "Tunisia",
+            "company_name": "CloudServices Tunisia",
             "display_name": "CloudServices Tunisia",
             "email": "info@cloudservices.tn",
-            "type": "company",
+            "supplier_type": "entreprise",
             "billing_address": {"country": "Tunisia"}
         }
     ]
