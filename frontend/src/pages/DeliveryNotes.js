@@ -12,7 +12,8 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
-import { Plus, Search, Truck, Edit, Trash2, MoreVertical, CheckCircle, Download, Eye, Filter } from 'lucide-react';
+import { Plus, Search, Truck, Edit, Trash2, MoreVertical, CheckCircle, Download, Eye, Filter, RefreshCw, FileText } from 'lucide-react';
+import axios from 'axios';
 import { toast } from '../hooks/use-toast';
 
 const DeliveryNotes = () => {
