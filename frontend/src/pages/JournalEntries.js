@@ -141,6 +141,39 @@ const JournalEntries = () => {
     }).format(value || 0);
   };
 
+  const exportToExcel = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const params = new URLSearchParams({ company_id: companyId });
+      if (filters.date_from) params.append('date_from', filters.date_from);
+      if (filters.date_to) params.append('date_to', filters.date_to);
+      if (journalFilter) params.append('journal_type', journalFilter);
+      
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}/api/journal-entries/export/excel?${params}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (!response.ok) throw new Error('Export failed');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Ecritures_Comptables_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Écritures exportées en Excel avec succès');
+    } catch (error) {
+      console.error('Error exporting:', error);
+      toast.error('Erreur lors de l\'export Excel');
+    }
+  };
+
+
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
     return new Date(dateStr).toLocaleDateString('fr-TN', {
