@@ -244,6 +244,8 @@ async def phase1_setup():
     suppliers_data = [
         {
             "name": "TechParts SARL",
+            "first_name": "TechParts",
+            "last_name": "SARL",
             "company_name": "TechParts SARL",
             "email": "contact@techparts.tn",
             "phone": "+216 71 345 678",
@@ -253,6 +255,8 @@ async def phase1_setup():
         },
         {
             "name": "Services Cloud SAS",
+            "first_name": "Services Cloud",
+            "last_name": "SAS",
             "company_name": "Services Cloud SAS",
             "email": "info@servicescloud.tn",
             "phone": "+216 71 456 789",
