@@ -101,10 +101,11 @@ const Settings = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.put(
-        `${API_URL}/api/auth/change-password`,
+        `${API_URL}/api/auth/password`,
         {
-          current_password: passwordData.current_password,
-          new_password: passwordData.new_password
+          old_password: passwordData.current_password,
+          new_password: passwordData.new_password,
+          confirm_password: passwordData.confirm_password
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
