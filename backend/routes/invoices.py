@@ -256,6 +256,80 @@ async def update_invoice(
     return {"message": "Invoice updated successfully"}
 
 
+
+@router.post("/{invoice_id}/send-email")
+async def send_invoice_by_email(
+    invoice_id: str,
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Envoie une facture par email au client
+    """
+    company = await get_current_company(current_user, company_id)
+    
+    # Récupérer la facture
+    invoice = await db.invoices.find_one({
+        "_id": ObjectId(invoice_id),
+        "company_id": ObjectId(company_id)
+    })
+    
+    if not invoice:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
+    
+    # Récupérer le client
+    customer = await db.customers.find_one({"_id": invoice["customer_id"]})
+    if not customer or not customer.get("email"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Customer email not found")
+    
+    # Générer l'URL du PDF (à adapter selon votre système)
+    pdf_url = f"{os.environ.get('FRONTEND_URL', 'http://localhost:3000')}/invoices/{invoice_id}/pdf"
+    
+    # Envoyer l'email
+    try:
+        email_service.send_invoice_email(
+            to_email=customer["email"],
+            customer_name=customer.get("display_name", customer.get("company_name", "Client")),
+            invoice_number=invoice.get("number"),
+            invoice_total=invoice.get("total"),
+            invoice_due_date=invoice.get("due_date").strftime("%d/%m/%Y") if invoice.get("due_date") else "",
+            pdf_url=pdf_url,
+            company_name=company.get("name", "")
+        )
+        
+        # Mettre à jour le statut de la facture
+        await db.invoices.update_one(
+            {"_id": ObjectId(invoice_id)},
+            {
+                "$set": {
+                    "status": "sent" if invoice.get("status") == "draft" else invoice.get("status"),
+                    "sent_at": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+        
+        # Si le statut passe à "sent", déclencher la sync comptable
+        if invoice.get("status") == "draft":
+            try:
+                await accounting_sync_service.sync_invoice(invoice_id)
+            except Exception as e:
+                logger.error(f"Erreur sync comptable facture {invoice_id} après envoi email: {str(e)}")
+        
+        return {
+            "message": "Invoice sent successfully",
+            "sent_to": customer["email"],
+            "sent_at": datetime.now(timezone.utc).isoformat()
+        }
+    
+    except Exception as e:
+        logger.error(f"Erreur envoi email facture {invoice_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to send email: {str(e)}"
+        )
+
+
 @router.delete("/{invoice_id}")
 async def delete_invoice(
     invoice_id: str,
