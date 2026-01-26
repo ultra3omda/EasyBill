@@ -300,6 +300,10 @@ const Suppliers = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => navigate(`/contacts/suppliers/${supplier.id}/summary`)}>
+                              <TrendingUp className="w-4 h-4 mr-2" />
+                              Voir synthèse
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleEdit(supplier)}>
                               <Eye className="w-4 h-4 mr-2" />
                               Voir / Modifier
