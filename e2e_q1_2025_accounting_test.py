@@ -275,6 +275,10 @@ async def phase2_sales_cycle():
         # Get customer display name
         customer_name = customer_pro.get("display_name") or f"{customer_pro.get('first_name', '')} {customer_pro.get('last_name', '')}".strip() or customer_pro.get("company_name", "")
         
+        # Helper function to get product field
+        def get_product_field(product, field_name, default=""):
+            return product.get(field_name) or product.get(field_name.replace("_", "")) or default
+        
         quote_data = {
             "customer_id": customer_pro["id"],
             "customer_name": customer_name,
@@ -282,20 +286,20 @@ async def phase2_sales_cycle():
             "valid_until": "2025-02-15",
             "items": [
                 {
-                    "product_id": laptop["id"],
-                    "product_name": laptop["name"],
-                    "description": laptop["description"],
+                    "product_id": laptop.get("id"),
+                    "product_name": get_product_field(laptop, "name", "Laptop"),
+                    "description": get_product_field(laptop, "description", "Ordinateur portable"),
                     "quantity": 2,
-                    "unit_price": laptop["unit_price"],
-                    "tax_rate": laptop["tax_rate"]
+                    "unit_price": get_product_field(laptop, "unit_price", 1200.0),
+                    "tax_rate": get_product_field(laptop, "tax_rate", 19.0)
                 },
                 {
-                    "product_id": support["id"],
-                    "product_name": support["name"],
-                    "description": support["description"],
+                    "product_id": support.get("id"),
+                    "product_name": get_product_field(support, "name", "Support"),
+                    "description": get_product_field(support, "description", "Support technique"),
                     "quantity": 1,
-                    "unit_price": support["unit_price"],
-                    "tax_rate": support["tax_rate"]
+                    "unit_price": get_product_field(support, "unit_price", 500.0),
+                    "tax_rate": get_product_field(support, "tax_rate", 19.0)
                 }
             ],
             "notes": "Devis pour équipement informatique"
