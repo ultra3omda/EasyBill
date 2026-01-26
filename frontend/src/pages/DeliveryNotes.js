@@ -110,9 +110,6 @@ const DeliveryNotes = () => {
     };
     return config[status] || config.draft;
   };
-    };
-    return config[status] || config.draft;
-  };
 
   const filteredDocs = docs.filter(d =>
     d.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
