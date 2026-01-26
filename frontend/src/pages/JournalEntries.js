@@ -348,17 +348,23 @@ const JournalEntries = () => {
             <h1 className="text-2xl font-bold text-gray-900">Écritures Comptables</h1>
             <p className="text-gray-500 mt-1">Gestion des écritures du journal général</p>
           </div>
-          <Button
-            onClick={() => {
-              resetForm();
-              setShowModal(true);
-            }}
-            className="bg-violet-600 hover:bg-violet-700"
-            data-testid="new-entry-btn"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nouvelle écriture
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={exportToExcel}>
+              <Download className="w-4 h-4 mr-2" />
+              Exporter Excel
+            </Button>
+            <Button
+              onClick={() => {
+                resetForm();
+                setShowModal(true);
+              }}
+              className="bg-violet-600 hover:bg-violet-700"
+              data-testid="new-entry-btn"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nouvelle écriture
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
