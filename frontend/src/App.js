@@ -281,6 +281,11 @@ const AppRoutes = () => {
       <Route path="/sales/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
       <Route path="/sales/credit-notes" element={<ProtectedRoute><CreditNotes /></ProtectedRoute>} />
       <Route path="/sales/reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
+      <Route path="/sales/exit-vouchers" element={<ProtectedRoute><ExitVouchers /></ProtectedRoute>} />
+      <Route path="/purchases/receipts" element={<ProtectedRoute><Receipts /></ProtectedRoute>} />
+      <Route path="/sales/disbursements" element={<ProtectedRoute><Disbursements /></ProtectedRoute>} />
+      <Route path="/accounting/withholding-taxes" element={<ProtectedRoute><WithholdingTaxes /></ProtectedRoute>} />
+
       
       {/* Stock Routes with /stock prefix */}
       <Route path="/stock/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
