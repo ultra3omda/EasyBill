@@ -288,6 +288,126 @@ async def convert_delivery_note_to_invoice(
         "Convertir BL en Facture",
         f"{delivery.get('number', '')} → {invoice_number}",
         request.client.host if request.client else None
+
+
+@router.post("/{delivery_id}/validate")
+async def validate_delivery_note(
+    delivery_id: str,
+    request: Request,
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Valide un bon de livraison et sort automatiquement le stock
+    """
+    company = await get_current_company(current_user, company_id)
+    
+    # Récupérer le BL
+    delivery = await db.delivery_notes.find_one({
+        "_id": ObjectId(delivery_id),
+        "company_id": ObjectId(company_id)
+    })
+    
+    if not delivery:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delivery note not found")
+    
+    if delivery.get("status") == "validated":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Delivery note already validated")
+    
+    # Sortir le stock pour chaque item
+    stock_movements = []
+    for item in delivery.get("items", []):
+        if item.get("product_id"):
+            product_id = item["product_id"]
+            quantity = item["quantity"]
+            
+            # Récupérer le produit
+            product = await db.products.find_one({"_id": ObjectId(product_id)})
+            if not product:
+                continue
+            
+            # Vérifier si c'est un produit avec stock (pas un service)
+            if product.get("type") != "service":
+                # Obtenir l'entrepôt principal
+                warehouse = await db.warehouses.find_one({
+                    "company_id": ObjectId(company_id),
+                    "is_default": True
+                })
+                
+                if not warehouse:
+                    # Créer l'entrepôt principal s'il n'existe pas
+                    warehouse_result = await db.warehouses.insert_one({
+                        "company_id": ObjectId(company_id),
+                        "name": "Entrepôt Principal",
+                        "code": "MAIN",
+                        "is_default": True,
+                        "created_at": datetime.now(timezone.utc)
+                    })
+                    warehouse = {"_id": warehouse_result.inserted_id}
+                
+                # Créer le mouvement de sortie
+                movement = {
+                    "company_id": ObjectId(company_id),
+                    "product_id": ObjectId(product_id),
+                    "warehouse_id": warehouse["_id"],
+                    "type": "out",
+                    "quantity": quantity,
+                    "reference": delivery.get("number"),
+                    "document_type": "delivery_note",
+                    "document_id": ObjectId(delivery_id),
+                    "date": datetime.now(timezone.utc),
+                    "notes": f"Sortie automatique BL {delivery.get('number')}",
+                    "created_at": datetime.now(timezone.utc),
+                    "created_by": current_user["_id"]
+                }
+                
+                movement_result = await db.stock_movements.insert_one(movement)
+                stock_movements.append(str(movement_result.inserted_id))
+                
+                # Mettre à jour le stock du produit
+                current_stock = product.get("quantity_in_stock", 0)
+                new_stock = max(0, current_stock - quantity)
+                
+                await db.products.update_one(
+                    {"_id": ObjectId(product_id)},
+                    {
+                        "$set": {
+                            "quantity_in_stock": new_stock,
+                            "updated_at": datetime.now(timezone.utc)
+                        }
+                    }
+                )
+    
+    # Mettre à jour le statut du BL
+    await db.delivery_notes.update_one(
+        {"_id": ObjectId(delivery_id)},
+        {
+            "$set": {
+                "status": "validated",
+                "validated_at": datetime.now(timezone.utc),
+                "validated_by": current_user["_id"],
+                "stock_movements": stock_movements,
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    # Log action
+    await log_action(
+        company_id,
+        str(current_user["_id"]),
+        current_user.get("full_name", ""),
+        "Valider BL",
+        delivery.get("number", ""),
+        request.client.host if request.client else None
+    )
+    
+    return {
+        "message": "Delivery note validated successfully",
+        "stock_movements_created": len(stock_movements),
+        "stock_movements": stock_movements
+    }
+
     )
     
     return {
