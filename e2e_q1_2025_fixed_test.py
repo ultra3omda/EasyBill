@@ -87,8 +87,17 @@ async def register_and_login() -> bool:
             if response.status_code in [200, 201]:
                 data = response.json()
                 auth_token = data.get("access_token")
-                company_id = data.get("company_id")
-                log_success(f"Inscription réussie - Company ID: {company_id}")
+                log_success(f"Inscription réussie")
+                
+                # Récupérer company_id
+                if auth_token:
+                    headers = {"Authorization": f"Bearer {auth_token}"}
+                    response = await client.get(f"{BASE_URL}/companies/", headers=headers)
+                    if response.status_code == 200:
+                        companies = response.json()
+                        if companies:
+                            company_id = companies[0].get("id")
+                            log_success(f"Company ID récupéré: {company_id}")
             else:
                 # Peut-être déjà inscrit, essayer de se connecter
                 log_warning(f"Inscription échouée (peut-être déjà inscrit): {response.status_code}")
