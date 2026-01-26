@@ -334,6 +334,12 @@ const Quotes = () => {
                                 <Printer className="w-4 h-4 mr-2" />
                                 Télécharger PDF
                               </DropdownMenuItem>
+                              {quote.status === 'draft' && (
+                                <DropdownMenuItem onClick={() => handleSendByEmail(quote.id)}>
+                                  <Send className="w-4 h-4 mr-2" />
+                                  Envoyer par email
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem onClick={() => openEditModal(quote)}>
                                 <Edit className="w-4 h-4 mr-2" />
                                 Modifier
