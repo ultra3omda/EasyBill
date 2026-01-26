@@ -183,6 +183,119 @@ async def update_delivery_note(
     return {"message": "Delivery note updated"}
 
 
+
+
+@router.post("/{delivery_id}/convert-to-invoice")
+async def convert_delivery_note_to_invoice(
+    delivery_id: str,
+    request: Request,
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Convertit un bon de livraison en facture
+    """
+    company = await get_current_company(current_user, company_id)
+    
+    # Récupérer le bon de livraison
+    delivery = await db.delivery_notes.find_one({
+        "_id": ObjectId(delivery_id),
+        "company_id": ObjectId(company_id)
+    })
+    
+    if not delivery:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delivery note not found")
+    
+    # Vérifier si déjà converti
+    if delivery.get("converted_to_invoice"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Delivery note already converted to invoice")
+    
+    # Générer le numéro de facture
+    numbering = company.get("numbering", {})
+    invoice_prefix = numbering.get("invoice_prefix", "FAC")
+    invoice_next = numbering.get("invoice_next", 1)
+    
+    invoice_number = generate_document_number(
+        invoice_prefix,
+        invoice_next,
+        datetime.now().year
+    )
+    
+    # Calculer les totaux
+    items = delivery.get("items", [])
+    totals = calculate_document_totals(items)
+    
+    # Créer la facture
+    invoice_dict = {
+        "company_id": ObjectId(company_id),
+        "customer_id": delivery["customer_id"],
+        "number": invoice_number,
+        "date": datetime.now(timezone.utc),
+        "due_date": delivery.get("due_date", datetime.now(timezone.utc)),
+        "subject": delivery.get("subject"),
+        "items": items,
+        **totals,
+        "amount_paid": 0.0,
+        "balance_due": totals["total"],
+        "payment_terms": delivery.get("payment_terms"),
+        "notes": delivery.get("notes"),
+        "language": delivery.get("language", "fr"),
+        "status": "draft",
+        "delivery_id": ObjectId(delivery_id),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+        "created_by": current_user["_id"]
+    }
+    
+    result = await db.invoices.insert_one(invoice_dict)
+    invoice_id = str(result.inserted_id)
+    
+    # Mettre à jour la numérotation
+    await db.companies.update_one(
+        {"_id": ObjectId(company_id)},
+        {"$inc": {"numbering.invoice_next": 1}}
+    )
+    
+    # Marquer le BL comme converti
+    await db.delivery_notes.update_one(
+        {"_id": ObjectId(delivery_id)},
+        {
+            "$set": {
+                "converted_to_invoice": True,
+                "invoice_id": ObjectId(invoice_id),
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    # Mettre à jour les stats client
+    await db.customers.update_one(
+        {"_id": delivery["customer_id"]},
+        {
+            "$inc": {
+                "invoice_count": 1,
+                "total_invoiced": totals["total"],
+                "balance": totals["total"]
+            }
+        }
+    )
+    
+    # Log action
+    await log_action(
+        company_id,
+        str(current_user["_id"]),
+        current_user.get("full_name", ""),
+        "Convertir BL en Facture",
+        f"{delivery.get('number', '')} → {invoice_number}",
+        request.client.host if request.client else None
+    )
+    
+    return {
+        "id": invoice_id,
+        "number": invoice_number,
+        "message": "Delivery note converted to invoice successfully"
+    }
+
 @router.delete("/{doc_id}")
 async def delete_delivery_note(
     doc_id: str,
