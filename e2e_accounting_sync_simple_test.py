@@ -14,26 +14,44 @@ TEST_EMAIL = "testuser@easybill.com"
 TEST_PASSWORD = "TestPass123!"
 COMPANY_ID = "69774dbbdb057f6d21416ad8"
 
+# Créer un nouveau compte pour le test
 async def main():
     print("\n" + "="*80)
     print("TEST SYNCHRONISATION COMPTABLE - VERSION SIMPLIFIÉE")
     print("="*80 + "\n")
     
     async with httpx.AsyncClient(timeout=60.0) as client:
-        # 1. Login
-        print("1. Connexion...")
+        # 1. Inscription
+        print("1. Inscription...")
+        email = f"test-sync-{int(datetime.now().timestamp())}@easybill.com"
+        password = "TestSync2025!"
+        
         response = await client.post(
-            f"{BASE_URL}/auth/login",
-            json={"email": TEST_EMAIL, "password": TEST_PASSWORD}
+            f"{BASE_URL}/auth/register",
+            json={
+                "email": email,
+                "password": password,
+                "company_name": "Test Sync Company",
+                "full_name": "Test Sync User"
+            }
         )
         
-        if response.status_code != 200:
-            print(f"❌ Échec connexion: {response.status_code}")
+        if response.status_code not in [200, 201]:
+            print(f"❌ Échec inscription: {response.status_code}")
             return
         
         token = response.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
-        print(f"✅ Connecté")
+        
+        # Récupérer company_id
+        response = await client.get(f"{BASE_URL}/companies/", headers=headers)
+        if response.status_code != 200 or not response.json():
+            print("❌ Échec récupération company")
+            return
+        
+        company_id = response.json()[0]["id"]
+        print(f"✅ Utilisateur créé: {email}")
+        print(f"   Company ID: {company_id}")
         
         # 2. Vérifier les écritures comptables existantes
         print("\n2. Vérification des écritures comptables existantes...")
