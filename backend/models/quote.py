@@ -11,7 +11,7 @@ class DocumentItem(BaseModel):
     unit_price: float = Field(ge=0)
     tax_rate: float = Field(ge=0, le=100, default=0)
     discount: float = Field(ge=0, le=100, default=0)
-    total: float = Field(ge=0)
+    total: Optional[float] = Field(default=None, ge=0)  # Optional, auto-calculated if not provided
 
 class Quote(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
