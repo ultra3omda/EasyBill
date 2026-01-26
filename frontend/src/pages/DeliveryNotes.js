@@ -106,6 +106,10 @@ const DeliveryNotes = () => {
     const config = {
       draft: { label: 'Brouillon', className: 'bg-gray-100 text-gray-800' },
       delivered: { label: 'Livré', className: 'bg-green-100 text-green-800' },
+      cancelled: { label: 'Annulé', className: 'bg-red-100 text-red-800' }
+    };
+    return config[status] || config.draft;
+  };
 
   const handleValidate = async (deliveryId) => {
     try {
