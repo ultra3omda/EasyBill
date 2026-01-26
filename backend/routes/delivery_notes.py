@@ -411,13 +411,6 @@ async def validate_delivery_note(
         "stock_movements": stock_movements
     }
 
-    )
-    
-    return {
-        "id": invoice_id,
-        "number": invoice_number,
-        "message": "Delivery note converted to invoice successfully"
-    }
 
 @router.delete("/{doc_id}")
 async def delete_delivery_note(
