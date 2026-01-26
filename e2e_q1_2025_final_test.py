@@ -280,37 +280,34 @@ async def create_products():
         {
             "name": "Laptop Dell Latitude 5420",
             "type": "product",
-            "sale_price": 1200.0,
-            "purchase_price": 950.0,
-            "quantity_in_stock": 10,
+            "unit_price": 1200.0,
+            "stock_quantity": 10,
             "tax_rate": 19.0
         },
         {
             "name": "Écran Samsung 27 pouces",
             "type": "product",
-            "sale_price": 350.0,
-            "purchase_price": 280.0,
-            "quantity_in_stock": 15,
+            "unit_price": 350.0,
+            "stock_quantity": 15,
             "tax_rate": 19.0
         },
         {
             "name": "Pack Clavier/Souris Logitech",
             "type": "product",
-            "sale_price": 45.0,
-            "purchase_price": 35.0,
-            "quantity_in_stock": 25,
+            "unit_price": 45.0,
+            "stock_quantity": 25,
             "tax_rate": 19.0
         },
         {
             "name": "Service Installation & Configuration",
             "type": "service",
-            "sale_price": 200.0,
+            "unit_price": 200.0,
             "tax_rate": 19.0
         },
         {
             "name": "Support technique annuel",
             "type": "service",
-            "sale_price": 500.0,
+            "unit_price": 500.0,
             "tax_rate": 19.0
         }
     ]
