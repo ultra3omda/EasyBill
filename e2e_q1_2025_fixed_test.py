@@ -576,16 +576,7 @@ async def create_supplier_invoices() -> bool:
                 
                 # Changer le statut à "validated" pour déclencher la sync comptable
                 invoice_id = invoice["id"]
-                response = await client.patch(
-                    f"{BASE_URL}/supplier-invoices/{invoice_id}",
-                    params={"company_id": company_id},
-                    json={"status": "validated"},
-                    headers=headers
-                )
-                if response.status_code == 200:
-                    log_success(f"✨ Facture fournisseur {supplier_invoice1_data['number']} → statut 'validated' (sync comptable déclenchée)")
-                else:
-                    log_warning(f"Erreur changement statut: {response.status_code}")
+                await update_document_status(client, "supplier-invoices", invoice_id, "validated", supplier_invoice1_data['number'], company_id, headers)
             else:
                 log_error(f"Erreur création facture fournisseur: {response.status_code} - {response.text}")
         except Exception as e:
