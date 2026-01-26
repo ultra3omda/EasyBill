@@ -691,23 +691,24 @@ def print_summary():
 
 async def main():
     """Main test execution"""
-    global auth_token
+    global auth_token, COMPANY_ID
     
     print(f"\n{Colors.MAGENTA}{'='*80}")
     print("🧪 TEST COMPLET MODULE COMPTABILITÉ EASYBILL")
     print("Testing all accounting routes + Excel exports")
     print(f"{'='*80}{Colors.END}\n")
     
-    print(f"Base URL: {BASE_URL}")
-    print(f"Test Email: {TEST_EMAIL}")
-    print(f"Company ID: {COMPANY_ID}\n")
+    print(f"Base URL: {BASE_URL}\n")
     
-    # Login first
-    auth_token = await login()
+    # Register and login
+    auth_token, COMPANY_ID = await register_and_login()
     
-    if not auth_token:
-        print(f"\n{Colors.RED}CRITICAL: Cannot proceed without authentication token{Colors.END}")
+    if not auth_token or not COMPANY_ID:
+        print(f"\n{Colors.RED}CRITICAL: Cannot proceed without authentication token and company_id{Colors.END}")
         return
+    
+    print(f"\nTest Email: {TEST_EMAIL}")
+    print(f"Company ID: {COMPANY_ID}\n")
     
     # Run all accounting tests
     await test_chart_of_accounts()
