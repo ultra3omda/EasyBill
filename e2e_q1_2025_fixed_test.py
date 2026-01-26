@@ -164,7 +164,7 @@ async def create_test_data() -> bool:
                 if response.status_code in [200, 201]:
                     customer = response.json()
                     test_data["customers"].append(customer)
-                    log_success(f"Client créé: {customer_data['name']}")
+                    log_success(f"Client créé: {customer_data['company_name']}")
                 else:
                     log_error(f"Erreur création client: {response.status_code}")
             except Exception as e:
