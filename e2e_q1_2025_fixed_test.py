@@ -292,16 +292,28 @@ async def create_customer_invoices() -> bool:
                 
                 # Changer le statut à "sent" pour déclencher la sync comptable
                 invoice_id = invoice["id"]
-                response = await client.patch(
+                # Récupérer la facture complète
+                response_get = await client.get(
                     f"{BASE_URL}/invoices/{invoice_id}",
                     params={"company_id": company_id},
-                    json={"status": "sent"},
                     headers=headers
                 )
-                if response.status_code == 200:
-                    log_success(f"Facture {invoice1_data['number']} → statut 'sent' (sync comptable déclenchée)")
+                if response_get.status_code == 200:
+                    full_invoice = response_get.json()
+                    full_invoice["status"] = "sent"
+                    
+                    response = await client.put(
+                        f"{BASE_URL}/invoices/{invoice_id}",
+                        params={"company_id": company_id},
+                        json=full_invoice,
+                        headers=headers
+                    )
+                    if response.status_code == 200:
+                        log_success(f"Facture {invoice1_data['number']} → statut 'sent' (sync comptable déclenchée)")
+                    else:
+                        log_warning(f"Erreur changement statut: {response.status_code}")
                 else:
-                    log_warning(f"Erreur changement statut: {response.status_code}")
+                    log_warning(f"Erreur récupération facture: {response_get.status_code}")
             else:
                 log_error(f"Erreur création facture: {response.status_code} - {response.text}")
         except Exception as e:
