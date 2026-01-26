@@ -184,6 +184,8 @@ async def phase1_setup():
         {
             "name": "Société ABC",
             "type": "B2B",
+            "first_name": "Société",
+            "last_name": "ABC",
             "company_name": "Société ABC",
             "email": "contact@abc.tn",
             "phone": "+216 71 123 456",
@@ -193,6 +195,8 @@ async def phase1_setup():
         {
             "name": "Entreprise XYZ",
             "type": "B2B",
+            "first_name": "Entreprise",
+            "last_name": "XYZ",
             "company_name": "Entreprise XYZ",
             "email": "info@xyz.tn",
             "phone": "+216 71 234 567",
