@@ -83,10 +83,24 @@ async def phase1_setup():
             if response.status_code in [200, 201]:
                 data = response.json()
                 auth_token = data.get("access_token")
-                company_id = data.get("company_id")
                 test_data["user"] = {"email": email, "password": password}
                 print_success(f"Utilisateur créé: {email}")
-                print_info(f"Company ID: {company_id}")
+                
+                # Fetch company ID
+                headers = {"Authorization": f"Bearer {auth_token}"}
+                response = await client.get(f"{BASE_URL}/companies/", headers=headers)
+                
+                if response.status_code == 200:
+                    companies = response.json()
+                    if companies and len(companies) > 0:
+                        company_id = companies[0]["id"]
+                        print_info(f"Company ID: {company_id}")
+                    else:
+                        print_error("Aucune entreprise trouvée")
+                        return False
+                else:
+                    print_error(f"Échec récupération entreprise: {response.status_code}")
+                    return False
             else:
                 print_error(f"Échec inscription: {response.status_code} - {response.text}")
                 return False
