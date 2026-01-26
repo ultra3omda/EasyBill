@@ -288,6 +288,9 @@ async def convert_delivery_note_to_invoice(
         "Convertir BL en Facture",
         f"{delivery.get('number', '')} → {invoice_number}",
         request.client.host if request.client else None
+    )
+    
+    return {"message": "Bon de livraison converti en facture", "invoice_id": str(invoice_result.inserted_id), "invoice_number": invoice_number}
 
 
 @router.post("/{delivery_id}/validate")
