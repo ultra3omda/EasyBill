@@ -451,9 +451,11 @@ async def phase2_sales_cycle():
         customer_part = test_data["customers"][1]
         licence = test_data["products"][2]
         
+        customer_part_name = customer_part.get("display_name") or f"{customer_part.get('first_name', '')} {customer_part.get('last_name', '')}".strip() or customer_part.get("company_name", "")
+        
         invoice_data = {
             "customer_id": customer_part["id"],
-            "customer_name": customer_part["name"],
+            "customer_name": customer_part_name,
             "date": "2025-02-10",
             "due_date": "2025-03-10",
             "items": [
@@ -462,7 +464,7 @@ async def phase2_sales_cycle():
                     "product_name": licence["name"],
                     "description": licence["description"],
                     "quantity": 1,
-                    "unit_price": licence["price"],
+                    "unit_price": licence["unit_price"],
                     "tax_rate": licence["tax_rate"]
                 }
             ],
