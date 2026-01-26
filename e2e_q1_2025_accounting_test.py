@@ -724,11 +724,13 @@ async def phase4_corrections():
         if len(test_data["invoices"]) > 0:
             invoice = test_data["invoices"][0]
             laptop = test_data["products"][0]
+            customer_pro = test_data["customers"][0]
+            customer_name = customer_pro.get("display_name") or f"{customer_pro.get('first_name', '')} {customer_pro.get('last_name', '')}".strip() or customer_pro.get("company_name", "")
             
             credit_note_data = {
                 "invoice_id": invoice["id"],
                 "customer_id": invoice["customer_id"],
-                "customer_name": invoice["customer_name"],
+                "customer_name": customer_name,
                 "date": "2025-03-01",
                 "items": [
                     {
@@ -736,7 +738,7 @@ async def phase4_corrections():
                         "product_name": laptop["name"],
                         "description": "Retour laptop défectueux",
                         "quantity": 1,
-                        "unit_price": laptop["price"],
+                        "unit_price": laptop["unit_price"],
                         "tax_rate": laptop["tax_rate"]
                     }
                 ],
