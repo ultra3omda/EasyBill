@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Header
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 from models.user import UserCreate, UserLogin, User, UserUpdate, PasswordUpdate, ForgotPassword, ResetPassword
 from utils.auth import get_password_hash, verify_password, create_access_token
@@ -15,6 +15,35 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
+
+
+async def create_default_chart_of_accounts_for_company(company_id: ObjectId):
+    """Initialize Tunisian chart of accounts for new company"""
+    from data.tunisian_chart_of_accounts import TUNISIAN_CHART_OF_ACCOUNTS
+    
+    now = datetime.now(timezone.utc)
+    accounts_to_insert = []
+    
+    for account in TUNISIAN_CHART_OF_ACCOUNTS:
+        account_doc = {
+            "code": account["code"],
+            "name": account["name"],
+            "type": account["type"],
+            "is_group": account.get("is_group", False),
+            "parent_code": account.get("parent_code"),
+            "company_id": company_id,
+            "is_system": True,
+            "is_active": True,
+            "balance": 0.0,
+            "created_at": now
+        }
+        accounts_to_insert.append(account_doc)
+    
+    # Bulk insert for better performance (490 accounts)
+    if accounts_to_insert:
+        await db.chart_of_accounts.insert_many(accounts_to_insert)
+        return len(accounts_to_insert)
+    return 0
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(user_data: UserCreate):
