@@ -268,7 +268,7 @@ const AppLayout = ({ children }) => {
         { icon: FileText, label: 'Devis', path: '/quotes' },
         { icon: Receipt, label: 'Factures', path: '/invoices' },
         { icon: FileInput, label: "Factures d'avoir", path: '/credit-notes' },
-        { icon: ClipboardCheck, label: 'Notes de débours', path: '/expense-reports' },
+        { icon: ClipboardCheck, label: 'Notes de débours', path: '/disbursements' },
         { icon: CreditCard, label: 'Paiements', path: '/payments' },
         { icon: AlertCircle, label: 'Rappels', path: '/reminders' },
         { icon: Store, label: 'Points de vente', path: '/pos' }
@@ -281,6 +281,7 @@ const AppLayout = ({ children }) => {
       label: 'Achats',
       items: [
         { icon: FileText, label: 'Bons de commande', path: '/purchase-orders' },
+        { icon: FileInput, label: 'Bons de réception', path: '/receipts' },
         { icon: Receipt, label: 'Factures fournisseur', path: '/supplier-invoices' },
         { icon: CreditCard, label: 'Paiements', path: '/supplier-payments' },
         { icon: ClipboardCheck, label: 'Bons de réception', path: '/reception-notes' },
