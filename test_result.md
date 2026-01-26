@@ -322,11 +322,11 @@ backend:
 
   - task: "Rappels automatisés"
     implemented: true
-    working: false
+    working: true
     file: "services/reminder_service.py, routes/reminders.py"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -334,6 +334,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "❌ CRITICAL BUG: GET /api/reminders/overdue-invoices returns 520 error due to FastAPI route ordering issue. The generic route @router.get('/{doc_id}') at line 147 catches '/overdue-invoices' before the specific route at line 368. SOLUTION: Move all specific routes (/overdue-invoices, /templates/list, /templates/create, /templates/initialize-defaults, /send-automatic/{invoice_id}, /process-automatic, /history) BEFORE the generic /{doc_id} route. GET /api/reminders/templates/list works. BUG FIXED: customer name extraction in services/reminder_service.py line 182."
+      - working: true
+        agent: "main"
+        comment: "✅ BUG CORRIGÉ: Routes spécifiques déplacées AVANT la route générique /{doc_id}. Backend redémarré. Tests réussis: GET /reminders/templates/list (200), GET /reminders/overdue-invoices (200), GET /reminders/history (200). Toutes les routes de rappels fonctionnent correctement maintenant."
 
   - task: "Signature électronique BL"
     implemented: true
