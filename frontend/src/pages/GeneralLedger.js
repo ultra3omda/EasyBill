@@ -110,6 +110,40 @@ const GeneralLedger = () => {
     });
   };
 
+
+  const exportToExcel = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const params = new URLSearchParams({ company_id: companyId });
+      if (filters.account_code) params.append('account_code', filters.account_code);
+      if (filters.date_from) params.append('date_from', filters.date_from);
+      if (filters.date_to) params.append('date_to', filters.date_to);
+      
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}/api/accounting/general-ledger/export/excel?${params}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (!response.ok) throw new Error('Export failed');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Grand_Livre_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Grand livre exporté en Excel avec succès');
+    } catch (error) {
+      console.error('Error exporting:', error);
+      toast.error('Erreur lors de l\'export Excel');
+    }
+  };
+
+
   const toggleAccount = (code) => {
     setExpandedAccounts(prev => {
       const newSet = new Set(prev);
