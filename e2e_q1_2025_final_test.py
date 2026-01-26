@@ -165,22 +165,30 @@ async def create_customers():
     
     customers_data = [
         {
+            "first_name": "ABC",
+            "last_name": "SARL",
+            "company_name": "Société ABC SARL",
             "display_name": "Société ABC SARL",
             "email": "abc@example.com",
             "phone": "+216 71 123 456",
-            "type": "company",
+            "client_type": "entreprise",
             "billing_address": {"country": "Tunisia"}
         },
         {
+            "first_name": "XYZ",
+            "last_name": "SA",
+            "company_name": "Entreprise XYZ SA",
             "display_name": "Entreprise XYZ SA",
             "email": "xyz@example.com",
-            "type": "company",
+            "client_type": "entreprise",
             "billing_address": {"country": "Tunisia"}
         },
         {
+            "first_name": "Mohamed",
+            "last_name": "Ben Ali",
             "display_name": "Mohamed Ben Ali",
             "email": "mohamed@example.com",
-            "type": "individual",
+            "client_type": "particulier",
             "billing_address": {"country": "Tunisia"}
         }
     ]
