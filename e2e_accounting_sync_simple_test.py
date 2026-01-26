@@ -53,51 +53,48 @@ async def main():
         print(f"✅ Utilisateur créé: {email}")
         print(f"   Company ID: {company_id}")
         
-        # 2. Vérifier les écritures comptables existantes
-        print("\n2. Vérification des écritures comptables existantes...")
+        # 2. Créer un client
+        print("\n2. Création d'un client...")
+        customer_data = {
+            "first_name": "Test",
+            "last_name": "Customer",
+            "company_name": "Test Company",
+            "email": "test@example.com",
+            "phone": "+216 71 123 456"
+        }
+        
+        response = await client.post(
+            f"{BASE_URL}/customers/",
+            params={"company_id": company_id},
+            json=customer_data,
+            headers=headers
+        )
+        
+        if response.status_code not in [200, 201]:
+            print(f"❌ Échec création client: {response.status_code}")
+            return
+        
+        customer = response.json()
+        customer_name = customer.get("display_name") or f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip()
+        print(f"✅ Client créé: {customer_name}")
+        
+        # 3. Vérifier les écritures comptables existantes
+        print("\n3. Vérification des écritures comptables existantes...")
         response = await client.get(
             f"{BASE_URL}/journal-entries/",
-            params={"company_id": COMPANY_ID},
+            params={"company_id": company_id},
             headers=headers
         )
         
         if response.status_code == 200:
             entries = response.json()
-            print(f"✅ {len(entries)} écritures comptables trouvées")
-            
-            if len(entries) > 0:
-                print("\nDétail des écritures:")
-                for entry in entries[:5]:  # Afficher les 5 premières
-                    print(f"\n  Écriture: {entry.get('reference')}")
-                    print(f"  Date: {entry.get('date')}")
-                    print(f"  Description: {entry.get('description')}")
-                    print(f"  Type document: {entry.get('document_type')}")
-                    print(f"  Lignes:")
-                    for line in entry.get('lines', []):
-                        if line.get('debit') > 0:
-                            print(f"    Débit {line.get('account_code')} - {line.get('account_name')}: {line.get('debit')} TND")
-                        if line.get('credit') > 0:
-                            print(f"    Crédit {line.get('account_code')} - {line.get('account_name')}: {line.get('credit')} TND")
+            print(f"✅ {len(entries)} écritures comptables trouvées (devrait être 0 pour nouveau compte)")
         else:
             print(f"❌ Échec récupération écritures: {response.status_code} - {response.text}")
             return
         
-        # 3. Créer une facture simple pour tester la synchronisation
-        print("\n3. Création d'une facture de test...")
-        
-        # D'abord, récupérer un client
-        response = await client.get(
-            f"{BASE_URL}/customers/",
-            params={"company_id": COMPANY_ID},
-            headers=headers
-        )
-        
-        if response.status_code != 200 or not response.json():
-            print("❌ Aucun client trouvé")
-            return
-        
-        customer = response.json()[0]
-        customer_name = customer.get("display_name") or f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip()
+        # 4. Créer une facture simple pour tester la synchronisation
+        print("\n4. Création d'une facture de test...")
         
         # Créer une facture
         invoice_data = {
