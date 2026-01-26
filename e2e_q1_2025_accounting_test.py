@@ -389,7 +389,7 @@ async def phase2_sales_cycle():
                     payment_data = {
                         "invoice_id": invoice_id,
                         "customer_id": customer_pro["id"],
-                        "customer_name": customer_pro["name"],
+                        "customer_name": customer_name,
                         "amount": 2000.0,
                         "date": "2025-01-25",
                         "payment_method": "bank",
