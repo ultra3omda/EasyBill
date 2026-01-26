@@ -157,7 +157,10 @@ async def list_invoices(
     
     # Optimize: Batch fetch all customers to avoid N+1 queries
     customer_ids = list(set([inv["customer_id"] for inv in invoices if inv.get("customer_id")]))
-    customers = await db.customers.find({"_id": {"$in": customer_ids}}).to_list(None)
+    customers = await db.customers.find(
+        {"_id": {"$in": customer_ids}},
+        {"_id": 1, "display_name": 1, "company_name": 1, "first_name": 1, "last_name": 1}
+    ).to_list(1000)
     customer_map = {str(c["_id"]): c for c in customers}
     
     # Populate customer names using the map
