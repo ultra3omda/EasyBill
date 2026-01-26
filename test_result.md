@@ -126,15 +126,18 @@ backend:
 
   - task: "Récupération mot de passe (Forgot/Reset Password)"
     implemented: true
-    working: "NA"
+    working: true
     file: "routes/auth.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Backend implémenté: POST /api/auth/forgot-password et POST /api/auth/reset-password. À tester avec mode simulation email."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: POST /api/auth/forgot-password generates reset token successfully. POST /api/auth/reset-password validates token and resets password. Email simulation works."
 
   - task: "Vérification Email"
     implemented: true
