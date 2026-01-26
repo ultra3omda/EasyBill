@@ -442,31 +442,16 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 0
+  test_sequence: 1
   run_ui: false
 
 test_plan:
   current_focus:
-    - "OAuth Google/Facebook Authentication"
-    - "Récupération mot de passe"
-    - "Vérification Email"
-    - "Système d'envoi d'emails"
-    - "Factures récurrentes automatiques"
-    - "Synchronisation comptable automatique"
-    - "Portail client public"
-    - "Bons de sortie"
-    - "Bons de réception"
-    - "Notes de débours"
-    - "Retenues à la source"
-    - "Gestion collaborateurs"
-    - "Import/Export contacts"
-    - "Module Trésorerie"
     - "Rappels automatisés"
-    - "Signature électronique BL"
-    - "Génération reçus PDF"
-  stuck_tasks: []
-  test_all: true
-  test_priority: "high_first"
+  stuck_tasks:
+    - "Rappels automatisés"
+  test_all: false
+  test_priority: "stuck_first"
 
 agent_communication:
   - agent: "main"
@@ -478,6 +463,68 @@ agent_communication:
       - Backend: MongoDB local sur test_database
       - Frontend: React pointant vers backend preview
       
+      Objectifs du test backend:
+      1. Vérifier que toutes les routes API répondent correctement
+      2. Tester les validations et erreurs
+      3. Vérifier l'intégrité des données
+      4. Tester les hooks de synchronisation comptable
+      5. Valider les services (email simulation, portail client, etc.)
+      
+      Commençant par les tests backend complets.
+  
+  - agent: "testing"
+    message: |
+      ✅ PHASE 1 BACKEND TESTING COMPLETE - 90% SUCCESS RATE (27/30 tests passed)
+      
+      SUMMARY:
+      - 16 out of 17 P0/P1 features are WORKING correctly
+      - 1 feature has a CRITICAL BUG that needs fixing
+      - 3 minor bugs were FIXED during testing
+      
+      PASSED FEATURES (16/17):
+      ✅ OAuth Google/Facebook Authentication
+      ✅ Récupération mot de passe (Forgot/Reset Password)
+      ✅ Vérification Email
+      ✅ Système d'envoi d'emails (Email Service)
+      ✅ Factures récurrentes automatiques
+      ✅ Synchronisation comptable automatique
+      ✅ Portail client public
+      ✅ Bons de sortie (Exit Vouchers)
+      ✅ Bons de réception
+      ✅ Notes de débours
+      ✅ Retenues à la source (Withholding Tax)
+      ✅ Gestion collaborateurs
+      ✅ Import/Export contacts CSV
+      ✅ Module Trésorerie (5 routes: bank-accounts, dashboard, cash-flow, forecast, monthly report)
+      ✅ Signature électronique BL
+      ✅ Génération reçus PDF paiements
+      
+      FAILED FEATURES (1/17):
+      ❌ Rappels automatisés - CRITICAL BUG: Route ordering issue in routes/reminders.py
+      
+      BUGS FIXED BY TESTING AGENT:
+      1. System library missing: Installed libpangoft2-1.0-0 for WeasyPrint PDF generation
+      2. routes/collaborators.py lines 492, 504: Fixed current_user["id"] vs current_user["_id"] inconsistency
+      3. services/reminder_service.py line 182: Fixed customer name extraction to handle None values
+      
+      CRITICAL BUG REQUIRING MAIN AGENT FIX:
+      routes/reminders.py - FastAPI route ordering issue:
+      - The generic route @router.get("/{doc_id}") at line 147 is catching specific routes like "/overdue-invoices"
+      - SOLUTION: Move ALL specific routes BEFORE the generic /{doc_id} route:
+        * /overdue-invoices (line 368)
+        * /templates/list (line 308)
+        * /templates/create (line 324)
+        * /templates/initialize-defaults (line 344)
+        * /send-automatic/{invoice_id} (line 387)
+        * /process-automatic (line 407)
+        * /history (line 418)
+      - These must be defined BEFORE line 147 where /{doc_id} is defined
+      
+      TEST ENVIRONMENT:
+      - Backend URL: https://test-et-implement.preview.emergentagent.com/api
+      - Test user: testuser@easybill.com
+      - Company ID: 69774dbbdb057f6d21416ad8
+      - All tests run via backend_test.py script
       Objectifs du test backend:
       1. Vérifier que toutes les routes API répondent correctement
       2. Tester les validations et erreurs
