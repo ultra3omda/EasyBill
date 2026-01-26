@@ -62,6 +62,39 @@ const TrialBalance = () => {
     }
   };
 
+  const exportToExcel = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const params = new URLSearchParams({ company_id: companyId });
+      if (dateTo) params.append('date_to', dateTo);
+      
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}/api/accounting/trial-balance/export/excel?${params}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Balance_Comptes_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Balance exportée en Excel avec succès');
+    } catch (error) {
+      console.error('Error exporting:', error);
+      toast.error('Erreur lors de l\'export Excel');
+    }
+  };
+
+
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('fr-TN', {
       style: 'currency',
