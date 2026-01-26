@@ -501,8 +501,9 @@ async def get_my_permissions(
         }
     
     # Sinon, chercher dans les collaborateurs
+    user_id = current_user.get("_id") or current_user.get("id")
     collab = await db.collaborators.find_one({
-        "user_id": ObjectId(current_user["id"]),
+        "user_id": ObjectId(user_id) if isinstance(user_id, str) else user_id,
         "company_id": ObjectId(company_id),
         "status": "active"
     })
