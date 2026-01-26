@@ -80,10 +80,27 @@ async def register_and_login() -> tuple[Optional[str], Optional[str]]:
             if response.status_code in [200, 201]:
                 data = response.json()
                 token = data.get("access_token")
-                company_id = data.get("company_id")
                 log_test("Registration", "PASS", f"User registered successfully")
-                log_test("Login", "PASS", f"Token obtained successfully")
-                return token, company_id
+                
+                # Get company_id by fetching user's companies
+                headers = {"Authorization": f"Bearer {token}"}
+                companies_response = await client.get(
+                    f"{BASE_URL}/companies/",
+                    headers=headers
+                )
+                
+                if companies_response.status_code == 200:
+                    companies = companies_response.json()
+                    if companies and len(companies) > 0:
+                        company_id = companies[0].get("id")
+                        log_test("Get Company ID", "PASS", f"Company ID: {company_id}")
+                        return token, company_id
+                    else:
+                        log_test("Get Company ID", "FAIL", "No companies found")
+                        return token, None
+                else:
+                    log_test("Get Company ID", "FAIL", f"Status: {companies_response.status_code}")
+                    return token, None
             else:
                 log_test("Registration", "FAIL", f"Status: {response.status_code}, Response: {response.text}")
                 return None, None
