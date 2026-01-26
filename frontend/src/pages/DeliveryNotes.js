@@ -56,6 +56,39 @@ const DeliveryNotes = () => {
     }
   };
 
+
+  const handleValidate = async (deliveryId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `${process.env.REACT_APP_BACKEND_URL}/api/delivery-notes/${deliveryId}/validate?company_id=${currentCompany.id}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast({ title: 'Succès', description: 'Bon de livraison validé et stock mis à jour' });
+      loadData();
+    } catch (error) {
+      console.error('Error validating delivery note:', error);
+      toast({ title: 'Erreur', description: error.response?.data?.detail || 'Erreur lors de la validation', variant: 'destructive' });
+    }
+  };
+
+  const handleConvertToInvoice = async (deliveryId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.post(
+        `${process.env.REACT_APP_BACKEND_URL}/api/delivery-notes/${deliveryId}/convert-to-invoice?company_id=${currentCompany.id}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast({ title: 'Succès', description: `Facture ${res.data.number} créée depuis le BL` });
+      loadData();
+    } catch (error) {
+      console.error('Error converting to invoice:', error);
+      toast({ title: 'Erreur', description: error.response?.data?.detail || 'Erreur lors de la conversion', variant: 'destructive' });
+    }
+  };
+
   const handleDeliver = async (id) => {
     try {
       await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/delivery-notes/${id}/deliver?company_id=${currentCompany.id}`, {
