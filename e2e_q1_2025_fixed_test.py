@@ -60,6 +60,39 @@ def print_section(title: str):
     print(f"{'='*80}{Colors.END}\n")
 
 
+async def update_document_status(client, endpoint: str, doc_id: str, new_status: str, doc_number: str, company_id: str, headers: dict) -> bool:
+    """Helper function to update document status via PUT"""
+    try:
+        # Récupérer le document complet
+        response_get = await client.get(
+            f"{BASE_URL}/{endpoint}/{doc_id}",
+            params={"company_id": company_id},
+            headers=headers
+        )
+        if response_get.status_code == 200:
+            full_doc = response_get.json()
+            full_doc["status"] = new_status
+            
+            response = await client.put(
+                f"{BASE_URL}/{endpoint}/{doc_id}",
+                params={"company_id": company_id},
+                json=full_doc,
+                headers=headers
+            )
+            if response.status_code == 200:
+                log_success(f"✨ {doc_number} → statut '{new_status}' (sync comptable déclenchée)")
+                return True
+            else:
+                log_warning(f"Erreur changement statut: {response.status_code}")
+                return False
+        else:
+            log_warning(f"Erreur récupération document: {response_get.status_code}")
+            return False
+    except Exception as e:
+        log_error(f"Exception changement statut: {str(e)}")
+        return False
+
+
 async def register_and_login() -> bool:
     """Phase 0: Inscription et connexion"""
     print_section("PHASE 0: INSCRIPTION ET CONNEXION")
