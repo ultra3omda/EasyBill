@@ -188,9 +188,9 @@ backend:
     implemented: true
     working: false
     file: "services/accounting_sync_service.py"
-    stuck_count: 2
+    stuck_count: 3
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -204,6 +204,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "❌ E2E TEST Q1 2025: Attempted comprehensive accounting synchronization test. FINDINGS: 1) ObjectId serialization in journal_entries.py appears to be fixed (GET /api/journal-entries/ returns 200). 2) Accounting sync hooks are properly integrated in routes/invoices.py line 251 (called when status changes to 'sent' or 'paid'). 3) CRITICAL ISSUE: Chart of accounts may not be initialized for new companies - accounting_sync_service.sync_invoice() at line 183-194 validates account codes exist before creating journal entries. If chart of accounts is empty, journal entry creation will fail silently. 4) Invoice/supplier invoice item structure requires 'total' field which is not auto-calculated, causing 422 errors during test data creation. RECOMMENDATION: Main agent should verify chart of accounts initialization and add auto-calculation of item totals in invoice creation."
+      - working: false
+        agent: "testing"
+        comment: "❌ E2E TEST Q1 2025 FINAL: Comprehensive test completed with PARTIAL SUCCESS. WORKING: ✅ Chart of accounts initialization (490 accounts created automatically on company registration). ✅ Customer invoices sync (3 invoices created 3 journal entries). ✅ Customer payments sync (3 payments created 3 journal entries). ✅ Supplier payments sync (2 payments created 2 journal entries). ✅ All journal entries balanced (debit = credit). ✅ Trial balance balanced (16,344.05 TND debit = credit). NOT WORKING: ❌ Supplier invoices NOT creating journal entries (2 supplier invoices created but 0 journal entries). ❌ Credit notes NOT creating journal entries (1 credit note created but 0 journal entry). EXPECTED: 11 journal entries (3 invoices + 3 payments + 2 supplier invoices + 2 supplier payments + 1 credit note). ACTUAL: 8 journal entries (3 invoices + 3 payments + 2 supplier payments). ROOT CAUSE: Accounting sync hooks in routes/supplier_invoices.py line 133 and routes/credit_notes.py are being called but sync_supplier_invoice() and sync_credit_note() methods in accounting_sync_service.py are failing silently. No error logs found. RECOMMENDATION: Main agent must debug why sync_supplier_invoice() and sync_credit_note() are not creating journal entries despite being called. Check if there are validation failures or silent exceptions."
 
   - task: "Portail client public"
     implemented: true
