@@ -689,4 +689,45 @@ agent_communication:
       
       NEXT STEPS:
       Main agent must fix the two critical bugs before accounting synchronization can be properly tested.
-      Once fixed, re-run e2e_accounting_sync_test.py to verify the fixes.
+      Once fixed, re-run e2e_accounting_sync_test.py to verify the fixes.  
+  - agent: "testing"
+    message: |
+      ❌ E2E ACCOUNTING SYNCHRONIZATION TEST Q1 2025 - INCOMPLETE
+      
+      TEST OBJECTIVE:
+      Simulate Q1 2025 business cycle to verify automatic accounting synchronization
+      
+      TEST RESULTS:
+      - Phase 1 (Setup): ✅ PARTIAL - User/company creation successful
+      - Phase 2-5 (Business Operations): ❌ BLOCKED - Cannot create test data
+      
+      CRITICAL FINDINGS:
+      
+      1. ✅ ObjectId Serialization Fixed:
+         - GET /api/journal-entries/ now returns 200 (previously 520 error)
+      
+      2. ✅ Accounting Sync Hooks Integrated:
+         - routes/invoices.py line 251: sync_invoice() called when status changes to 'sent'/'paid'
+      
+      3. ❌ CRITICAL ISSUE #1: Chart of Accounts Not Initialized
+         - New companies do not have chart of accounts populated
+         - accounting_sync_service.py lines 183-194 validates account codes exist
+         - If accounts (411, 707, 4351, etc.) don't exist, journal entry creation fails silently
+         - SOLUTION: Initialize chart of accounts on company creation with Tunisian PCG accounts
+      
+      4. ❌ CRITICAL ISSUE #2: Invoice Item Structure
+         - Invoice items require 'total' field (422 validation error)
+         - Field is not auto-calculated from quantity * unit_price * (1 + tax_rate/100)
+         - SOLUTION: Add auto-calculation or make field optional with backend calculation
+      
+      TEST FILES CREATED:
+      - /app/e2e_q1_2025_accounting_test.py - Comprehensive Q1 2025 simulation (incomplete)
+      - /app/e2e_accounting_sync_simple_test.py - Simplified sync test (blocked)
+      
+      RECOMMENDATIONS FOR MAIN AGENT:
+      1. HIGH PRIORITY: Initialize chart of accounts on company creation
+      2. HIGH PRIORITY: Fix invoice item total auto-calculation
+      3. MEDIUM PRIORITY: Add logging to accounting_sync_service methods
+      
+      NEXT STEPS:
+      Once issues #1 and #2 are fixed, re-run e2e_accounting_sync_simple_test.py
