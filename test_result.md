@@ -111,15 +111,18 @@ backend:
   # P0 - Fonctionnalités Critiques
   - task: "OAuth Google/Facebook Authentication"
     implemented: true
-    working: "NA"
+    working: true
     file: "routes/auth.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Backend implémenté avec POST /api/auth/google et /api/auth/facebook. À tester sans clés API (mode simulation)."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Both POST /api/auth/google and POST /api/auth/facebook routes work correctly. Routes accept mock credentials and create/link user accounts. Email service simulation works."
 
   - task: "Récupération mot de passe (Forgot/Reset Password)"
     implemented: true
