@@ -120,6 +120,23 @@ const Quotes = () => {
     }
   };
 
+  const handleSendByEmail = async (quoteId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `${process.env.REACT_APP_BACKEND_URL}/api/quotes/${quoteId}/send-email?company_id=${currentCompany.id}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast({ title: 'Succès', description: 'Devis envoyé par email avec succès' });
+      loadQuotes();
+    } catch (error) {
+      console.error('Error sending quote by email:', error);
+      toast({ title: 'Erreur', description: error.response?.data?.detail || 'Erreur lors de l\'envoi de l\'email', variant: 'destructive' });
+    }
+  };
+
+
   const openCreateModal = () => {
     navigate('/sales/quotes/new');
   };
