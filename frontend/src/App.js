@@ -337,6 +337,8 @@ const AppRoutes = () => {
       <Route path="/journal-entries" element={<ProtectedRoute><JournalEntries /></ProtectedRoute>} />
       <Route path="/general-ledger" element={<ProtectedRoute><GeneralLedger /></ProtectedRoute>} />
       <Route path="/trial-balance" element={<ProtectedRoute><TrialBalance /></ProtectedRoute>} />
+      <Route path="/auxiliary-ledgers" element={<ProtectedRoute><AuxiliaryLedgers /></ProtectedRoute>} />
+
       <Route path="/ledgers" element={<ProtectedRoute><GeneralLedger /></ProtectedRoute>} />
       <Route path="/balances" element={<ProtectedRoute><TrialBalance /></ProtectedRoute>} />
       <Route path="/balance-tiers" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
