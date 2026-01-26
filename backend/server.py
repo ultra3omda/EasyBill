@@ -7,13 +7,8 @@ import os
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# Set default values if not in .env
-if 'MONGO_URL' not in os.environ:
-    os.environ['MONGO_URL'] = 'mongodb://localhost:27017'
-if 'DB_NAME' not in os.environ:
-    os.environ['DB_NAME'] = 'easybill'
-if 'JWT_SECRET' not in os.environ:
-    os.environ['JWT_SECRET'] = 'easybill_super_secret_key_2026'
+# Environment variables must be set in .env file - no fallbacks for production
+# Kubernetes will inject the proper values
 
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
