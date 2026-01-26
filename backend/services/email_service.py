@@ -14,7 +14,12 @@ SMTP_USER = os.environ.get('SMTP_USER', '')
 SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
 SMTP_FROM_EMAIL = os.environ.get('SMTP_FROM_EMAIL', 'noreply@easybill.com')
 SMTP_FROM_NAME = os.environ.get('SMTP_FROM_NAME', 'EasyBill')
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+# Frontend URL for email links - must be set in production
+FRONTEND_URL = os.environ.get('FRONTEND_URL')
+if not FRONTEND_URL:
+    # Only log warning, don't fail - email features will work but links will be None
+    import logging
+    logging.warning("FRONTEND_URL not set in environment - email links will not work properly")
 
 class EmailService:
     """Service for sending emails via SMTP"""
