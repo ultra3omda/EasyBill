@@ -222,6 +222,11 @@ async def create_test_data() -> bool:
                 log_error(f"Exception création produit: {str(e)}")
     
     log_info(f"Données créées: {len(test_data['customers'])} clients, {len(test_data['suppliers'])} fournisseurs, {len(test_data['products'])} produits")
+    
+    # Debug: Print first product structure
+    if test_data['products']:
+        log_info(f"Premier produit (debug): {test_data['products'][0]}")
+    
     return len(test_data['customers']) >= 3 and len(test_data['suppliers']) >= 2 and len(test_data['products']) >= 5
 
 
