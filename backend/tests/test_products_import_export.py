@@ -7,7 +7,7 @@ import requests
 import os
 import io
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://easybill-25.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://test-et-implement.preview.emergentagent.com')
 COMPANY_ID = "697549d9ee757048d6c9c8aa"
 
 # Test credentials
