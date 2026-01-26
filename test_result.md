@@ -527,6 +527,36 @@ agent_communication:
       - Test user: testuser@easybill.com
       - Company ID: 69774dbbdb057f6d21416ad8
       - All tests run via backend_test.py script
+  
+  - agent: "main"
+    message: |
+      ✅ BUG CRITIQUE CORRIGÉ - Module Rappels Automatisés
+      
+      PROBLÈME IDENTIFIÉ:
+      - Bug d'ordre des routes FastAPI dans routes/reminders.py
+      - La route générique @router.get("/{doc_id}") capturait toutes les routes spécifiques
+      
+      CORRECTION EFFECTUÉE:
+      1. Déplacé TOUTES les routes spécifiques AVANT la route générique /{doc_id}:
+         - /templates/list
+         - /templates/create
+         - /templates/initialize-defaults
+         - /overdue-invoices
+         - /send-automatic/{invoice_id}
+         - /process-automatic
+         - /history
+      2. Backend redémarré avec succès
+      
+      TESTS DE VÉRIFICATION RÉUSSIS:
+      ✅ GET /api/reminders/templates/list: 200 OK
+      ✅ GET /api/reminders/overdue-invoices: 200 OK
+      ✅ GET /api/reminders/history: 200 OK
+      
+      RÉSULTAT FINAL: 17/17 FONCTIONNALITÉS P0/P1 BACKEND WORKING ✅
+      
+      PROCHAINES ÉTAPES:
+      - Demander à l'utilisateur s'il veut tester le frontend
+      - Puis passer à l'implémentation des fonctionnalités manquantes
       Objectifs du test backend:
       1. Vérifier que toutes les routes API répondent correctement
       2. Tester les validations et erreurs
