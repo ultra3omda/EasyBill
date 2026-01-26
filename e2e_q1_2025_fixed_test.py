@@ -378,14 +378,7 @@ async def create_customer_invoices() -> bool:
                 
                 # Changer le statut à "sent"
                 invoice_id = invoice["id"]
-                response = await client.patch(
-                    f"{BASE_URL}/invoices/{invoice_id}",
-                    params={"company_id": company_id},
-                    json={"status": "sent"},
-                    headers=headers
-                )
-                if response.status_code == 200:
-                    log_success(f"Facture {invoice2_data['number']} → statut 'sent' (sync comptable déclenchée)")
+                await update_document_status(client, "invoices", invoice_id, "sent", invoice2_data['number'], company_id, headers)
             else:
                 log_error(f"Erreur création facture: {response.status_code}")
         except Exception as e:
