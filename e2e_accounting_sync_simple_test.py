@@ -132,11 +132,11 @@ async def main():
         print(f"   Status: {invoice.get('status')} - Aucune écriture comptable attendue (draft)")
         
         # 4. Mettre à jour la facture en "sent" pour déclencher la synchronisation
-        print("\n4. Mise à jour facture → Status 'sent' (déclenchement synchronisation)...")
+        print("\n5. Mise à jour facture → Status 'sent' (déclenchement synchronisation)...")
         
         response = await client.put(
             f"{BASE_URL}/invoices/{invoice_id}",
-            params={"company_id": COMPANY_ID},
+            params={"company_id": company_id},
             json={"status": "sent"},
             headers=headers
         )
