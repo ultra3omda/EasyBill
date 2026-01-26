@@ -296,38 +296,34 @@ async def phase1_setup():
             "name": "Laptop Dell",
             "sku": "LAPTOP-DELL-001",
             "type": "product",
-            "selling_price": 1200.0,
-            "purchase_price": 950.0,
+            "unit_price": 1200.0,
             "tax_rate": 19.0,
             "unit": "pièce",
-            "quantity_in_stock": 10
+            "stock_quantity": 10
         },
         {
             "name": "Écran Samsung 27\"",
             "sku": "SCREEN-SAMSUNG-27",
             "type": "product",
-            "selling_price": 350.0,
-            "purchase_price": 280.0,
+            "unit_price": 350.0,
             "tax_rate": 19.0,
             "unit": "pièce",
-            "quantity_in_stock": 15
+            "stock_quantity": 15
         },
         {
             "name": "Clavier/Souris",
             "sku": "KB-MOUSE-001",
             "type": "product",
-            "selling_price": 45.0,
-            "purchase_price": 35.0,
+            "unit_price": 45.0,
             "tax_rate": 19.0,
             "unit": "ensemble",
-            "quantity_in_stock": 25
+            "stock_quantity": 25
         },
         {
             "name": "Service Installation",
             "sku": "SERVICE-INSTALL",
             "type": "service",
-            "selling_price": 200.0,
-            "purchase_price": 0.0,
+            "unit_price": 200.0,
             "tax_rate": 19.0,
             "unit": "heure"
         },
@@ -335,8 +331,7 @@ async def phase1_setup():
             "name": "Support annuel",
             "sku": "SUPPORT-ANNUAL",
             "type": "service",
-            "selling_price": 500.0,
-            "purchase_price": 0.0,
+            "unit_price": 500.0,
             "tax_rate": 19.0,
             "unit": "année"
         }
