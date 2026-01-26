@@ -12,7 +12,7 @@ import json
 
 # Configuration
 BASE_URL = "https://test-et-implement.preview.emergentagent.com/api"
-TEST_EMAIL = "easybill-e2e-fixed@test.com"
+TEST_EMAIL = f"easybill-e2e-fixed-{int(datetime.now().timestamp())}@test.com"
 TEST_PASSWORD = "EasyBill2025Fixed!"
 
 # Variables globales
