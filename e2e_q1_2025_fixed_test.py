@@ -214,7 +214,15 @@ async def create_test_data() -> bool:
                 )
                 if response.status_code in [200, 201]:
                     product = response.json()
-                    test_data["products"].append(product)
+                    # Store both the ID and the original data
+                    product_with_data = {
+                        "id": product.get("id"),
+                        "name": product_data["name"],
+                        "unit_price": product_data["unit_price"],
+                        "tax_rate": product_data["tax_rate"],
+                        "type": product_data["type"]
+                    }
+                    test_data["products"].append(product_with_data)
                     log_success(f"Produit créé: {product_data['name']} (ID: {product.get('id', 'N/A')})")
                 else:
                     log_error(f"Erreur création produit: {response.status_code}")
