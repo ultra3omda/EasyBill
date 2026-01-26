@@ -225,6 +225,11 @@ const GeneralLedger = () => {
               <Button type="button" variant="outline" onClick={clearFilters}>
                 Effacer
               </Button>
+              <Button type="button" variant="outline" onClick={exportToExcel}>
+                <Download className="w-4 h-4 mr-2" />
+                Exporter Excel
+              </Button>
+
             </div>
           </form>
         </Card>
