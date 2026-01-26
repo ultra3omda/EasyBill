@@ -314,7 +314,7 @@ async def phase2_sales_cycle():
                 # Créer la facture manuellement avec les mêmes données
                 invoice_data = {
                     "customer_id": customer_pro["id"],
-                    "customer_name": customer_pro["name"],
+                    "customer_name": customer_name,
                     "date": "2025-01-20",
                     "due_date": "2025-02-20",
                     "items": quote_data["items"],
