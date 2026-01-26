@@ -202,26 +202,29 @@ async def phase1_setup():
             {
                 "name": "Laptop",
                 "description": "Ordinateur portable professionnel",
-                "price": 1200.0,
+                "unit_price": 1200.0,
                 "tax_rate": 19.0,
                 "unit": "pièce",
-                "sku": "LAP-001"
+                "sku": "LAP-001",
+                "type": "product"
             },
             {
                 "name": "Support",
                 "description": "Support technique mensuel",
-                "price": 500.0,
+                "unit_price": 500.0,
                 "tax_rate": 19.0,
                 "unit": "mois",
-                "sku": "SUP-001"
+                "sku": "SUP-001",
+                "type": "service"
             },
             {
                 "name": "Licence",
                 "description": "Licence logicielle annuelle",
-                "price": 300.0,
+                "unit_price": 300.0,
                 "tax_rate": 19.0,
                 "unit": "licence",
-                "sku": "LIC-001"
+                "sku": "LIC-001",
+                "type": "product"
             }
         ]
         
