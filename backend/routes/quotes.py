@@ -274,9 +274,7 @@ async def send_quote_by_email(
             customer_name=customer.get("display_name", customer.get("company_name", "Client")),
             quote_number=quote.get("number"),
             quote_total=quote.get("total"),
-            quote_valid_until=quote.get("valid_until").strftime("%d/%m/%Y") if quote.get("valid_until") else "",
-            pdf_url=pdf_url,
-            company_name=company.get("name", "")
+            quote_pdf_url=pdf_url
         )
         
         # Mettre à jour le statut du devis
