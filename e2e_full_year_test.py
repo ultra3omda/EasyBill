@@ -352,7 +352,7 @@ async def phase1_setup():
                     product_id = result.get("id")
                     test_data["products"][product_data["name"]] = product_id
                     log_test(f"Create Product - {product_data['name']}", "PASS", 
-                            f"ID: {product_id}, Price: {product_data['selling_price']} TND HT")
+                            f"ID: {product_id}, Price: {product_data['unit_price']} TND HT")
                 else:
                     log_test(f"Create Product - {product_data['name']}", "FAIL", 
                             f"Status: {response.status_code}")
