@@ -1,9 +1,17 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from bson import ObjectId
 from .user import PyObjectId
 from .company import Address
+
+class Contact(BaseModel):
+    """Contact secondaire pour un client"""
+    name: str
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    position: Optional[str] = None
+    is_primary: bool = False
 
 class PublicAccess(BaseModel):
     enabled: bool = False
@@ -33,6 +41,7 @@ class Customer(BaseModel):
     birthday: Optional[str] = None  # For particulier
     billing_address: Address = Field(default_factory=Address)
     shipping_address: Address = Field(default_factory=Address)
+    contacts: List[Contact] = Field(default_factory=list)  # Multi-contacts
     notes: Optional[str] = None
     balance: float = 0.0
     total_invoiced: float = 0.0
