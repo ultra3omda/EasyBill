@@ -221,6 +221,18 @@ const DeliveryNotes = () => {
                               Modifier
                             </DropdownMenuItem>
                             {doc.status === 'draft' && (
+                              <>
+                                <DropdownMenuItem onClick={() => handleValidate(doc.id)}>
+                                  <CheckCircle className="w-4 h-4 mr-2" />
+                                  Valider (sortie stock)
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleConvertToInvoice(doc.id)}>
+                                  <RefreshCw className="w-4 h-4 mr-2" />
+                                  Convertir en facture
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            {doc.status === 'draft' && (
                               <DropdownMenuItem onClick={() => handleDeliver(doc.id)}>
                                 <CheckCircle className="w-4 h-4 mr-2" />
                                 Marquer livré
