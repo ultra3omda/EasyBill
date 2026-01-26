@@ -487,9 +487,10 @@ async def get_my_permissions(
     """Récupère les permissions de l'utilisateur actuel pour une entreprise"""
     
     # Vérifier si c'est le propriétaire
+    user_id = current_user.get("_id") or current_user.get("id")
     company = await db.companies.find_one({
         "_id": ObjectId(company_id),
-        "owner_id": ObjectId(current_user["id"])
+        "owner_id": ObjectId(user_id) if isinstance(user_id, str) else user_id
     })
     
     if company:
