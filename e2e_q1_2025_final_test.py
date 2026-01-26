@@ -443,19 +443,17 @@ async def convert_quote_to_invoice():
         "items": [
             {
                 "product_id": test_data["products"]["product_1"],
-                "product_name": "Laptop Dell Latitude 5420",
+                "description": "Laptop Dell Latitude 5420",
                 "quantity": 2,
                 "unit_price": 1200.0,
                 "tax_rate": 19.0,
-                "total": 2400.0
             },
             {
                 "product_id": test_data["products"]["product_4"],
-                "product_name": "Service Installation & Configuration",
+                "description": "Service Installation & Configuration",
                 "quantity": 1,
                 "unit_price": 200.0,
                 "tax_rate": 19.0,
-                "total": 200.0
             }
         ]
     }
@@ -629,19 +627,17 @@ async def create_invoice_2():
         "items": [
             {
                 "product_id": test_data["products"]["product_2"],
-                "product_name": "Écran Samsung 27 pouces",
+                "description": "Écran Samsung 27 pouces",
                 "quantity": 3,
                 "unit_price": 350.0,
                 "tax_rate": 19.0,
-                "total": 1050.0
             },
             {
                 "product_id": test_data["products"]["product_5"],
-                "product_name": "Support technique annuel",
+                "description": "Support technique annuel",
                 "quantity": 1,
                 "unit_price": 500.0,
                 "tax_rate": 19.0,
-                "total": 500.0
             }
         ]
     }
@@ -755,19 +751,17 @@ async def create_invoice_3():
         "items": [
             {
                 "product_id": test_data["products"]["product_1"],
-                "product_name": "Laptop Dell Latitude 5420",
+                "description": "Laptop Dell Latitude 5420",
                 "quantity": 1,
                 "unit_price": 1200.0,
                 "tax_rate": 19.0,
-                "total": 1200.0
             },
             {
                 "product_id": test_data["products"]["product_3"],
-                "product_name": "Pack Clavier/Souris Logitech",
+                "description": "Pack Clavier/Souris Logitech",
                 "quantity": 1,
                 "unit_price": 45.0,
                 "tax_rate": 19.0,
-                "total": 45.0
             }
         ]
     }
@@ -865,14 +859,12 @@ async def create_supplier_invoice_1():
                 "quantity": 10,
                 "unit_price": 950.0,
                 "tax_rate": 19.0,
-                "total": 9500.0
             },
             {
                 "description": "Écran Samsung 27 pouces",
                 "quantity": 5,
                 "unit_price": 280.0,
                 "tax_rate": 19.0,
-                "total": 1400.0
             }
         ],
         "status": "validated"
@@ -952,7 +944,6 @@ async def create_supplier_invoice_2():
                 "quantity": 1,
                 "unit_price": 250.0,
                 "tax_rate": 19.0,
-                "total": 250.0
             }
         ],
         "status": "validated"
@@ -1027,11 +1018,10 @@ async def create_credit_note():
         "items": [
             {
                 "product_id": test_data["products"]["product_1"],
-                "product_name": "Laptop Dell Latitude 5420",
+                "description": "Laptop Dell Latitude 5420",
                 "quantity": 1,
                 "unit_price": 1200.0,
                 "tax_rate": 19.0,
-                "total": 1200.0
             }
         ],
         "status": "validated"
