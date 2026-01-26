@@ -3,10 +3,14 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
 from datetime import datetime, timezone
 import os
+import logging
 from typing import Optional
 from models.quote import Quote, QuoteCreate, QuoteUpdate
 from utils.dependencies import get_current_user, get_current_company
 from utils.helpers import generate_document_number, calculate_document_totals
+from services.email_service import email_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/quotes", tags=["Quotes"])
 
