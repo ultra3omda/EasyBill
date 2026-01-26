@@ -535,10 +535,6 @@ async def resend_verification(email_data: ForgotPassword):
     )
     
     # For development: return link in response (remove in production)
-    verification_link = f"http://localhost:3000/verify-email?token={verification_token}"
-    
     return {
-        "message": "Verification email sent",
-        "verification_link": verification_link,  # Remove in production
-        "token": verification_token  # Remove in production
+        "message": "Verification email sent"
     }
