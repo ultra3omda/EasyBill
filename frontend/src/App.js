@@ -43,6 +43,8 @@ import ExitVouchers from './pages/ExitVouchers';
 import Receipts from './pages/Receipts';
 import Disbursements from './pages/Disbursements';
 import WithholdingTaxes from './pages/WithholdingTaxes';
+import CustomerSummary from './pages/CustomerSummary';
+import SupplierSummary from './pages/SupplierSummary';
 import PurchaseOrders from './pages/PurchaseOrders';
 import SupplierInvoices from './pages/SupplierInvoices';
 import SupplierPayments from './pages/SupplierPayments';
