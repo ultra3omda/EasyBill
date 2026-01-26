@@ -109,6 +109,23 @@ const Invoices = () => {
     }
   };
 
+  const handleSendByEmail = async (invoiceId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `${process.env.REACT_APP_BACKEND_URL}/api/invoices/${invoiceId}/send-email?company_id=${currentCompany.id}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast({ title: 'Succès', description: 'Facture envoyée par email avec succès' });
+      loadInvoices();
+    } catch (error) {
+      console.error('Error sending invoice by email:', error);
+      toast({ title: 'Erreur', description: error.response?.data?.detail || 'Erreur lors de l\'envoi de l\'email', variant: 'destructive' });
+    }
+  };
+
+
   const openCreateModal = () => {
     navigate('/sales/invoices/new');
   };
