@@ -106,6 +106,55 @@ const DeliveryNotes = () => {
     const config = {
       draft: { label: 'Brouillon', className: 'bg-gray-100 text-gray-800' },
       delivered: { label: 'Livré', className: 'bg-green-100 text-green-800' },
+
+  const handleValidate = async (deliveryId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.post(
+        `${process.env.REACT_APP_BACKEND_URL}/api/delivery-notes/${deliveryId}/validate?company_id=${currentCompany.id}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast({ 
+        title: 'Succès', 
+        description: `BL validé - ${res.data.stock_movements_created} mouvement(s) de stock créé(s)` 
+      });
+      loadData();
+    } catch (error) {
+      console.error('Error validating delivery note:', error);
+      toast({ 
+        title: 'Erreur', 
+        description: error.response?.data?.detail || 'Erreur lors de la validation', 
+        variant: 'destructive' 
+      });
+    }
+  };
+
+  const handleConvertToInvoice = async (deliveryId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.post(
+        `${process.env.REACT_APP_BACKEND_URL}/api/delivery-notes/${deliveryId}/convert-to-invoice?company_id=${currentCompany.id}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast({ 
+        title: 'Succès', 
+        description: `Facture ${res.data.number} créée depuis le BL` 
+      });
+      loadData();
+      // Optionnel: Naviguer vers la facture
+      // navigate(`/sales/invoices/${res.data.id}/edit`);
+    } catch (error) {
+      console.error('Error converting to invoice:', error);
+      toast({ 
+        title: 'Erreur', 
+        description: error.response?.data?.detail || 'Erreur lors de la conversion', 
+        variant: 'destructive' 
+      });
+    }
+  };
+
       cancelled: { label: 'Annulé', className: 'bg-red-100 text-red-800' }
     };
     return config[status] || config.draft;
