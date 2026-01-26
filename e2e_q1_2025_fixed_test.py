@@ -197,11 +197,11 @@ async def create_test_data() -> bool:
         # Créer 5 produits
         log_info("Création de 5 produits...")
         products_data = [
-            {"name": "Produit A", "description": "Description A", "price": 100.0, "tax_rate": 19.0, "type": "product"},
-            {"name": "Produit B", "description": "Description B", "price": 250.0, "tax_rate": 19.0, "type": "product"},
-            {"name": "Service C", "description": "Service C", "price": 500.0, "tax_rate": 19.0, "type": "service"},
-            {"name": "Produit D", "description": "Description D", "price": 75.0, "tax_rate": 19.0, "type": "product"},
-            {"name": "Service E", "description": "Service E", "price": 150.0, "tax_rate": 19.0, "type": "service"}
+            {"name": "Produit A", "description": "Description A", "unit_price": 100.0, "tax_rate": 19.0, "type": "product"},
+            {"name": "Produit B", "description": "Description B", "unit_price": 250.0, "tax_rate": 19.0, "type": "product"},
+            {"name": "Service C", "description": "Service C", "unit_price": 500.0, "tax_rate": 19.0, "type": "service"},
+            {"name": "Produit D", "description": "Description D", "unit_price": 75.0, "tax_rate": 19.0, "type": "product"},
+            {"name": "Service E", "description": "Service E", "unit_price": 150.0, "tax_rate": 19.0, "type": "service"}
         ]
         
         for product_data in products_data:
