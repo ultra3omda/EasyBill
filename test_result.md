@@ -186,7 +186,7 @@ backend:
 
   - task: "Synchronisation comptable automatique"
     implemented: true
-    working: false
+    working: true
     file: "services/accounting_sync_service.py"
     stuck_count: 3
     priority: "high"
@@ -207,6 +207,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "❌ E2E TEST Q1 2025 FINAL: Comprehensive test completed with PARTIAL SUCCESS. WORKING: ✅ Chart of accounts initialization (490 accounts created automatically on company registration). ✅ Customer invoices sync (3 invoices created 3 journal entries). ✅ Customer payments sync (3 payments created 3 journal entries). ✅ Supplier payments sync (2 payments created 2 journal entries). ✅ All journal entries balanced (debit = credit). ✅ Trial balance balanced (16,344.05 TND debit = credit). NOT WORKING: ❌ Supplier invoices NOT creating journal entries (2 supplier invoices created but 0 journal entries). ❌ Credit notes NOT creating journal entries (1 credit note created but 0 journal entry). EXPECTED: 11 journal entries (3 invoices + 3 payments + 2 supplier invoices + 2 supplier payments + 1 credit note). ACTUAL: 8 journal entries (3 invoices + 3 payments + 2 supplier payments). ROOT CAUSE: Accounting sync hooks in routes/supplier_invoices.py line 133 and routes/credit_notes.py are being called but sync_supplier_invoice() and sync_credit_note() methods in accounting_sync_service.py are failing silently. No error logs found. RECOMMENDATION: Main agent must debug why sync_supplier_invoice() and sync_credit_note() are not creating journal entries despite being called. Check if there are validation failures or silent exceptions."
+      - working: true
+        agent: "testing"
+        comment: "✅ E2E TEST Q1 2025 FINAL - TOUS LES BUGS CORRIGÉS! Test complet réussi avec 11/11 écritures comptables créées (100%). WORKING: ✅ Customer invoices sync (3/3). ✅ Customer payments sync (3/3). ✅ Supplier invoices sync (2/2) - FIXED! ✅ Supplier payments sync (2/2). ✅ Credit notes sync (1/1) - FIXED! ✅ All journal entries balanced. ✅ Detailed [SYNC] logs visible in backend. ROOT CAUSE IDENTIFIED & FIXED: Credit note sync was failing because sync_credit_note() was looking for 'tax_amount' field but credit notes use 'total_tax' field (from calculate_document_totals()). SOLUTION APPLIED: Updated line 620 in accounting_sync_service.py to check both fields: tax_amount = credit_note.get('tax_amount', credit_note.get('total_tax', 0)). VERIFICATION: Backend logs show all sync operations with detailed accounting lines. Supplier invoices create 3 lines (607/604 Achats, 4362 TVA déductible, 401 Fournisseurs). Credit notes create 3 lines (707 Ventes, 4351 TVA, 411 Clients). All entries balanced (debit = credit). Financial report generated successfully."
 
   - task: "Portail client public"
     implemented: true
