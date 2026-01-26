@@ -4,7 +4,11 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional
 
-SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
+# JWT Secret must be set in environment variables - no fallback for security
+SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or os.environ.get('JWT_SECRET')
+if not SECRET_KEY:
+    raise ValueError("JWT_SECRET_KEY or JWT_SECRET must be set in environment variables")
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
