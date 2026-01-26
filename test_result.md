@@ -188,7 +188,7 @@ backend:
     implemented: true
     working: false
     file: "services/accounting_sync_service.py"
-    stuck_count: 1
+    stuck_count: 2
     priority: "high"
     needs_retesting: true
     status_history:
@@ -201,6 +201,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "❌ CRITICAL BUG: GET /api/journal-entries/ returns 520 error due to ObjectId serialization issue in routes/journal_entries.py. The serialize_entry function at line 17-35 does not properly serialize ObjectIds in the 'lines' array and other nested fields (document_id, created_by). This causes ValueError when FastAPI tries to encode the response. SOLUTION: Update serialize_entry to convert all ObjectIds to strings, especially in nested structures like lines array. Also, accounting sync hooks may not be creating journal entries - created invoices, payments, and supplier invoices but found 0 journal entries in database."
+      - working: false
+        agent: "testing"
+        comment: "❌ E2E TEST Q1 2025: Attempted comprehensive accounting synchronization test. FINDINGS: 1) ObjectId serialization in journal_entries.py appears to be fixed (GET /api/journal-entries/ returns 200). 2) Accounting sync hooks are properly integrated in routes/invoices.py line 251 (called when status changes to 'sent' or 'paid'). 3) CRITICAL ISSUE: Chart of accounts may not be initialized for new companies - accounting_sync_service.sync_invoice() at line 183-194 validates account codes exist before creating journal entries. If chart of accounts is empty, journal entry creation will fail silently. 4) Invoice/supplier invoice item structure requires 'total' field which is not auto-calculated, causing 422 errors during test data creation. RECOMMENDATION: Main agent should verify chart of accounts initialization and add auto-calculation of item totals in invoice creation."
 
   - task: "Portail client public"
     implemented: true
