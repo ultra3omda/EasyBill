@@ -72,12 +72,18 @@ class AccountingSyncService:
         """Crée une écriture comptable"""
         
         try:
+            logger.info(f"[SYNC] Création écriture pour {document_type} {document_id}")
+            logger.info(f"[SYNC] Lignes: {len(lines)} lignes comptables")
+            
             # Vérifier l'équilibre débit/crédit
             total_debit = sum(line.get("debit", 0) for line in lines)
             total_credit = sum(line.get("credit", 0) for line in lines)
             
+            logger.info(f"[SYNC] Totaux - Débit: {total_debit}, Crédit: {total_credit}, Différence: {abs(total_debit - total_credit)}")
+            
             if abs(total_debit - total_credit) > 0.01:  # Tolérance de 1 centime
-                logger.error(f"Écriture déséquilibrée: Débit={total_debit}, Crédit={total_credit}")
+                logger.error(f"[SYNC] ❌ Écriture déséquilibrée: Débit={total_debit}, Crédit={total_credit}")
+                logger.error(f"[SYNC] Lignes détaillées: {lines}")
                 return None
             
             # Générer la référence si non fournie
@@ -85,6 +91,8 @@ class AccountingSyncService:
                 year = date.year
                 journal_code = self.JOURNAL_TYPES.get(journal_type, "OD")
                 reference = await self._get_next_entry_number(company_id, journal_code, year)
+            
+            logger.info(f"[SYNC] Référence générée: {reference}")
             
             # Créer l'écriture
             entry = {
@@ -103,12 +111,14 @@ class AccountingSyncService:
             
             result = await self.db.journal_entries.insert_one(entry)
             
-            logger.info(f"Écriture comptable créée: {reference} pour {document_type} {document_id}")
+            logger.info(f"[SYNC] ✅ Écriture comptable créée: {reference} pour {document_type} {document_id}")
             
             return str(result.inserted_id)
             
         except Exception as e:
-            logger.error(f"Erreur création écriture comptable: {str(e)}")
+            logger.error(f"[SYNC] ❌ Erreur création écriture comptable: {str(e)}")
+            import traceback
+            logger.error(f"[SYNC] Traceback: {traceback.format_exc()}")
             return None
     
     async def sync_invoice(self, invoice_id: str) -> Optional[str]:
