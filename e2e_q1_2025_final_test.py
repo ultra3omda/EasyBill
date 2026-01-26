@@ -382,19 +382,17 @@ async def create_quote_1():
         "items": [
             {
                 "product_id": test_data["products"]["product_1"],
-                "product_name": "Laptop Dell Latitude 5420",
+                "description": "Laptop Dell Latitude 5420",
                 "quantity": 2,
                 "unit_price": 1200.0,
-                "tax_rate": 19.0,
-                "total": 2400.0
+                "tax_rate": 19.0
             },
             {
                 "product_id": test_data["products"]["product_4"],
-                "product_name": "Service Installation & Configuration",
+                "description": "Service Installation & Configuration",
                 "quantity": 1,
                 "unit_price": 200.0,
-                "tax_rate": 19.0,
-                "total": 200.0
+                "tax_rate": 19.0
             }
         ]
     }
