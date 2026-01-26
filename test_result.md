@@ -186,11 +186,11 @@ backend:
 
   - task: "Synchronisation comptable automatique"
     implemented: true
-    working: true
+    working: false
     file: "services/accounting_sync_service.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
@@ -198,6 +198,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ TESTED: GET /api/journal-entries/ works. Accounting sync hooks are in place. Tested via journal entries endpoint."
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL BUG: GET /api/journal-entries/ returns 520 error due to ObjectId serialization issue in routes/journal_entries.py. The serialize_entry function at line 17-35 does not properly serialize ObjectIds in the 'lines' array and other nested fields (document_id, created_by). This causes ValueError when FastAPI tries to encode the response. SOLUTION: Update serialize_entry to convert all ObjectIds to strings, especially in nested structures like lines array. Also, accounting sync hooks may not be creating journal entries - created invoices, payments, and supplier invoices but found 0 journal entries in database."
 
   - task: "Portail client public"
     implemented: true
