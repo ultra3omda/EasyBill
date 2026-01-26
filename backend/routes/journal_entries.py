@@ -15,6 +15,19 @@ db = client[os.environ['DB_NAME']]
 
 
 def serialize_entry(e: dict) -> dict:
+    # Serialize lines array to convert all ObjectIds
+    serialized_lines = []
+    for line in e.get("lines", []):
+        serialized_line = {
+            "account_id": str(line["account_id"]) if isinstance(line.get("account_id"), ObjectId) else line.get("account_id"),
+            "account_code": line.get("account_code"),
+            "account_name": line.get("account_name"),
+            "debit": line.get("debit", 0),
+            "credit": line.get("credit", 0),
+            "description": line.get("description", "")
+        }
+        serialized_lines.append(serialized_line)
+    
     return {
         "id": str(e["_id"]),
         "company_id": str(e.get("company_id")) if e.get("company_id") else None,
@@ -23,13 +36,13 @@ def serialize_entry(e: dict) -> dict:
         "reference": e.get("reference"),
         "description": e.get("description"),
         "journal_type": e.get("journal_type", "general"),
-        "lines": e.get("lines", []),
+        "lines": serialized_lines,
         "total_debit": e.get("total_debit", 0),
         "total_credit": e.get("total_credit", 0),
         "status": e.get("status", "draft"),
         "document_type": e.get("document_type"),
-        "document_id": e.get("document_id"),
-        "created_by": e.get("created_by"),
+        "document_id": str(e.get("document_id")) if isinstance(e.get("document_id"), ObjectId) else e.get("document_id"),
+        "created_by": str(e.get("created_by")) if isinstance(e.get("created_by"), ObjectId) else e.get("created_by"),
         "created_at": e.get("created_at").isoformat() if e.get("created_at") else None,
         "posted_at": e.get("posted_at").isoformat() if e.get("posted_at") else None
     }
