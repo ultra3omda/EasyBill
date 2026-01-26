@@ -117,7 +117,7 @@ async def main():
         
         response = await client.post(
             f"{BASE_URL}/invoices/",
-            params={"company_id": COMPANY_ID},
+            params={"company_id": company_id},
             json=invoice_data,
             headers=headers
         )
