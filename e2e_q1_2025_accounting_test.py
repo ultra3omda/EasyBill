@@ -470,12 +470,12 @@ async def phase2_sales_cycle():
             "due_date": "2025-03-10",
             "items": [
                 {
-                    "product_id": licence["id"],
-                    "product_name": licence["name"],
-                    "description": licence["description"],
+                    "product_id": licence.get("id"),
+                    "product_name": get_product_field(licence, "name", "Licence"),
+                    "description": get_product_field(licence, "description", "Licence logicielle"),
                     "quantity": 1,
-                    "unit_price": licence["unit_price"],
-                    "tax_rate": licence["tax_rate"]
+                    "unit_price": get_product_field(licence, "unit_price", 300.0),
+                    "tax_rate": get_product_field(licence, "tax_rate", 19.0)
                 }
             ],
             "notes": "Licence logicielle",
