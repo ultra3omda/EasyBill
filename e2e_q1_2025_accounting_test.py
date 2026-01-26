@@ -584,9 +584,11 @@ async def phase3_purchase_cycle():
         supplier = test_data["suppliers"][0]
         laptop = test_data["products"][0]
         
+        supplier_name = supplier.get("display_name") or f"{supplier.get('first_name', '')} {supplier.get('last_name', '')}".strip() or supplier.get("company_name", "")
+        
         supplier_invoice_data = {
             "supplier_id": supplier["id"],
-            "supplier_name": supplier["name"],
+            "supplier_name": supplier_name,
             "number": "FACH-2025-001",
             "date": "2025-02-01",
             "due_date": "2025-03-01",
