@@ -205,7 +205,7 @@ async def main():
             # Vérifier si la facture a bien l'accounting_entry_id
             response = await client.get(
                 f"{BASE_URL}/invoices/{invoice_id}",
-                params={"company_id": COMPANY_ID},
+                params={"company_id": company_id},
                 headers=headers
             )
             
