@@ -739,16 +739,7 @@ async def create_credit_note() -> bool:
                 
                 # Changer le statut à "validated" pour déclencher la sync comptable
                 credit_note_id = credit_note["id"]
-                response = await client.patch(
-                    f"{BASE_URL}/credit-notes/{credit_note_id}",
-                    params={"company_id": company_id},
-                    json={"status": "validated"},
-                    headers=headers
-                )
-                if response.status_code == 200:
-                    log_success(f"✨ Avoir client {credit_note_data['number']} → statut 'validated' (sync comptable déclenchée)")
-                else:
-                    log_warning(f"Erreur changement statut: {response.status_code}")
+                await update_document_status(client, "credit-notes", credit_note_id, "validated", credit_note_data['number'], company_id, headers)
             else:
                 log_error(f"Erreur création avoir: {response.status_code} - {response.text}")
         except Exception as e:
