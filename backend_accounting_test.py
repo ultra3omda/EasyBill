@@ -11,9 +11,9 @@ from typing import Dict, List, Optional
 
 # Configuration
 BASE_URL = "https://test-et-implement.preview.emergentagent.com/api"
-TEST_EMAIL = "testuser@easybill.com"
+TEST_EMAIL = f"accounting-test-{datetime.now().strftime('%Y%m%d%H%M%S')}@easybill.com"
 TEST_PASSWORD = "TestPass123!"
-COMPANY_ID = "69774dbbdb057f6d21416ad8"
+COMPANY_ID = None  # Will be set after registration
 
 # Global variables
 auth_token = None
