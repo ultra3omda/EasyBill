@@ -620,6 +620,8 @@ class AccountingSyncService:
             tax_amount = credit_note.get("tax_amount", 0)
             total = credit_note.get("total", 0)
             
+            logger.info(f"[SYNC] Credit note amounts - Subtotal: {subtotal}, Tax: {tax_amount}, Total: {total}")
+            
             # Déterminer le compte de vente
             sales_account = "707"
             
