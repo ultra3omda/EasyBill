@@ -595,6 +595,7 @@ async def phase3_purchase_cycle():
         laptop = test_data["products"][0]
         
         supplier_name = supplier.get("display_name") or f"{supplier.get('first_name', '')} {supplier.get('last_name', '')}".strip() or supplier.get("company_name", "")
+        laptop_name = get_product_field(laptop, "name", "Laptop")
         
         supplier_invoice_data = {
             "supplier_id": supplier["id"],
@@ -604,7 +605,7 @@ async def phase3_purchase_cycle():
             "due_date": "2025-03-01",
             "items": [
                 {
-                    "description": f"Achat {laptop['name']}",
+                    "description": f"Achat {laptop_name}",
                     "quantity": 5,
                     "unit_price": 1200.0,
                     "tax_rate": 19.0
