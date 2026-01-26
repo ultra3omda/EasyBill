@@ -22,7 +22,7 @@ const VerifyEmail = () => {
       }
 
       try {
-        await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/verify-email/${token}`);
+        await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/auth/verify-email/${token}`);
         setStatus('success');
         setMessage('Votre email a été vérifié avec succès !');
         
