@@ -75,6 +75,7 @@ async def register_and_login() -> bool:
                 json={
                     "email": TEST_EMAIL,
                     "password": TEST_PASSWORD,
+                    "full_name": "Test User E2E",
                     "company_name": "EasyBill E2E Test Fixed",
                     "company_type": "SARL",
                     "tax_id": "1234567X",
