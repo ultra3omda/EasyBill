@@ -163,6 +163,15 @@ const TrialBalance = () => {
                 }}
               >
                 Balance actuelle
+            <Button
+              type="button"
+              variant="outline"
+              onClick={exportToExcel}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Exporter Excel
+            </Button>
+
               </Button>
             )}
           </form>
