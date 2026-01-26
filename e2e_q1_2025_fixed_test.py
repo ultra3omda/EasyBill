@@ -173,8 +173,8 @@ async def create_test_data() -> bool:
         # Créer 2 fournisseurs
         log_info("Création de 2 fournisseurs...")
         suppliers_data = [
-            {"name": "Fournisseur Delta SARL", "email": "delta@supplier.tn", "phone": "+216 71 444 444", "address": "Tunis"},
-            {"name": "Fournisseur Epsilon SA", "email": "epsilon@supplier.tn", "phone": "+216 71 555 555", "address": "Ariana"}
+            {"first_name": "Delta", "last_name": "Supplier", "company_name": "Fournisseur Delta SARL", "email": "delta@supplier.tn", "phone": "+216 71 444 444", "billing_address": {"street": "Tunis", "city": "Tunis", "postal_code": "1000", "country": "TN"}},
+            {"first_name": "Epsilon", "last_name": "Supplier", "company_name": "Fournisseur Epsilon SA", "email": "epsilon@supplier.tn", "phone": "+216 71 555 555", "billing_address": {"street": "Ariana", "city": "Ariana", "postal_code": "2000", "country": "TN"}}
         ]
         
         for supplier_data in suppliers_data:
