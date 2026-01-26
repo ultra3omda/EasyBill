@@ -454,6 +454,103 @@ async def get_trial_balance(
                     "debit": debit_balance,
                     "credit": credit_balance
                 })
+
+
+
+@router.get("/trial-balance/export/excel")
+async def export_trial_balance_excel(
+    company_id: str = Query(...),
+    date_to: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Exporte la balance des comptes en Excel"""
+    from fastapi.responses import StreamingResponse
+    from services.accounting_reports_service import accounting_reports_service
+    
+    company = await get_current_company(current_user, company_id)
+    
+    date_to_dt = datetime.fromisoformat(date_to) if date_to else None
+    
+    excel_data = await accounting_reports_service.generate_trial_balance_excel(
+        company_id=company_id,
+        date_to=date_to_dt
+    )
+    
+    filename = f"Balance_Comptes_{company.get('name', 'EasyBill')}_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    
+    return StreamingResponse(
+        BytesIO(excel_data),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@router.get("/general-ledger/export/excel")
+async def export_general_ledger_excel(
+    company_id: str = Query(...),
+    account_code: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Exporte le grand livre en Excel"""
+    from fastapi.responses import StreamingResponse
+    from services.accounting_reports_service import accounting_reports_service
+    
+    company = await get_current_company(current_user, company_id)
+    
+    date_from_dt = datetime.fromisoformat(date_from) if date_from else None
+    date_to_dt = datetime.fromisoformat(date_to) if date_to else None
+    
+    excel_data = await accounting_reports_service.generate_general_ledger_excel(
+        company_id=company_id,
+        account_code=account_code,
+        date_from=date_from_dt,
+        date_to=date_to_dt
+    )
+    
+    filename = f"Grand_Livre_{company.get('name', 'EasyBill')}_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    
+    return StreamingResponse(
+        BytesIO(excel_data),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@router.get("/auxiliary-ledger/export/excel")
+async def export_auxiliary_ledger_excel(
+    company_id: str = Query(...),
+    ledger_type: str = Query(...),  # 'customers' or 'suppliers'
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Exporte le livre de tiers (clients ou fournisseurs) en Excel"""
+    from fastapi.responses import StreamingResponse
+    from services.accounting_reports_service import accounting_reports_service
+    
+    company = await get_current_company(current_user, company_id)
+    
+    date_from_dt = datetime.fromisoformat(date_from) if date_from else None
+    date_to_dt = datetime.fromisoformat(date_to) if date_to else None
+    
+    excel_data = await accounting_reports_service.generate_auxiliary_ledger_excel(
+        company_id=company_id,
+        ledger_type=ledger_type,
+        date_from=date_from_dt,
+        date_to=date_to_dt
+    )
+    
+    type_label = "Clients" if ledger_type == "customers" else "Fournisseurs"
+    filename = f"Livre_{type_label}_{company.get('name', 'EasyBill')}_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    
+    return StreamingResponse(
+        BytesIO(excel_data),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
                 total_debit += debit_balance
                 total_credit += credit_balance
     
