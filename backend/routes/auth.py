@@ -131,7 +131,10 @@ async def register(user_data: UserCreate):
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
         }
-        await db.companies.insert_one(company_dict)
+        company_result = await db.companies.insert_one(company_dict)
+        
+        # Initialize Tunisian chart of accounts (490 accounts)
+        await create_default_chart_of_accounts_for_company(company_result.inserted_id)
     
     # Create access token
     access_token = create_access_token(data={"sub": str(user_id)})
