@@ -56,6 +56,7 @@ import AccountingDashboard from './pages/AccountingDashboard';
 import JournalEntries from './pages/JournalEntries';
 import GeneralLedger from './pages/GeneralLedger';
 import TrialBalance from './pages/TrialBalance';
+import AuxiliaryLedgers from './pages/AuxiliaryLedgers';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
