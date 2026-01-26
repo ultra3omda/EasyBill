@@ -562,16 +562,3 @@ async def export_auxiliary_ledger_excel(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
-
-                total_debit += debit_balance
-                total_credit += credit_balance
-    
-    return {
-        "accounts": balance_data,
-        "totals": {
-            "debit": total_debit,
-            "credit": total_credit,
-            "balanced": abs(total_debit - total_credit) < 0.01
-        },
-        "date": date_to
-    }
