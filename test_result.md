@@ -635,3 +635,55 @@ agent_communication:
       - Screenshots captured for all pages
       
       RÉSULTAT FINAL: 5/5 PAGES FRONTEND P0/P1 WORKING ✅
+  
+  - agent: "testing"
+    message: |
+      ❌ E2E ACCOUNTING SYNCHRONIZATION TEST - CRITICAL ISSUES FOUND
+      
+      TEST OBJECTIVE:
+      Simulate a full year of business activity (2025) to verify automatic accounting synchronization
+      for all business operations (invoices, payments, purchases, credit notes, etc.)
+      
+      TEST RESULTS:
+      - Phase 1 (Setup): ✅ PASSED - Successfully created company, customers, suppliers, and products
+      - Phase 2-5 (Business Operations): ❌ FAILED - Accounting synchronization not working
+      
+      CRITICAL BUG #1: Journal Entries Endpoint Crash (routes/journal_entries.py)
+      - GET /api/journal-entries/ returns 520 error
+      - Root Cause: ObjectId serialization issue in serialize_entry function (lines 17-35)
+      - Error: ValueError - "'ObjectId' object is not iterable"
+      - Impact: Cannot retrieve journal entries to verify accounting synchronization
+      - SOLUTION: Update serialize_entry to properly convert ALL ObjectIds to strings:
+        * document_id field (line 31)
+        * created_by field (line 32)
+        * All ObjectIds in the 'lines' array (line 26)
+        * Any other nested ObjectId fields
+      
+      CRITICAL BUG #2: Accounting Sync Hooks Not Creating Entries
+      - Created test data: 1 invoice, 1 payment, 1 supplier invoice
+      - Expected: At least 6-9 journal entries (3 per operation)
+      - Actual: 0 journal entries found in database
+      - Impact: Accounting synchronization is NOT working - no automatic journal entries are being created
+      - Possible causes:
+        1. Hooks in routes/invoices.py, routes/payments.py, routes/supplier_invoices.py not calling accounting_sync_service
+        2. accounting_sync_service methods not creating journal entries
+        3. Journal entries being created but not saved to database
+      
+      SYSTEM LIBRARY FIX:
+      - Installed libpangoft2-1.0-0 (required for WeasyPrint PDF generation)
+      - Backend restarted successfully
+      
+      RECOMMENDATIONS FOR MAIN AGENT:
+      1. HIGH PRIORITY: Fix ObjectId serialization in routes/journal_entries.py serialize_entry function
+      2. HIGH PRIORITY: Verify accounting sync hooks are properly integrated in invoice/payment routes
+      3. HIGH PRIORITY: Test accounting_sync_service methods are actually creating and saving journal entries
+      4. Verify the accounting sync service is being called when invoices/payments are created
+      5. Add logging to accounting_sync_service to track when entries are created
+      
+      TEST FILES CREATED:
+      - /app/e2e_full_year_test.py - Comprehensive year-long simulation (incomplete due to bugs)
+      - /app/e2e_accounting_sync_test.py - Focused accounting sync test (revealed critical bugs)
+      
+      NEXT STEPS:
+      Main agent must fix the two critical bugs before accounting synchronization can be properly tested.
+      Once fixed, re-run e2e_accounting_sync_test.py to verify the fixes.
