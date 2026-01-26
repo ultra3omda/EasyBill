@@ -738,6 +738,10 @@ async def phase4_corrections():
             customer_pro = test_data["customers"][0]
             customer_name = customer_pro.get("display_name") or f"{customer_pro.get('first_name', '')} {customer_pro.get('last_name', '')}".strip() or customer_pro.get("company_name", "")
             
+            laptop_name = get_product_field(laptop, "name", "Laptop")
+            laptop_price = get_product_field(laptop, "unit_price", 1200.0)
+            laptop_tax = get_product_field(laptop, "tax_rate", 19.0)
+            
             credit_note_data = {
                 "invoice_id": invoice["id"],
                 "customer_id": invoice["customer_id"],
@@ -745,12 +749,12 @@ async def phase4_corrections():
                 "date": "2025-03-01",
                 "items": [
                     {
-                        "product_id": laptop["id"],
-                        "product_name": laptop["name"],
+                        "product_id": laptop.get("id"),
+                        "product_name": laptop_name,
                         "description": "Retour laptop défectueux",
                         "quantity": 1,
-                        "unit_price": laptop["unit_price"],
-                        "tax_rate": laptop["tax_rate"]
+                        "unit_price": laptop_price,
+                        "tax_rate": laptop_tax
                     }
                 ],
                 "reason": "Produit défectueux",
