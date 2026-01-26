@@ -455,7 +455,18 @@ async def get_trial_balance(
                     "debit": debit_balance,
                     "credit": credit_balance
                 })
-
+                total_debit += debit_balance
+                total_credit += credit_balance
+    
+    return {
+        "accounts": balance_data,
+        "totals": {
+            "debit": total_debit,
+            "credit": total_credit,
+            "balanced": abs(total_debit - total_credit) < 0.01
+        },
+        "date": date_to
+    }
 
 
 @router.get("/trial-balance/export/excel")
