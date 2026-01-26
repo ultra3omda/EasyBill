@@ -292,9 +292,7 @@ async def send_invoice_by_email(
             customer_name=customer.get("display_name", customer.get("company_name", "Client")),
             invoice_number=invoice.get("number"),
             invoice_total=invoice.get("total"),
-            invoice_due_date=invoice.get("due_date").strftime("%d/%m/%Y") if invoice.get("due_date") else "",
-            pdf_url=pdf_url,
-            company_name=company.get("name", "")
+            invoice_pdf_url=pdf_url
         )
         
         # Mettre à jour le statut de la facture
