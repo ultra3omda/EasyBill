@@ -432,3 +432,97 @@ async def delete_entry(
     await db.journal_entries.delete_one({"_id": ObjectId(entry_id)})
     
     return {"message": "Entry deleted"}
+
+
+
+@router.get("/export/excel")
+async def export_journal_entries_excel(
+    company_id: str = Query(...),
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    journal_type: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Exporte les écritures comptables en Excel"""
+    from fastapi.responses import StreamingResponse
+    import pandas as pd
+    from io import BytesIO
+    
+    company = await get_current_company(current_user, company_id)
+    
+    # Build query
+    query = {"company_id": ObjectId(company_id)}
+    
+    if date_from:
+        query["date"] = {"$gte": datetime.fromisoformat(date_from)}
+    if date_to:
+        if "date" in query:
+            query["date"]["$lte"] = datetime.fromisoformat(date_to)
+        else:
+            query["date"] = {"$lte": datetime.fromisoformat(date_to)}
+    
+    if journal_type:
+        query["journal_type"] = journal_type
+    
+    entries = await db.journal_entries.find(query).sort("date", 1).to_list(5000)
+    
+    # Prepare data - one row per line
+    data = []
+    for entry in entries:
+        for line in entry.get("lines", []):
+            data.append({
+                "Date": entry["date"].strftime("%d/%m/%Y") if entry.get("date") else "",
+                "Référence": entry.get("reference"),
+                "Description": entry.get("description"),
+                "Compte": line.get("account_code"),
+                "Libellé Compte": line.get("account_name"),
+                "Débit": round(line.get("debit", 0), 3),
+                "Crédit": round(line.get("credit", 0), 3),
+                "Type Journal": entry.get("journal_type"),
+                "Document": entry.get("document_type")
+            })
+    
+    # Create Excel
+    df = pd.DataFrame(data)
+    
+    # Add totals
+    if not df.empty:
+        totals = {
+            "Date": "",
+            "Référence": "",
+            "Description": "TOTAL",
+            "Compte": "",
+            "Libellé Compte": "",
+            "Débit": df["Débit"].sum(),
+            "Crédit": df["Crédit"].sum(),
+            "Type Journal": "",
+            "Document": ""
+        }
+        df = pd.concat([df, pd.DataFrame([totals])], ignore_index=True)
+    
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name='Écritures Comptables', index=False)
+        
+        # Format columns
+        worksheet = writer.sheets['Écritures Comptables']
+        for column in worksheet.columns:
+            max_length = 0
+            column = [cell for cell in column]
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            worksheet.column_dimensions[column[0].column_letter].width = adjusted_width
+    
+    filename = f"Ecritures_Comptables_{company.get('name', 'EasyBill')}_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
