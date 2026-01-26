@@ -179,22 +179,29 @@ class AccountingReportsService:
         # Create Excel with multiple sheets (one per account)
         output = BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            for code, data in sorted(ledger.items()):
-                df = pd.DataFrame(data["transactions"])
-                
-                # Add totals
-                if not df.empty:
-                    totals = {
-                        "Date": "",
-                        "Référence": "",
-                        "Description": "TOTAL",
-                        "Débit": df["Débit"].sum(),
-                        "Crédit": df["Crédit"].sum()
-                    }
-                    df = pd.concat([df, pd.DataFrame([totals])], ignore_index=True)
-                
-                sheet_name = f"{code} - {data['account_name'][:20]}"
-                df.to_excel(writer, sheet_name=sheet_name, index=False)
+            # Handle empty data case
+            if not ledger:
+                df_empty = pd.DataFrame([{
+                    "Message": "Aucune donnée disponible pour la période sélectionnée"
+                }])
+                df_empty.to_excel(writer, sheet_name='Aucune donnée', index=False)
+            else:
+                for code, data in sorted(ledger.items()):
+                    df = pd.DataFrame(data["transactions"])
+                    
+                    # Add totals
+                    if not df.empty:
+                        totals = {
+                            "Date": "",
+                            "Référence": "",
+                            "Description": "TOTAL",
+                            "Débit": df["Débit"].sum(),
+                            "Crédit": df["Crédit"].sum()
+                        }
+                        df = pd.concat([df, pd.DataFrame([totals])], ignore_index=True)
+                    
+                    sheet_name = f"{code} - {data['account_name'][:20]}"
+                    df.to_excel(writer, sheet_name=sheet_name, index=False)
         
         return output.getvalue()
     
