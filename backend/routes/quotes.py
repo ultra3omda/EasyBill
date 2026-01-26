@@ -237,6 +237,73 @@ async def update_quote(
     return {"message": "Quote updated successfully"}
 
 
+
+
+@router.post("/{quote_id}/send-email")
+async def send_quote_by_email(
+    quote_id: str,
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Envoie un devis par email au client
+    """
+    company = await get_current_company(current_user, company_id)
+    
+    # Récupérer le devis
+    quote = await db.quotes.find_one({
+        "_id": ObjectId(quote_id),
+        "company_id": ObjectId(company_id)
+    })
+    
+    if not quote:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quote not found")
+    
+    # Récupérer le client
+    customer = await db.customers.find_one({"_id": quote["customer_id"]})
+    if not customer or not customer.get("email"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Customer email not found")
+    
+    # Générer l'URL du PDF
+    pdf_url = f"{os.environ.get('FRONTEND_URL', 'http://localhost:3000')}/quotes/{quote_id}/pdf"
+    
+    # Envoyer l'email
+    try:
+        email_service.send_quote_email(
+            to_email=customer["email"],
+            customer_name=customer.get("display_name", customer.get("company_name", "Client")),
+            quote_number=quote.get("number"),
+            quote_total=quote.get("total"),
+            quote_valid_until=quote.get("valid_until").strftime("%d/%m/%Y") if quote.get("valid_until") else "",
+            pdf_url=pdf_url,
+            company_name=company.get("name", "")
+        )
+        
+        # Mettre à jour le statut du devis
+        await db.quotes.update_one(
+            {"_id": ObjectId(quote_id)},
+            {
+                "$set": {
+                    "status": "sent" if quote.get("status") == "draft" else quote.get("status"),
+                    "sent_at": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+        
+        return {
+            "message": "Quote sent successfully",
+            "sent_to": customer["email"],
+            "sent_at": datetime.now(timezone.utc).isoformat()
+        }
+    
+    except Exception as e:
+        logger.error(f"Erreur envoi email devis {quote_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to send email: {str(e)}"
+        )
+
 @router.delete("/{quote_id}")
 async def delete_quote(
     quote_id: str,
