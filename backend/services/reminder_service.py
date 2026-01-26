@@ -175,11 +175,16 @@ Cordialement,
             if inv.get("customer_id"):
                 customer = await self.db.customers.find_one({"_id": inv["customer_id"]})
             
+            # Safely get customer name
+            customer_name = None
+            if customer:
+                customer_name = customer.get("company_name") or customer.get("display_name") or f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip()
+            
             result.append({
                 "id": str(inv["_id"]),
                 "number": inv.get("number"),
                 "customer_id": str(inv.get("customer_id")) if inv.get("customer_id") else None,
-                "customer_name": customer.get("company_name") or f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip() if customer else None,
+                "customer_name": customer_name,
                 "customer_email": customer.get("email") if customer else None,
                 "total": inv.get("total", 0),
                 "due_date": due_date.isoformat() if due_date else None,
