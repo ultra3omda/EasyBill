@@ -285,6 +285,20 @@ const AppRoutes = () => {
       <Route path="/purchases/receipts" element={<ProtectedRoute><Receipts /></ProtectedRoute>} />
       <Route path="/sales/disbursements" element={<ProtectedRoute><Disbursements /></ProtectedRoute>} />
       <Route path="/accounting/withholding-taxes" element={<ProtectedRoute><WithholdingTaxes /></ProtectedRoute>} />
+      
+      {/* Compatibility routes - redirect old paths to new */}
+      <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
+      <Route path="/quotes" element={<ProtectedRoute><Quotes /></ProtectedRoute>} />
+      <Route path="/delivery-notes" element={<ProtectedRoute><DeliveryNotes /></ProtectedRoute>} />
+      <Route path="/credit-notes" element={<ProtectedRoute><CreditNotes /></ProtectedRoute>} />
+      <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
+      <Route path="/reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
+      <Route path="/exit-vouchers" element={<ProtectedRoute><ExitVouchers /></ProtectedRoute>} />
+      <Route path="/receipts" element={<ProtectedRoute><Receipts /></ProtectedRoute>} />
+      <Route path="/disbursements" element={<ProtectedRoute><Disbursements /></ProtectedRoute>} />
+      <Route path="/withholding-taxes" element={<ProtectedRoute><WithholdingTaxes /></ProtectedRoute>} />
+      <Route path="/purchase-orders" element={<ProtectedRoute><PurchaseOrders /></ProtectedRoute>} />
+
 
       
       {/* Stock Routes with /stock prefix */}
