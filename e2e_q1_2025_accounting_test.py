@@ -57,6 +57,11 @@ def print_info(message: str):
     print(f"{Colors.CYAN}ℹ️  {message}{Colors.END}")
 
 
+def get_product_field(product, field_name, default=""):
+    """Helper function to get product field with fallback"""
+    return product.get(field_name) or product.get(field_name.replace("_", "")) or default
+
+
 async def phase1_setup():
     """Phase 1: Setup - Inscription et création des données de base"""
     global auth_token, company_id
