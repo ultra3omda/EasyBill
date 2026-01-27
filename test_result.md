@@ -396,11 +396,11 @@ backend:
 frontend:
   - task: "Pages OAuth Google/Facebook"
     implemented: true
-    working: true
-    file: "pages/Login.js, pages/Register.js"
-    stuck_count: 0
+    working: false
+    file: "pages/Login.js, pages/Register.js, context/AuthContext.js"
+    stuck_count: 1
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
@@ -408,6 +408,9 @@ frontend:
       - working: true
         agent: "testing"
         comment: "✅ TESTED: Login page has Google and Facebook OAuth buttons (visible and clickable). Register page has Google OAuth button. All buttons are properly styled and functional. OAuth integration uses mock credentials (as expected without real API keys)."
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL BUG: OAuth Google login fails with 400 Bad Request. Frontend/Backend API contract mismatch. Frontend (AuthContext.js line 48-51) sends {email, name} but backend (routes/auth.py line 189-195) expects {credential, email, name, sub}. Backend validation fails: 'Google credential is required'. SOLUTION: Update AuthContext.js loginWithGoogle() to send: {credential: 'mock_google_credential', email: 'user@gmail.com', name: 'Google User', sub: 'mock_google_id_123'}. Backend works correctly when proper payload is sent (verified with curl). Frontend UI works perfectly (button visible, clickable, triggers API call). Only integration is broken. Same issue likely affects Facebook OAuth."
 
   - task: "Pages Forgot/Reset Password"
     implemented: true
