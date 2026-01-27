@@ -304,7 +304,9 @@ const AppRoutes = () => {
       <Route path="/disbursements" element={<ProtectedRoute><Disbursements /></ProtectedRoute>} />
       <Route path="/withholding-taxes" element={<ProtectedRoute><WithholdingTaxes /></ProtectedRoute>} />
       <Route path="/purchase-orders" element={<ProtectedRoute><PurchaseOrders /></ProtectedRoute>} />
-
+      <Route path="/purchases/purchase-orders" element={<ProtectedRoute><PurchaseOrders /></ProtectedRoute>} />
+      <Route path="/purchases/supplier-invoices" element={<ProtectedRoute><SupplierInvoices /></ProtectedRoute>} />
+      <Route path="/purchases/supplier-payments" element={<ProtectedRoute><SupplierPayments /></ProtectedRoute>} />
 
       
       {/* Stock Routes with /stock prefix */}
@@ -312,22 +314,6 @@ const AppRoutes = () => {
       <Route path="/stock/warehouses" element={<ProtectedRoute><Warehouses /></ProtectedRoute>} />
       <Route path="/stock/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
       <Route path="/stock/movements" element={<ProtectedRoute><StockMovements /></ProtectedRoute>} />
-      
-      {/* Ventes Routes */}
-      <Route path="/delivery-notes" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/exit-vouchers" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/credit-notes" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/expense-reports" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/sales-payments" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/reminders" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/pos" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      
-      {/* Achats Routes */}
-      <Route path="/reception-notes" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/purchase-orders" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/supplier-invoices" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/services" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/purchase-payments" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/withholding-tax" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/purchase-reminders" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       
