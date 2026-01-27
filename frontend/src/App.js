@@ -343,14 +343,7 @@ const AppRoutes = () => {
       <Route path="/roles-permissions" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/additional-entries" element={<ProtectedRoute><AdditionalEntriesPage /></ProtectedRoute>} />
       <Route path="/taxes" element={<ProtectedRoute><TaxesPage /></ProtectedRoute>} />
-      <Route path="/banks" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/customization" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/calendar" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/access-logs" element={<ProtectedRoute><AccessLogsPage /></ProtectedRoute>} />
-      <Route path="/access-logs" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/files" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/integrations" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/workflows" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" />} />
