@@ -907,6 +907,101 @@ agent_communication:
 
   - agent: "testing"
     message: |
+      ❌ OAUTH GOOGLE FLOW - CRITICAL BUG FOUND (Frontend/Backend Mismatch)
+      
+      TEST OBJECTIVE:
+      Tester le processus complet de connexion via Google OAuth en mode preview
+      
+      TEST RESULTS:
+      ❌ OAuth Google login FAILS with 400 Bad Request error
+      
+      CRITICAL BUG IDENTIFIED:
+      Frontend/Backend API Contract Mismatch in OAuth Google implementation
+      
+      ROOT CAUSE:
+      1. Frontend (AuthContext.js line 48-51) sends:
+         ```
+         { email: 'user@gmail.com', name: 'Google User' }
+         ```
+      
+      2. Backend (routes/auth.py line 189-195) expects:
+         ```
+         { credential: 'google_id_token', email: '...', name: '...', sub: '...' }
+         ```
+      
+      3. Backend validation fails because 'credential' field is missing:
+         - Error: "Google credential is required" (400 Bad Request)
+      
+      VERIFICATION:
+      ✅ Backend works correctly when proper payload is sent:
+         - Tested with: {"credential": "mock_token", "email": "test@gmail.com", "name": "Test", "sub": "123"}
+         - Result: 200 OK with access_token and user data
+      
+      ✅ Frontend UI works correctly:
+         - Login page loads properly
+         - Google OAuth button is visible and clickable
+         - Button has proper styling and data-testid attribute
+         - Click triggers API call to POST /api/auth/google
+      
+      ❌ Integration fails due to payload mismatch:
+         - Frontend sends incomplete payload (missing 'credential' field)
+         - Backend rejects request with 400 error
+         - User sees no error message (toast not displayed)
+         - User remains on login page
+      
+      IMPACT:
+      - OAuth Google login is completely non-functional
+      - Users cannot authenticate via Google
+      - No user-friendly error message displayed
+      
+      SOLUTION REQUIRED:
+      Main agent must fix the frontend AuthContext.js to send correct payload:
+      
+      Option 1 (Mock Implementation - Current Approach):
+      Update AuthContext.js line 48-51 to send:
+      ```javascript
+      const response = await authAPI.googleLogin({ 
+        credential: 'mock_google_credential',
+        email: 'user@gmail.com',
+        name: 'Google User',
+        sub: 'mock_google_id_123'
+      });
+      ```
+      
+      Option 2 (Real OAuth Implementation):
+      Implement actual Google OAuth flow:
+      1. Add Google OAuth client library to frontend
+      2. Configure Google OAuth credentials
+      3. Implement OAuth popup/redirect flow
+      4. Send real Google credential token to backend
+      
+      RECOMMENDATION:
+      For preview/demo mode, use Option 1 (mock implementation) to make the flow work.
+      For production, implement Option 2 (real OAuth).
+      
+      ADDITIONAL FINDINGS:
+      ✅ System library libpangoft2-1.0-0 was missing (causing 520 errors)
+         - Fixed by installing: sudo apt-get install -y libpangoft2-1.0-0
+         - Backend now starts successfully
+      
+      ✅ Backend OAuth endpoint is functional and properly implemented
+      ✅ Frontend UI/UX is well-designed and user-friendly
+      ❌ Frontend/Backend integration is broken due to API contract mismatch
+      
+      TEST ENVIRONMENT:
+      - Frontend URL: https://test-et-implement.preview.emergentagent.com/login
+      - Backend URL: https://test-et-implement.preview.emergentagent.com/api
+      - Test date: 2026-01-27
+      - Screenshots captured: 6 images showing complete flow
+      
+      NEXT STEPS:
+      1. Main agent must update AuthContext.js to send correct payload format
+      2. Re-test OAuth Google flow after fix
+      3. Test OAuth Facebook flow (likely has same issue)
+      4. Add user-friendly error messages for OAuth failures
+  
+  - agent: "testing"
+    message: |
       ✅ MODULE COMPTABILITÉ - TEST COMPLET RÉUSSI (74.2% SUCCESS RATE)
       
       TEST OBJECTIVE:
