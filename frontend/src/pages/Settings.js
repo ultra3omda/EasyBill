@@ -145,7 +145,7 @@ const Settings = () => {
               <User className="w-4 h-4 mr-2" />
               Profil
             </TabsTrigger>
-            <TabsTrigger value="company" onClick={() => navigate('/settings/company')}>
+            <TabsTrigger value="company">
               <Building className="w-4 h-4 mr-2" />
               Entreprise
             </TabsTrigger>
