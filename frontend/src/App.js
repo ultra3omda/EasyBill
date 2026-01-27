@@ -276,11 +276,6 @@ const AppRoutes = () => {
       } />
 
       
-      {/* Stock Routes */}
-      <Route path="/warehouses" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/inventory" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/stock-movements" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      
       {/* Sales Routes with /sales prefix */}
       <Route path="/sales/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
       <Route path="/sales/invoices/new" element={<ProtectedRoute><InvoiceForm /></ProtectedRoute>} />
