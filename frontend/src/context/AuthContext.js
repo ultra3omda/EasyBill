@@ -46,8 +46,10 @@ export const AuthProvider = ({ children }) => {
     try {
       // Mock Google OAuth for now - in production this would use actual Google OAuth
       const response = await authAPI.googleLogin({ 
+        credential: 'mock_google_credential_' + Date.now(),
         email: 'user@gmail.com',
-        name: 'Google User'
+        name: 'Google User',
+        sub: 'google_user_' + Date.now()
       });
       
       const { access_token, user: userData } = response.data;
@@ -67,8 +69,10 @@ export const AuthProvider = ({ children }) => {
     try {
       // Mock Facebook OAuth for now - in production this would use actual Facebook OAuth
       const response = await authAPI.facebookLogin({ 
+        access_token: 'mock_facebook_token_' + Date.now(),
         email: 'user@facebook.com',
-        name: 'Facebook User'
+        name: 'Facebook User',
+        id: 'facebook_user_' + Date.now()
       });
       
       const { access_token, user: userData } = response.data;
