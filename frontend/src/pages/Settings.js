@@ -231,6 +231,42 @@ const Settings = () => {
             </Card>
           </TabsContent>
 
+          {/* Company Tab */}
+          <TabsContent value="company" className="space-y-4">
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-6">Paramètres de l'entreprise</h2>
+              {currentCompany ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Nom de l'entreprise</Label>
+                      <Input value={currentCompany.name || ''} disabled className="bg-gray-50" />
+                    </div>
+                    <div>
+                      <Label>Devise</Label>
+                      <Input value={currentCompany.primary_currency || 'TND'} disabled className="bg-gray-50" />
+                    </div>
+                  </div>
+                  <div className="flex gap-4 pt-4">
+                    <Button variant="outline" onClick={() => navigate('/taxes')}>
+                      <Percent className="w-4 h-4 mr-2" />
+                      Gérer les taxes
+                    </Button>
+                    <Button variant="outline" onClick={() => navigate('/access-logs')}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      Logs d'accès
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  Aucune entreprise sélectionnée
+                </div>
+              )}
+            </Card>
+          </TabsContent>
+
+
           {/* Notifications Tab */}
           <TabsContent value="notifications" className="space-y-4">
             <Card className="p-6">
