@@ -269,6 +269,12 @@ const AppRoutes = () => {
           <Settings />
         </ProtectedRoute>
       } />
+      <Route path="/settings/company" element={
+        <ProtectedRoute>
+          <Settings />
+        </ProtectedRoute>
+      } />
+
       
       {/* Stock Routes */}
       <Route path="/warehouses" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
