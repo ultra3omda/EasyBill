@@ -26,6 +26,7 @@ import {
 } from '../components/ui/dropdown-menu';
 import { Plus, Search, Filter, Download, Send, Edit, Trash2, MoreVertical, FileCheck, FileText, CheckCircle, Printer } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
+import QuoteFormModal from '../components/modals/QuoteFormModal';
 
 const Quotes = () => {
   const { t } = useLanguage();
@@ -34,6 +35,7 @@ const Quotes = () => {
   const [quotes, setQuotes] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     if (currentCompany) {
