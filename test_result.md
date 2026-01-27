@@ -480,7 +480,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Frontend testing (si demandé par utilisateur)"
+    - "Pages OAuth Google/Facebook - CRITICAL BUG FOUND"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
