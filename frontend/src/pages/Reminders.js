@@ -52,7 +52,7 @@ const Reminders = () => {
 
       // Charger les rappels
       const remindersRes = await axios.get(`${API_URL}/api/reminders/?company_id=${currentCompany.id}`, { headers });
-      setReminders(remindersRes.data);
+      setReminders(Array.isArray(remindersRes.data) ? remindersRes.data : (remindersRes.data.items || []));
 
       // Charger les factures en retard
       const overdueRes = await axios.get(`${API_URL}/api/reminders/overdue-invoices?company_id=${currentCompany.id}`, { headers });
@@ -68,6 +68,9 @@ const Reminders = () => {
         description: "Impossible de charger les rappels",
         variant: "destructive"
       });
+      setReminders([]);
+      setOverdueInvoices([]);
+      setTemplates([]);
     } finally {
       setLoading(false);
     }
