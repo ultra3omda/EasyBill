@@ -31,13 +31,19 @@ const Receipts = () => {
       const headers = { Authorization: `Bearer ${token}` };
       
       const res = await axios.get(`${API_URL}/api/receipts/?company_id=${currentCompany.id}`, { headers });
-      setReceipts(res.data);
+      setReceipts(res.data.items || res.data || []);
       
       const statsRes = await axios.get(`${API_URL}/api/receipts/stats?company_id=${currentCompany.id}`, { headers });
-      setStats(statsRes.data);
+      const statsData = statsRes.data || {};
+      setStats({
+        total: statsData.total || 0,
+        validated: statsData.validated || 0,
+        pending: statsData.pending || 0
+      });
     } catch (error) {
       console.error('Error loading data:', error);
       toast({ title: "Erreur", description: "Impossible de charger les bons de réception", variant: "destructive" });
+      setReceipts([]);
     } finally {
       setLoading(false);
     }
@@ -65,9 +71,9 @@ const Receipts = () => {
     return <Badge variant={s.variant}>{s.label}</Badge>;
   };
 
-  const filteredReceipts = receipts.filter(r =>
+  const filteredReceipts = Array.isArray(receipts) ? receipts.filter(r =>
     r.number?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ) : [];
 
   return (
     <AppLayout>
@@ -142,7 +148,7 @@ const Receipts = () => {
                   <TableRow key={receipt.id}>
                     <TableCell className="font-medium">{receipt.number}</TableCell>
                     <TableCell>{new Date(receipt.date).toLocaleDateString('fr-FR')}</TableCell>
-                    <TableCell>{receipt.supplier_name}</TableCell>
+                    <TableCell>{receipt.supplier_name || '-'}</TableCell>
                     <TableCell>{getStatusBadge(receipt.status)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">

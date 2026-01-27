@@ -31,13 +31,19 @@ const Disbursements = () => {
       const headers = { Authorization: `Bearer ${token}` };
       
       const res = await axios.get(`${API_URL}/api/disbursements/?company_id=${currentCompany.id}`, { headers });
-      setDisbursements(res.data);
+      setDisbursements(res.data.items || res.data || []);
       
       const statsRes = await axios.get(`${API_URL}/api/disbursements/stats?company_id=${currentCompany.id}`, { headers });
-      setStats(statsRes.data);
+      const statsData = statsRes.data || {};
+      setStats({
+        total: statsData.total || 0,
+        pending: statsData.pending || 0,
+        invoiced: statsData.invoiced || 0
+      });
     } catch (error) {
       console.error('Error loading data:', error);
       toast({ title: "Erreur", description: "Impossible de charger les notes de débours", variant: "destructive" });
+      setDisbursements([]);
     } finally {
       setLoading(false);
     }
@@ -65,9 +71,9 @@ const Disbursements = () => {
     return <Badge variant={s.variant}>{s.label}</Badge>;
   };
 
-  const filteredDisbursements = disbursements.filter(d =>
+  const filteredDisbursements = Array.isArray(disbursements) ? disbursements.filter(d =>
     d.number?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ) : [];
 
   return (
     <AppLayout>
@@ -138,7 +144,7 @@ const Disbursements = () => {
                   <TableRow key={disb.id}>
                     <TableCell className="font-medium">{disb.number}</TableCell>
                     <TableCell>{new Date(disb.date).toLocaleDateString('fr-FR')}</TableCell>
-                    <TableCell>{disb.customer_name}</TableCell>
+                    <TableCell>{disb.customer_name || '-'}</TableCell>
                     <TableCell>{disb.total?.toFixed(2)} TND</TableCell>
                     <TableCell>{getStatusBadge(disb.status)}</TableCell>
                     <TableCell className="text-right">

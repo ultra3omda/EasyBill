@@ -32,16 +32,24 @@ const WithholdingTaxes = () => {
       const headers = { Authorization: `Bearer ${token}` };
       
       const res = await axios.get(`${API_URL}/api/withholding-taxes/?company_id=${currentCompany.id}`, { headers });
-      setTaxes(res.data);
+      setTaxes(res.data.items || res.data || []);
       
       const ratesRes = await axios.get(`${API_URL}/api/withholding-taxes/rates?company_id=${currentCompany.id}`, { headers });
       setRates(ratesRes.data.rates || []);
       
       const statsRes = await axios.get(`${API_URL}/api/withholding-taxes/stats?company_id=${currentCompany.id}`, { headers });
-      setStats(statsRes.data);
+      const statsData = statsRes.data || {};
+      setStats({
+        total: statsData.total || 0,
+        pending: statsData.pending || 0,
+        paid: statsData.paid || 0,
+        total_amount: statsData.total_amount || 0
+      });
     } catch (error) {
       console.error('Error loading data:', error);
       toast({ title: "Erreur", description: "Impossible de charger les retenues à la source", variant: "destructive" });
+      setTaxes([]);
+      setRates([]);
     } finally {
       setLoading(false);
     }
@@ -70,9 +78,9 @@ const WithholdingTaxes = () => {
     return <Badge variant={s.variant}>{s.label}</Badge>;
   };
 
-  const filteredTaxes = taxes.filter(t =>
+  const filteredTaxes = Array.isArray(taxes) ? taxes.filter(t =>
     t.reference?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ) : [];
 
   return (
     <AppLayout>
@@ -117,18 +125,19 @@ const WithholdingTaxes = () => {
           </Card>
         </div>
 
-        {/* Taux de retenue */}
-        <Card className="p-6">
-          <h2 className="text-lg font-semibold mb-4">Taux de retenue à la source (Tunisie)</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {rates.map((rate, idx) => (
-              <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="font-medium">{rate.type}</span>
-                <Badge className="bg-purple-100 text-purple-800">{rate.rate}%</Badge>
-              </div>
-            ))}
-          </div>
-        </Card>
+        {rates.length > 0 && (
+          <Card className="p-6">
+            <h2 className="text-lg font-semibold mb-4">Taux de retenue à la source (Tunisie)</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {rates.map((rate, idx) => (
+                <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                  <span className="font-medium">{rate.type}</span>
+                  <Badge className="bg-purple-100 text-purple-800">{rate.rate}%</Badge>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         <Card className="p-6">
           <div className="flex justify-between items-center mb-4">

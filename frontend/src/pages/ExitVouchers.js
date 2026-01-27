@@ -31,13 +31,19 @@ const ExitVouchers = () => {
       const headers = { Authorization: `Bearer ${token}` };
       
       const res = await axios.get(`${API_URL}/api/exit-vouchers/?company_id=${currentCompany.id}`, { headers });
-      setVouchers(res.data);
+      setVouchers(res.data.items || res.data || []);
       
       const statsRes = await axios.get(`${API_URL}/api/exit-vouchers/stats?company_id=${currentCompany.id}`, { headers });
-      setStats(statsRes.data);
+      const statsData = statsRes.data || {};
+      setStats({
+        total: statsData.total || 0,
+        validated: statsData.validated || 0,
+        pending: statsData.pending || 0
+      });
     } catch (error) {
       console.error('Error loading data:', error);
       toast({ title: "Erreur", description: "Impossible de charger les bons de sortie", variant: "destructive" });
+      setVouchers([]);
     } finally {
       setLoading(false);
     }
@@ -65,9 +71,9 @@ const ExitVouchers = () => {
     return <Badge variant={s.variant}>{s.label}</Badge>;
   };
 
-  const filteredVouchers = vouchers.filter(v =>
+  const filteredVouchers = Array.isArray(vouchers) ? vouchers.filter(v =>
     v.number?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ) : [];
 
   return (
     <AppLayout>
