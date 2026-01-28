@@ -1197,3 +1197,60 @@ agent_communication:
       dans l'application, et peut se déconnecter.
       
       RÉSULTAT FINAL: ✅ OAUTH GOOGLE WORKING - TEST PASSED
+  
+  - agent: "user"
+    message: |
+      ❌ PROBLÈME SIGNALÉ PAR L'UTILISATEUR (2026-01-28):
+      "Continuer avec Google" ne fonctionne pas en mode preview, alors qu'elle fonctionnait auparavant.
+      URL: https://test-et-implement.preview.emergentagent.com
+      Demande de test urgent pour identifier pourquoi OAuth ne marche plus.
+  
+  - agent: "testing"
+    message: |
+      ✅ OAUTH GOOGLE - BUG IDENTIFIÉ ET CORRIGÉ (2026-01-28)
+      
+      PROBLÈME RAPPORTÉ:
+      L'utilisateur signale que "Continuer avec Google" ne fonctionne plus en mode preview.
+      
+      DIAGNOSTIC EFFECTUÉ:
+      1. ✅ Page login chargée correctement
+      2. ✅ Bouton "Continuer avec Google" présent et cliquable
+      3. ❌ API call POST /api/auth/google retourne 520 error (backend crash)
+      4. ❌ Aucun token sauvegardé
+      5. ❌ Utilisateur reste sur page login
+      
+      ROOT CAUSE IDENTIFIÉE:
+      Backend crash au démarrage à cause de la bibliothèque système manquante:
+      - Error: "OSError: cannot load library 'libpangoft2-1.0-0'"
+      - Impact: Backend ne démarre pas, toutes les requêtes API retournent 520
+      - Cause: La bibliothèque libpangoft2-1.0-0 (requise par WeasyPrint pour PDF) était manquante
+      
+      SOLUTION APPLIQUÉE:
+      1. Installé libpangoft2-1.0-0: sudo apt-get install -y libpangoft2-1.0-0
+      2. Redémarré backend: sudo supervisorctl restart backend
+      3. Vérifié que backend démarre correctement (logs montrent "Uvicorn running")
+      
+      VÉRIFICATION POST-FIX:
+      ✅ Backend démarre sans erreur
+      ✅ POST /api/auth/google retourne 200 OK
+      ✅ Token JWT sauvegardé dans localStorage
+      ✅ User data sauvegardée correctement
+      ✅ Redirection automatique vers /dashboard
+      ✅ Utilisateur authentifié peut naviguer dans l'app
+      
+      TEST RESULTS:
+      - API Response: 200 OK
+      - Token saved: YES
+      - User authenticated: YES
+      - Redirection working: YES (vers /dashboard)
+      - Dashboard accessible: YES
+      
+      CONCLUSION:
+      ✅ OAUTH GOOGLE FONCTIONNE À NOUVEAU!
+      Le problème n'était PAS dans le code OAuth, mais dans l'infrastructure backend.
+      La bibliothèque système libpangoft2-1.0-0 était manquante, empêchant le backend de démarrer.
+      Après installation et redémarrage, OAuth Google fonctionne parfaitement.
+      
+      RECOMMANDATION:
+      Ce problème peut se reproduire si le container est recréé. Il faudrait ajouter
+      libpangoft2-1.0-0 aux dépendances système du Dockerfile pour éviter ce problème à l'avenir.
