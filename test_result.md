@@ -414,6 +414,12 @@ frontend:
       - working: true
         agent: "testing"
         comment: "✅ OAUTH GOOGLE FLOW COMPLET TESTÉ ET FONCTIONNEL! Test end-to-end réussi. RÉSULTATS: 1) OAuth Google authentication fonctionne parfaitement (API call POST /api/auth/google returns 200). 2) Token JWT sauvegardé dans localStorage. 3) User data sauvegardée (email: user@gmail.com, name: Google User). 4) Redirection automatique vers /onboarding pour première connexion. 5) Utilisateur peut naviguer dans l'app après authentification. 6) Déconnexion fonctionne (token et user data supprimés). CORRECTION APPLIQUÉE: AuthContext.js lines 48-53 maintenant envoie le payload correct avec {credential, email, name, sub}. Le flow OAuth Google est maintenant 100% fonctionnel en mode mock. Minor: Onboarding form submission reste sur /onboarding au lieu de rediriger vers /dashboard (peut être dû à validation de formulaire ou champs manquants), mais cela n'affecte pas le flow OAuth qui est le focus du test."
+      - working: false
+        agent: "user"
+        comment: "❌ USER REPORT (2026-01-28): OAuth Google ne fonctionne plus en mode preview. Le bouton 'Continuer avec Google' ne fonctionne pas. Demande de test urgent."
+      - working: true
+        agent: "testing"
+        comment: "✅ BUG IDENTIFIÉ ET CORRIGÉ (2026-01-28): OAuth Google ne fonctionnait plus à cause d'un crash backend. ROOT CAUSE: Bibliothèque système libpangoft2-1.0-0 manquante (requise par WeasyPrint), empêchant le backend de démarrer. Toutes les requêtes API retournaient 520 error. SOLUTION: Installé libpangoft2-1.0-0 et redémarré backend. VÉRIFICATION: POST /api/auth/google retourne maintenant 200 OK, token sauvegardé, redirection vers dashboard fonctionne. OAuth Google est à nouveau 100% FONCTIONNEL. Le problème n'était pas dans le code OAuth mais dans l'infrastructure backend."
 
   - task: "Pages Forgot/Reset Password"
     implemented: true
