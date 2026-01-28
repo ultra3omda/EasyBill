@@ -489,7 +489,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "OAuth Google flow tested and working"
+    - "OAuth Google flow tested and working - Issue resolved (backend library missing)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
