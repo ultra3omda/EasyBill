@@ -1,0 +1,236 @@
+<analysis>**original_problem_statement:**
+The user initially requested a full, pixel-perfect clone of the Tunisian invoicing software . This has since evolved into building a custom full-stack invoicing and business management application named EasyBill. The user is now providing specific UI/UX requirements via screenshots from  and directing the agent to implement them feature by feature.
+
+**PRODUCT REQUIREMENTS:**
+1.  **Application:** Build a full-stack invoicing and business management application named EasyBill.
+2.  **Branding & Theme:** The application must use the name EasyBill and a violet/gold color scheme, but UI should closely mimic  as directed by the user.
+3.  **Onboarding & Core Features:**
+    *   Mandatory company creation flow for new users.
+    *   Automatic seeding of default data (taxes, fiscal stamps, Chart of Accounts).
+    *   Automatic creation of a Principal warehouse for each new company.
+4.  **Full Functionality:** Implement complete CRUD for all modules: Contacts, Stock, Sales, Purchases, Accounting, Projects, and Settings.
+5.  **Specific UI/UX Overhauls:**
+    *   **Contacts (Customers/Suppliers):** Implement Iberis-style KPI dashboards and a multi-step wizard for creation/editing, distinguishing between Particulier (Individual) and Entreprise (Company).
+    *   **Products (Articles):** Implement Iberis-style KPI dashboards, tabbed navigation, and a comprehensive creation/editing form that supports composite products, stock management, and warehouses.
+    *   **Import/Export:** Implement Excel import for products, including the ability to download a template file.
+6.  **Authentication:** Implement JWT (email/password). A mocked Google Auth exists, but a full implementation is an upcoming task.
+7.  **PDF Generation:** Invoices and quotes must be downloadable as PDFs.
+
+**User's preferred language**: French
+
+**what currently exists?**
+A full-stack application with a React frontend and a FastAPI/MongoDB backend.
+- **Core Modules (Functional):** Authentication (JWT), Company Onboarding, Sales, Purchases, Accounting (including dashboards and PDF generation).
+- **Recently Overhauled Modules:**
+    - **Contacts (Customers/Suppliers):** Pages now feature Iberis-style KPI dashboards. The creation/editing modal is a multi-step wizard that dynamically changes fields based on whether the contact is an individual or a company.
+    - **Products (Articles):** The page has been redesigned with Iberis-style KPIs and tabs. A new, comprehensive form for adding products has been created, though the backend logic for all fields (like composite products) is not fully integrated.
+    - **Layout:** The main application layout () has been updated to include a functional company switcher, a redesigned New Company modal, and a working notifications panel.
+- **Backend:** Models and routes for Customers and Suppliers have been updated with the new fields. A Principal warehouse is now created automatically with each new company. Backend routes for product import/export have been added but the implementation is not complete.
+
+**Last working item**:
+    - Last item agent was working: The agent was implementing the **Product Import** feature. This involved creating backend routes for importing from Excel and downloading a template, and then modifying the  frontend page to add the Importer button, an import modal, checkboxes for bulk actions, and a functional Action button. The agent was in the middle of updating .
+    - Status: IN PROGRESS
+    - Agent Testing Done: N
+    - Which testing method agent to use? both
+    - User Testing Done: N
+
+**All Pending/In progress Issue list**:
+  - Issue 1: Backend service instability due to WeasyPrint dependencies (PRIORITY: P0)
+
+  Issues Detail:
+  - Issue 1: 
+     - Attempted fixes: The agent repeatedly reinstalled missing system libraries () and restarted the backend service. This fixes the problem temporarily, but it reoccurs, suggesting an environment configuration issue.
+     - Next debug checklist: 
+       - Verify the Dockerfile or startup script ensures Hit:1 http://deb.debian.org/debian bookworm InRelease
+Get:2 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
+Get:3 http://deb.debian.org/debian-security bookworm-security InRelease [48.0 kB]
+Get:4 https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 InRelease [3005 B]
+Get:5 https://deb.nodesource.com/node_20.x nodistro InRelease [12.1 kB]
+Get:6 http://deb.debian.org/debian-security bookworm-security/main arm64 Packages [288 kB]
+Get:7 https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0/multiverse amd64 Packages [100 kB]
+Get:8 https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0/multiverse arm64 Packages [98.9 kB]
+Fetched 606 kB in 2s (330 kB/s)
+Reading package lists...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+libpango-1.0-0 is already the newest version (1.50.12+ds-1).
+libcairo2 is already the newest version (1.16.0-7).
+The following additional packages will be installed:
+  libgdk-pixbuf2.0-bin libgdk-pixbuf2.0-common shared-mime-info
+The following NEW packages will be installed:
+  libgdk-pixbuf-2.0-0 libgdk-pixbuf2.0-bin libgdk-pixbuf2.0-common
+  libpangoft2-1.0-0 shared-mime-info
+0 upgraded, 5 newly installed, 0 to remove and 0 not upgraded.
+Need to get 1226 kB of archives.
+After this operation, 9208 kB of additional disk space will be used.
+Get:1 http://deb.debian.org/debian bookworm/main arm64 libgdk-pixbuf2.0-common all 2.42.10+dfsg-1+deb12u3 [307 kB]
+Get:2 http://deb.debian.org/debian bookworm/main arm64 shared-mime-info arm64 2.2-1 [727 kB]
+Get:3 http://deb.debian.org/debian bookworm/main arm64 libgdk-pixbuf-2.0-0 arm64 2.42.10+dfsg-1+deb12u3 [130 kB]
+Get:4 http://deb.debian.org/debian bookworm/main arm64 libgdk-pixbuf2.0-bin arm64 2.42.10+dfsg-1+deb12u3 [18.3 kB]
+Get:5 http://deb.debian.org/debian bookworm/main arm64 libpangoft2-1.0-0 arm64 1.50.12+ds-1 [44.5 kB]
+Fetched 1226 kB in 0s (4681 kB/s)
+Selecting previously unselected package libgdk-pixbuf2.0-common.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 38194 files and directories currently installed.)
+Preparing to unpack .../libgdk-pixbuf2.0-common_2.42.10+dfsg-1+deb12u3_all.deb ...
+Unpacking libgdk-pixbuf2.0-common (2.42.10+dfsg-1+deb12u3) ...
+Selecting previously unselected package shared-mime-info.
+Preparing to unpack .../shared-mime-info_2.2-1_arm64.deb ...
+Unpacking shared-mime-info (2.2-1) ...
+Selecting previously unselected package libgdk-pixbuf-2.0-0:arm64.
+Preparing to unpack .../libgdk-pixbuf-2.0-0_2.42.10+dfsg-1+deb12u3_arm64.deb ...
+Unpacking libgdk-pixbuf-2.0-0:arm64 (2.42.10+dfsg-1+deb12u3) ...
+Selecting previously unselected package libgdk-pixbuf2.0-bin.
+Preparing to unpack .../libgdk-pixbuf2.0-bin_2.42.10+dfsg-1+deb12u3_arm64.deb ...
+Unpacking libgdk-pixbuf2.0-bin (2.42.10+dfsg-1+deb12u3) ...
+Selecting previously unselected package libpangoft2-1.0-0:arm64.
+Preparing to unpack .../libpangoft2-1.0-0_1.50.12+ds-1_arm64.deb ...
+Unpacking libpangoft2-1.0-0:arm64 (1.50.12+ds-1) ...
+Setting up libgdk-pixbuf2.0-common (2.42.10+dfsg-1+deb12u3) ...
+Setting up shared-mime-info (2.2-1) ...
+Setting up libgdk-pixbuf-2.0-0:arm64 (2.42.10+dfsg-1+deb12u3) ...
+Setting up libpangoft2-1.0-0:arm64 (1.50.12+ds-1) ...
+Setting up libgdk-pixbuf2.0-bin (2.42.10+dfsg-1+deb12u3) ...
+Processing triggers for libc-bin (2.36-9+deb12u13) ... is run before the backend starts.
+       - If the issue persists, consider using the  to diagnose the recurring environment problem.
+     - Why fix this issue and what will be achieved with the fix?: The backend is critical for all application functionality. A stable backend is required to continue development and testing.
+     - Status:  IN PROGRESS
+     - Is recurring issue? Y
+     - Should Test frontend/backend/both after fix? backend
+     - Blocked on other issue: None
+
+**In progress Task List**:
+  - Task 1: Complete the Product Import/Export & Actions Feature (PRIORITY: P0)
+
+ Task Detail:
+  - Task 1: 
+     - Where to resume: 
+       1.  **Frontend ():** The agent was in the process of adding the JSX for the import modal and wiring up the event handlers for file upload, download template, and the Actions dropdown for bulk delete. This file needs to be completed.
+       2.  **Backend ():** The placeholder routes  and  exist but lack implementation. The agent needs to add logic using a library like  or  to parse the uploaded Excel file and create products, and to generate the template file for download.
+     - What will be achieved with this?: Fulfills the user's explicit request for bulk product management, a key feature for an invoicing application.
+     - Status:  IN PROGRESS
+     - Should Test frontend/backend/both after fix? Both
+     - Blocked on something: The recurring backend crash (Issue 1).
+
+**Upcoming and Future Tasks**
+    Upcoming Tasks:
+    - (P0) **Module Projets (Frontend):** The backend for projects and tasks is complete. The frontend needs to be built. This was the original next step before the user redirected focus.
+    - (P1) **Implement Full Google OAuth:** The current Google login is a mock. This task involves implementing a real OAuth 2.0 flow.
+    - (P1) **Module Entrepôts (Warehouses):** Create a dedicated page for managing warehouses as requested by the user, with a layout similar to the provided screenshot.
+    - (P2) **Bilingual Support (FR/EN):** Implement a language switcher.
+
+    Future Tasks:
+    - Data import/export for other modules (Contacts, etc.).
+    - Automated email reminders for overdue invoices.
+    - An external REST API (Open API) for third-party integrations.
+
+**Completed work in this session**
+- **UI/UX Overhaul for Customers & Suppliers:**
+  - Implemented Iberis-style KPI dashboards on  and .
+  - Replaced the simple form with a multi-step wizard modal (, ) that adapts its fields for Entreprise vs Particulier types.
+- **UI/UX Overhaul for Products:**
+  - Redesigned  with Iberis-style KPIs, tabs, and a comprehensive, multi-section creation form.
+- **App Layout and Functionality:**
+  - In , made the company switcher dropdown functional.
+  - Implemented a redesigned, functional Nouvelle entreprise modal.
+  - Implemented a functional notification dropdown panel with mock data.
+- **Backend Enhancements:**
+  - Updated  and  models and routes to handle new fields from the wizard.
+  - Modified the company creation route () to automatically generate a Principal warehouse.
+  - Added skeleton routes for product import/export in .
+- **Bug Fixes:**
+  - Repeatedly resolved backend crashes by reinstalling  dependencies.
+  - Diagnosed and fixed the Google Login button by ensuring the backend service was running.
+
+**Earlier issues found/mentioned but not fixed**
+- None.
+
+**Known issue recurrence from previous fork**
+  - **Issue recurrence in previous fork**: Backend crash due to missing  dependencies ().
+  - **Recurrence count**: High (occurred at least 3 times in this session).
+  - **Status**: NOT RESOLVED (only temporarily fixed each time).
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+-   **Frontend:** React, React Router, React Context API, , TailwindCSS, Shadcn UI, .
+-   **Backend:** FastAPI, Pydantic, MongoDB with .
+-   **PDF Generation:** .
+-   **Data Import/Export:** ,  (to be installed and used).
+
+**key DB schema**
+-   **customers / suppliers:** added  (or ), , , , , , , , , .
+-   **warehouses (New):** 
+-   **products:** Schema needs to be updated to support new fields from the form:  (product/service),  (sale/purchase), , , , , etc.
+
+**changes in tech stack**
+-   Required additions for backend: ,  for Excel file handling.
+
+**All files of reference**
+-   : Currently being edited to add import/export functionality.
+-   : Reference for the new KPI and table layout.
+-   : Reference for the multi-step wizard implementation.
+-   : Contains the logic for the New Company modal and notification panel.
+-   : Contains the backend routes to be implemented for import/export.
+-   : Shows how the default warehouse is created.
+
+**Areas that need refactoring**:
+- The multi-step wizard logic in  and  is nearly identical and contains complex state management. This should be extracted into a reusable custom hook (e.g., ) to simplify both components and prepare for future wizards.
+
+**key api endpoints**
+-   : (POST) To upload an Excel file of products. (Implementation pending)
+-   : (GET) To download the Excel template for importing products. (Implementation pending)
+-   CRUD endpoints for  and  were updated to handle the new, more complex data structures.
+
+**Critical Info for New Agent**
+-   **Your immediate priority is to stabilize the backend environment.** The recurring crash related to  dependencies is a major blocker. Before writing code, ensure the backend can restart reliably. The command to fix it is Reading package lists...
+Building dependency tree...
+Reading state information...
+libpango-1.0-0 is already the newest version (1.50.12+ds-1).
+libcairo2 is already the newest version (1.16.0-7).
+libpangoft2-1.0-0 is already the newest version (1.50.12+ds-1).
+libgdk-pixbuf-2.0-0 is already the newest version (2.42.10+dfsg-1+deb12u3).
+0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded. followed by backend: stopped
+backend: started.
+-   **Resume the Product Import feature.** The user is expecting this to be completed next. Focus on finishing the frontend in  and then implementing the backend logic in .
+-   **User-driven priorities:** The user is currently directing development based on  screenshots. Be prepared to pivot away from the planned roadmap ( module, etc.) if the user provides new instructions.
+-   **Google Auth is Mocked:** Be aware that the Google Login button calls a mock endpoint. While it appears to work, it does not perform a real OAuth flow. This is a P1 upcoming task.
+
+**documents and test reports created in this job**
+-    (updated by the agent)
+
+**Last 10 User Messages and any pending HUMAN messages** 
+1.  **User (LATEST):** Requested import/export for articles (products), download of a model file, and functional action buttons, providing screenshots. (In Progress)
+2.  **Agent:** Completed the product page redesign and summarized the work.
+3.  **User:** Requested that the New Company modal look like the initial onboarding page, providing a screenshot. (Completed)
+4.  **Agent:** Confirmed the new company modal was updated.
+5.  **User:** Reported that the Continue with Google button was not working for testing. (Resolved)
+6.  **Agent:** Confirmed Google Login was working and explained the backend was down.
+7.  **User:** Requested several fixes: New Company button not working, company switcher not working, and notification button being a mock. (Completed)
+8.  **Agent:** Confirmed all sidebar/header functionalities were fixed.
+9.  **User:** Reported Google login was not working. (Resolved)
+10. **Agent:** Confirmed the fix and explained the backend was down due to WeasyPrint dependencies.
+
+**Project Health Check:**
+-   **Functional:** Authentication, Onboarding, Contacts, Products (display and basic forms), Sales, Purchases, Accounting, PDF Generation.
+-   **Mocked:** Notifications panel (data is static), Google Login (backend endpoint is real but frontend flow is not a true OAuth flow).
+-   **Broken:** The backend environment is unstable and prone to crashing.
+-   **In-Progress:** Products (Import/Export, advanced features like composite products), Projects (frontend not started).
+
+**3rd Party Integrations**
+-   **WeasyPrint 68.0:** Server-side PDF generation. (Source of instability).
+-   **Recharts 3.7.0:** Frontend charts.
+-   **Planned:**  and  for Excel import/export.
+-   **Planned:** Google OAuth for authentication.
+
+**Testing status**
+  - Testing agent used after significant changes: NO
+  - Troubleshoot agent used after agent stuck in loop: NO
+  - Test files created: []
+  - Known regressions: The backend environment has become unstable.
+
+**Credentials to test flow:**
+-   Create a new user through the registration page or use the Google Login mock.
+-   **Email:** 
+-   **Password:** </analysis>

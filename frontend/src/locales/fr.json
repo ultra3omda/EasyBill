@@ -1,0 +1,98 @@
+{
+  "app": {
+    "name": "EasyBill",
+    "tagline": "Gestion simplifiée pour votre entreprise"
+  },
+  "common": {
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "export": "Exporter",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "view": "Voir",
+    "create": "Créer",
+    "loading": "Chargement...",
+    "noData": "Aucune donnée",
+    "actions": "Actions",
+    "status": "Statut",
+    "date": "Date",
+    "total": "Total",
+    "submit": "Soumettre",
+    "close": "Fermer"
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "contacts": "Contacts",
+    "sales": "Ventes",
+    "purchases": "Achats",
+    "stock": "Stock",
+    "accounting": "Comptabilité",
+    "projects": "Projets",
+    "reports": "Rapports",
+    "settings": "Paramètres"
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "revenue": "Chiffre d'affaires",
+    "expenses": "Dépenses",
+    "profit": "Bénéfice",
+    "invoices": "Factures"
+  },
+  "customers": {
+    "title": "Clients",
+    "createCustomer": "Nouveau client",
+    "totalCustomers": "Total clients",
+    "unpaid": "Impayé",
+    "revenue": "Chiffre d'affaires",
+    "newThisMonth": "Nouveaux ce mois"
+  },
+  "suppliers": {
+    "title": "Fournisseurs",
+    "createSupplier": "Nouveau fournisseur",
+    "totalSuppliers": "Total fournisseurs"
+  },
+  "products": {
+    "title": "Produits",
+    "createProduct": "Nouveau produit",
+    "lowestStock": "Stock le plus bas",
+    "stockValue": "Valeur du stock",
+    "mostProfitable": "Le plus rentable",
+    "bestSeller": "Le plus vendu"
+  },
+  "invoices": {
+    "title": "Factures",
+    "createInvoice": "Nouvelle facture",
+    "draft": "Brouillon",
+    "sent": "Envoyée",
+    "paid": "Payée",
+    "overdue": "En retard",
+    "delete": "Supprimer",
+    "sendEmail": "Envoyer par email",
+    "markSent": "Marquer envoyée",
+    "markPaid": "Marquer payée"
+  },
+  "quotes": {
+    "title": "Devis",
+    "createQuote": "Nouveau devis",
+    "draft": "Brouillon",
+    "sent": "Envoyé",
+    "accepted": "Accepté",
+    "rejected": "Rejeté",
+    "sendEmail": "Envoyer par email"
+  },
+  "reminders": {
+    "title": "Rappels",
+    "overdueInvoices": "Factures en retard",
+    "sent": "Rappels envoyés",
+    "totalOverdue": "Montant total en retard"
+  },
+  "accounting": {
+    "title": "Comptabilité",
+    "chartOfAccounts": "Plan comptable",
+    "journalEntries": "Écritures comptables",
+    "generalLedger": "Grand livre",
+    "trialBalance": "Balance des comptes"
+  }
+}

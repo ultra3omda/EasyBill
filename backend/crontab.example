@@ -1,0 +1,39 @@
+# EasyBill - Cron Jobs Configuration
+# 
+# To install: crontab -e
+# Then copy the relevant lines below
+
+# Process recurring invoices daily at 8:00 AM
+# Generates invoices that are due and sends them to customers
+0 8 * * * cd /path/to/EasyBilll/backend && /usr/bin/python3 scripts/process_recurring_invoices.py >> /var/log/easybill-recurring.log 2>&1
+
+# Alternative: Run at midnight
+# 0 0 * * * cd /path/to/EasyBilll/backend && /usr/bin/python3 scripts/process_recurring_invoices.py >> /var/log/easybill-recurring.log 2>&1
+
+# Alternative: Run twice a day (8 AM and 8 PM)
+# 0 8,20 * * * cd /path/to/EasyBilll/backend && /usr/bin/python3 scripts/process_recurring_invoices.py >> /var/log/easybill-recurring.log 2>&1
+
+# Backup database daily at 2:00 AM
+# 0 2 * * * mongodump --uri="mongodb://localhost:27017/easybill" --out=/backups/easybill-$(date +\%Y\%m\%d) >> /var/log/easybill-backup.log 2>&1
+
+# Clean old logs weekly (Sunday at 3:00 AM)
+# 0 3 * * 0 find /var/log/easybill-*.log -mtime +30 -delete
+
+# Send payment reminders daily at 9:00 AM (future feature)
+# 0 9 * * * cd /path/to/EasyBilll/backend && /usr/bin/python3 scripts/send_payment_reminders.py >> /var/log/easybill-reminders.log 2>&1
+
+# IMPORTANT: Replace /path/to/EasyBilll with your actual installation path
+# IMPORTANT: Ensure Python path is correct (/usr/bin/python3 or /usr/local/bin/python3)
+# IMPORTANT: Set environment variables in the script or use a wrapper script
+
+# Example wrapper script (/path/to/EasyBilll/backend/scripts/run_recurring.sh):
+# #!/bin/bash
+# export MONGO_URL=mongodb://localhost:27017
+# export DB_NAME=easybill
+# export SMTP_HOST=smtp.gmail.com
+# export SMTP_PORT=587
+# export SMTP_USER=your-email@gmail.com
+# export SMTP_PASSWORD=your-app-password
+# export FRONTEND_URL=http://localhost:3000
+# cd /path/to/EasyBilll/backend
+# /usr/bin/python3 scripts/process_recurring_invoices.py

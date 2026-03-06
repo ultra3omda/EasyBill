@@ -1,0 +1,98 @@
+{
+  "app": {
+    "name": "EasyBill",
+    "tagline": "Simplified management for your business"
+  },
+  "common": {
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "create": "Create",
+    "loading": "Loading...",
+    "noData": "No data",
+    "actions": "Actions",
+    "status": "Status",
+    "date": "Date",
+    "total": "Total",
+    "submit": "Submit",
+    "close": "Close"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "contacts": "Contacts",
+    "sales": "Sales",
+    "purchases": "Purchases",
+    "stock": "Inventory",
+    "accounting": "Accounting",
+    "projects": "Projects",
+    "reports": "Reports",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "revenue": "Revenue",
+    "expenses": "Expenses",
+    "profit": "Profit",
+    "invoices": "Invoices"
+  },
+  "customers": {
+    "title": "Customers",
+    "createCustomer": "New customer",
+    "totalCustomers": "Total customers",
+    "unpaid": "Unpaid",
+    "revenue": "Revenue",
+    "newThisMonth": "New this month"
+  },
+  "suppliers": {
+    "title": "Suppliers",
+    "createSupplier": "New supplier",
+    "totalSuppliers": "Total suppliers"
+  },
+  "products": {
+    "title": "Products",
+    "createProduct": "New product",
+    "lowestStock": "Lowest stock",
+    "stockValue": "Stock value",
+    "mostProfitable": "Most profitable",
+    "bestSeller": "Best seller"
+  },
+  "invoices": {
+    "title": "Invoices",
+    "createInvoice": "New invoice",
+    "draft": "Draft",
+    "sent": "Sent",
+    "paid": "Paid",
+    "overdue": "Overdue",
+    "delete": "Delete",
+    "sendEmail": "Send by email",
+    "markSent": "Mark as sent",
+    "markPaid": "Mark as paid"
+  },
+  "quotes": {
+    "title": "Quotes",
+    "createQuote": "New quote",
+    "draft": "Draft",
+    "sent": "Sent",
+    "accepted": "Accepted",
+    "rejected": "Rejected",
+    "sendEmail": "Send by email"
+  },
+  "reminders": {
+    "title": "Reminders",
+    "overdueInvoices": "Overdue invoices",
+    "sent": "Reminders sent",
+    "totalOverdue": "Total overdue amount"
+  },
+  "accounting": {
+    "title": "Accounting",
+    "chartOfAccounts": "Chart of accounts",
+    "journalEntries": "Journal entries",
+    "generalLedger": "General ledger",
+    "trialBalance": "Trial balance"
+  }
+}
