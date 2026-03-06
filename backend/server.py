@@ -19,9 +19,30 @@ from routes import auth, companies, customers, suppliers, products, quotes, invo
 from routes import delivery_notes, credit_notes, reminders
 from routes import purchase_orders, supplier_invoices, supplier_payments
 from routes import warehouses, stock_movements, accounting
-from routes import journal_entries, pdf, seed, dashboard, inventories, recurring_invoices, accounting_sync, client_portal
+from routes import journal_entries, seed, dashboard, inventories, recurring_invoices, accounting_sync, client_portal
 from routes import exit_vouchers, receipts, disbursements, withholding_taxes, collaborators
-from routes import import_export, treasury, receipts_pdf, signatures
+from routes import import_export, treasury, signatures
+
+# ── Nouveaux modules (A-E) ───────────────────────────────────────────────
+from routes import cash_accounts           # A - Cash-first payment model
+from routes import chatbot                 # B - Chatbot financial interface
+from routes import country_configs         # C - Multi-country accounting
+from routes import reminder_engine_routes  # D - Reminder engine
+from routes import ai_assistant            # E - AI-ready hooks
+
+# PDF routes optionnels (WeasyPrint nécessite Pango/GTK, pas toujours dispo sur Windows)
+try:
+    from routes import pdf
+    _pdf_available = True
+except Exception as e:
+    _pdf_available = False
+    pdf = None
+try:
+    from routes import receipts_pdf
+    _receipts_pdf_available = True
+except Exception:
+    _receipts_pdf_available = False
+    receipts_pdf = None
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -64,7 +85,8 @@ app.include_router(accounting.router)
 app.include_router(accounting_sync.router)
 app.include_router(client_portal.router)
 app.include_router(journal_entries.router)
-app.include_router(pdf.router)
+if _pdf_available and pdf:
+    app.include_router(pdf.router)
 app.include_router(seed.router)
 app.include_router(dashboard.router)
 app.include_router(exit_vouchers.router)
@@ -74,8 +96,16 @@ app.include_router(withholding_taxes.router)
 app.include_router(collaborators.router)
 app.include_router(import_export.router)
 app.include_router(treasury.router)
-app.include_router(receipts_pdf.router)
+if _receipts_pdf_available and receipts_pdf:
+    app.include_router(receipts_pdf.router)
 app.include_router(signatures.router)
+
+# ── Nouveaux modules ─────────────────────────────────────────────────────
+app.include_router(cash_accounts.router)
+app.include_router(chatbot.router)
+app.include_router(country_configs.router)
+app.include_router(reminder_engine_routes.router)
+app.include_router(ai_assistant.router)
 
 # Root endpoint
 @app.get("/")

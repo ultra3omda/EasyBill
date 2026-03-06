@@ -246,10 +246,10 @@ export const journalEntriesAPI = {
 
 // Taxes API
 export const taxesAPI = {
-  list: (companyId) => apiClient.get(`/settings/taxes?company_id=${companyId}`),
-  create: (companyId, data) => apiClient.post(`/settings/taxes?company_id=${companyId}`, data),
-  update: (companyId, id, data) => apiClient.put(`/settings/taxes/${id}?company_id=${companyId}`, data),
-  delete: (companyId, id) => apiClient.delete(`/settings/taxes/${id}?company_id=${companyId}`),
+  list: (companyId) => apiClient.get(`/settings/taxes/${companyId}`),
+  create: (companyId, data) => apiClient.post(`/settings/taxes/${companyId}`, data),
+  update: (companyId, id, data) => apiClient.put(`/settings/taxes/${id}`, data),
+  delete: (companyId, id) => apiClient.delete(`/settings/taxes/${id}`),
 };
 
 // PDF API
@@ -266,6 +266,82 @@ export const pdfAPI = {
     apiClient.get(`/pdf/quote/${quoteId}?company_id=${companyId}`, { responseType: 'blob' }),
   downloadDeliveryNote: (companyId, deliveryId) => 
     apiClient.get(`/pdf/delivery-note/${deliveryId}?company_id=${companyId}`, { responseType: 'blob' }),
+};
+
+// ── Nouveaux modules ────────────────────────────────────────────────────
+
+// A - Cash Accounts API
+export const cashAPI = {
+  listAccounts: (companyId) => apiClient.get(`/cash/accounts?company_id=${companyId}`),
+  createAccount: (companyId, data) => apiClient.post(`/cash/accounts?company_id=${companyId}`, data),
+  updateAccount: (companyId, id, data) => apiClient.put(`/cash/accounts/${id}?company_id=${companyId}`, data),
+  recordTransaction: (companyId, data) => apiClient.post(`/cash/transactions?company_id=${companyId}`, data),
+  recordExpense: (companyId, data) => apiClient.post(`/cash/expenses?company_id=${companyId}`, data),
+  listTransactions: (companyId, params = {}) => {
+    const q = new URLSearchParams({ company_id: companyId, ...params }).toString();
+    return apiClient.get(`/cash/transactions?${q}`);
+  },
+  getCustomerBalances: (companyId, params = {}) => {
+    const q = new URLSearchParams({ company_id: companyId, ...params }).toString();
+    return apiClient.get(`/cash/customer-balances?${q}`);
+  },
+  getUnpaidInvoices: (companyId, params = {}) => {
+    const q = new URLSearchParams({ company_id: companyId, ...params }).toString();
+    return apiClient.get(`/cash/unpaid-invoices?${q}`);
+  },
+  getDailyReport: (companyId, date) => {
+    const q = new URLSearchParams({ company_id: companyId, ...(date ? { report_date: date } : {}) }).toString();
+    return apiClient.get(`/cash/daily-report?${q}`);
+  },
+};
+
+// B - Chatbot API
+export const chatbotAPI = {
+  sendMessage: (companyId, data) => apiClient.post(`/chatbot/message?company_id=${companyId}`, data),
+  getLogs: (companyId, limit = 50) => apiClient.get(`/chatbot/logs?company_id=${companyId}&limit=${limit}`),
+  getIntents: () => apiClient.get('/chatbot/intents'),
+};
+
+// C - Country Config API
+export const countryConfigAPI = {
+  listCountries: () => apiClient.get('/country-config/countries'),
+  getCountry: (code) => apiClient.get(`/country-config/countries/${code}`),
+  getCompanySettings: (companyId) => apiClient.get(`/country-config/company-settings?company_id=${companyId}`),
+  updateCompanySettings: (companyId, data) => apiClient.put(`/country-config/company-settings?company_id=${companyId}`, data),
+  listTaxRates: (companyId, params = {}) => {
+    const q = new URLSearchParams({ company_id: companyId, ...params }).toString();
+    return apiClient.get(`/country-config/tax-rates?${q}`);
+  },
+  createTaxRate: (companyId, data) => apiClient.post(`/country-config/tax-rates?company_id=${companyId}`, data),
+  initializeCountry: (companyId, countryCode) => apiClient.post(`/country-config/initialize/${countryCode}?company_id=${companyId}`),
+};
+
+// D - Reminder Engine API
+export const reminderEngineAPI = {
+  initialize: (companyId) => apiClient.post(`/reminder-engine/initialize?company_id=${companyId}`),
+  listRules: (companyId) => apiClient.get(`/reminder-engine/rules?company_id=${companyId}`),
+  createRule: (companyId, data) => apiClient.post(`/reminder-engine/rules?company_id=${companyId}`, data),
+  listTemplates: (companyId) => apiClient.get(`/reminder-engine/templates?company_id=${companyId}`),
+  createTemplate: (companyId, data) => apiClient.post(`/reminder-engine/templates?company_id=${companyId}`, data),
+  detect: (companyId) => apiClient.get(`/reminder-engine/detect?company_id=${companyId}`),
+  generatePayload: (companyId, invoiceId, level) =>
+    apiClient.post(`/reminder-engine/generate-payload/${invoiceId}?company_id=${companyId}&level=${level}`),
+  process: (companyId, dryRun = false) =>
+    apiClient.post(`/reminder-engine/process?company_id=${companyId}&dry_run=${dryRun}`),
+  getLogs: (companyId, invoiceId) => {
+    const q = new URLSearchParams({ company_id: companyId, ...(invoiceId ? { invoice_id: invoiceId } : {}) }).toString();
+    return apiClient.get(`/reminder-engine/logs?${q}`);
+  },
+};
+
+// E - AI Assistant API
+export const aiAPI = {
+  status: () => apiClient.get('/ai/status'),
+  parseInvoice: (companyId, text) => apiClient.post(`/ai/parse-invoice?company_id=${companyId}`, { text }),
+  suggestReminder: (companyId, data) => apiClient.post(`/ai/suggest-reminder?company_id=${companyId}`, data),
+  customerFollowup: (companyId, customerId) =>
+    apiClient.post(`/ai/customer-followup?company_id=${companyId}`, { customer_id: customerId }),
+  categorizeExpense: (companyId, data) => apiClient.post(`/ai/categorize-expense?company_id=${companyId}`, data),
 };
 
 export default apiClient;

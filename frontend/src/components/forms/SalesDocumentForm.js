@@ -60,6 +60,7 @@ import {
 } from 'lucide-react';
 import { customersAPI, productsAPI, taxesAPI } from '../../services/api';
 import { toast } from '../../hooks/use-toast';
+import ProductFormModal from '../modals/ProductFormModal';
 
 const SalesDocumentForm = ({
   type = 'invoice', // invoice, quote, delivery_note, exit_note
@@ -105,8 +106,12 @@ const SalesDocumentForm = ({
   const [taxes, setTaxes] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
-  const [showProductSearch, setShowProductSearch] = useState(false);
-  const [productSearchTerm, setProductSearchTerm] = useState('');
+  const [showCsvImport, setShowCsvImport] = useState(false);
+  const [activeSearchRowIndex, setActiveSearchRowIndex] = useState(null);
+  const [rowSearchTerm, setRowSearchTerm] = useState('');
+  const [showNewProductModal, setShowNewProductModal] = useState(false);
+  const [newProductInitialName, setNewProductInitialName] = useState('');
+  const [newProductTargetRowIndex, setNewProductTargetRowIndex] = useState(null);
   const [priceType, setPriceType] = useState('ht'); // ht or ttc
 
   // Document type configurations
@@ -167,6 +172,7 @@ const SalesDocumentForm = ({
   }, [companyId, document]);
 
   const loadData = async () => {
+    if (!companyId) return;
     try {
       const [customersRes, productsRes, taxesRes] = await Promise.all([
         customersAPI.list(companyId),
@@ -175,7 +181,7 @@ const SalesDocumentForm = ({
       ]);
       setCustomers(customersRes.data);
       setProducts(productsRes.data);
-      setTaxes(taxesRes.data);
+      setTaxes(taxesRes.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
     }
@@ -225,8 +231,6 @@ const SalesDocumentForm = ({
       ...prev,
       items: [...prev.items, newItem]
     }));
-    setShowProductSearch(false);
-    setProductSearchTerm('');
   };
 
   const updateItem = (index, field, value) => {
@@ -247,6 +251,25 @@ const SalesDocumentForm = ({
       ...prev,
       items: prev.items.filter((_, i) => i !== index)
     }));
+  };
+
+  const selectProductForRow = (index, product) => {
+    setFormData(prev => {
+      const newItems = [...prev.items];
+      newItems[index] = {
+        ...newItems[index],
+        product_id: product.id,
+        product_name: product.name,
+        description: product.description || '',
+        unit: product.unit || 'pièce',
+        unit_price: product.selling_price || 0,
+        tax_rate: product.tax_rate || 19,
+        total: (newItems[index].quantity || 1) * (product.selling_price || 0),
+      };
+      return { ...prev, items: newItems };
+    });
+    setActiveSearchRowIndex(null);
+    setRowSearchTerm('');
   };
 
   const calculateTotals = () => {
@@ -308,10 +331,6 @@ const SalesDocumentForm = ({
     onSave(documentData, action);
   };
 
-  const filteredProducts = products.filter(p => 
-    p.name?.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
-    p.sku?.toLowerCase().includes(productSearchTerm.toLowerCase())
-  );
 
   return (
     <div className="flex gap-6 h-full" data-testid="sales-document-form">
@@ -424,11 +443,21 @@ const SalesDocumentForm = ({
                     <SelectValue placeholder="Sélectionner un client" />
                   </SelectTrigger>
                   <SelectContent>
-                    {customers.map(c => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name} {c.customer_type === 'entreprise' && <Badge variant="outline" className="ml-2 text-xs">Entreprise</Badge>}
-                      </SelectItem>
-                    ))}
+                    {customers.map(c => {
+                      const label = c.display_name
+                        || c.company_name
+                        || [c.first_name, c.last_name].filter(Boolean).join(' ')
+                        || c.email
+                        || 'Client sans nom';
+                      return (
+                        <SelectItem key={c.id} value={c.id}>
+                          {label}
+                          {(c.client_type === 'entreprise' || c.customer_type === 'entreprise') && (
+                            <Badge variant="outline" className="ml-2 text-xs">Entreprise</Badge>
+                          )}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
                 <Button variant="outline" size="icon" onClick={() => setShowCustomerModal(true)}>
@@ -472,9 +501,9 @@ const SalesDocumentForm = ({
         {/* Items Table */}
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <Button variant="outline" size="sm" onClick={() => setShowProductSearch(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Ajouter des articles en masse
+            <Button variant="outline" size="sm" onClick={() => setShowCsvImport(true)}>
+              <Upload className="w-4 h-4 mr-2" />
+              Importer en masse (CSV)
             </Button>
             
             <div className="flex items-center gap-4">
@@ -511,13 +540,92 @@ const SalesDocumentForm = ({
               {formData.items.map((item, index) => (
                 <TableRow key={item.id}>
                   <TableCell>
-                    <div>
-                      <Input
-                        value={item.product_name}
-                        onChange={(e) => updateItem(index, 'product_name', e.target.value)}
-                        placeholder="Nom de l'article"
-                        className="font-medium"
-                      />
+                    <div className="relative">
+                      {/* Combobox style Select */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRowSearchTerm('');
+                          setActiveSearchRowIndex(activeSearchRowIndex === index ? null : index);
+                        }}
+                        className="flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring font-medium"
+                      >
+                        <span className={item.product_name ? '' : 'text-muted-foreground'}>
+                          {item.product_name || 'Sélectionner un article'}
+                        </span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-50 shrink-0 ml-2"><path d="m6 9 6 6 6-6"/></svg>
+                      </button>
+
+                      {/* Dropdown autocomplete */}
+                      {activeSearchRowIndex === index && (
+                        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg">
+                          {/* Barre de recherche */}
+                          <div className="p-2 border-b">
+                            <div className="relative">
+                              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                              <input
+                                autoFocus
+                                value={rowSearchTerm}
+                                onChange={(e) => setRowSearchTerm(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Escape' && setActiveSearchRowIndex(null)}
+                                placeholder="Rechercher..."
+                                className="w-full pl-7 pr-3 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-violet-500"
+                              />
+                            </div>
+                          </div>
+                          {/* Liste */}
+                          <div className="max-h-48 overflow-y-auto">
+                            {products
+                              .filter(p =>
+                                !rowSearchTerm ||
+                                p.name?.toLowerCase().includes(rowSearchTerm.toLowerCase()) ||
+                                p.sku?.toLowerCase().includes(rowSearchTerm.toLowerCase())
+                              )
+                              .slice(0, 8)
+                              .map(product => (
+                                <div
+                                  key={product.id}
+                                  className="flex items-center justify-between px-3 py-2 hover:bg-violet-50 cursor-pointer border-b last:border-0"
+                                  onMouseDown={(e) => { e.preventDefault(); selectProductForRow(index, product); setActiveSearchRowIndex(null); }}
+                                >
+                                  <div className="min-w-0">
+                                    <p className="font-medium text-sm truncate">{product.name}</p>
+                                    <p className="text-xs text-gray-400">{[product.sku, product.category].filter(Boolean).join(' • ')}</p>
+                                  </div>
+                                  <p className="text-sm text-violet-600 ml-3 shrink-0 font-medium">{(product.selling_price || 0).toFixed(3)} TND</p>
+                                </div>
+                              ))}
+                            {products.filter(p => !rowSearchTerm || p.name?.toLowerCase().includes(rowSearchTerm.toLowerCase())).length === 0 && !rowSearchTerm && (
+                              <p className="text-center text-gray-400 text-xs py-3">Aucun article dans le catalogue</p>
+                            )}
+                          </div>
+                          {/* Créer nouveau article */}
+                          <div className="border-t p-2">
+                            <button
+                              type="button"
+                              className="flex items-center gap-2 w-full px-2 py-1.5 text-sm text-violet-600 hover:bg-violet-50 rounded font-medium"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                setActiveSearchRowIndex(null);
+                                setNewProductInitialName(rowSearchTerm || item.product_name || '');
+                                setNewProductTargetRowIndex(index);
+                                setShowNewProductModal(true);
+                              }}
+                            >
+                              <Plus className="w-4 h-4 shrink-0" />
+                              {rowSearchTerm
+                                ? <>Créer <strong className="mx-1">"{rowSearchTerm}"</strong> comme nouvel article</>
+                                : 'Créer un nouvel article'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Overlay pour fermer le dropdown */}
+                      {activeSearchRowIndex === index && (
+                        <div className="fixed inset-0 z-40" onClick={() => setActiveSearchRowIndex(null)} />
+                      )}
+
                       <Textarea
                         value={item.description}
                         onChange={(e) => updateItem(index, 'description', e.target.value)}
@@ -579,7 +687,7 @@ const SalesDocumentForm = ({
               {formData.items.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-gray-400">
-                    Aucun article ajouté. Cliquez sur "Ajouter des articles en masse" ou utilisez le scanner.
+                    Cliquez sur "+ Ajouter un article" pour commencer.
                   </TableCell>
                 </TableRow>
               )}
@@ -665,10 +773,21 @@ const SalesDocumentForm = ({
             </div>
           </div>
         </Card>
+
+        {/* Remarques */}
+        <Card className="p-4">
+          <h3 className="font-semibold mb-3">Remarques</h3>
+          <Textarea
+            value={formData.remarks}
+            onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+            placeholder="Notes internes..."
+            rows={3}
+          />
+        </Card>
       </div>
 
       {/* Right Sidebar */}
-      <div className="w-80 space-y-4 overflow-y-auto pb-20">
+      <div className="w-80 space-y-4 overflow-y-auto pb-4">
         {/* Totals */}
         <Card className="p-4">
           <h3 className="font-semibold mb-4 flex items-center gap-2">
@@ -802,19 +921,8 @@ const SalesDocumentForm = ({
           </Card>
         )}
 
-        {/* Remarks */}
-        <Card className="p-4">
-          <h3 className="font-semibold mb-3">Remarques</h3>
-          <Textarea
-            value={formData.remarks}
-            onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-            placeholder="Notes internes..."
-            rows={3}
-          />
-        </Card>
-
         {/* Action Buttons */}
-        <div className="sticky bottom-0 bg-white pt-4 border-t space-y-2">
+        <div className="pt-4 border-t space-y-2">
           <Button className="w-full bg-violet-600 hover:bg-violet-700" onClick={() => handleSubmit('save')}>
             <Save className="w-4 h-4 mr-2" />
             Enregistrer
@@ -835,43 +943,99 @@ const SalesDocumentForm = ({
         </div>
       </div>
 
-      {/* Product Search Modal */}
-      <Dialog open={showProductSearch} onOpenChange={setShowProductSearch}>
-        <DialogContent className="max-w-2xl">
+      {/* Modal création nouveau produit depuis la ligne */}
+      <ProductFormModal
+        open={showNewProductModal}
+        onClose={() => { setShowNewProductModal(false); setNewProductInitialName(''); setNewProductTargetRowIndex(null); }}
+        product={{ name: newProductInitialName }}
+        onSuccess={(createdProduct) => {
+          // Recharger la liste des produits
+          if (companyId) productsAPI.list(companyId).then(r => setProducts(r.data)).catch(() => {});
+          // Remplir la ligne cible si elle existe
+          if (newProductTargetRowIndex !== null && createdProduct) {
+            const p = createdProduct;
+            setFormData(prev => {
+              const newItems = [...prev.items];
+              if (newItems[newProductTargetRowIndex]) {
+                newItems[newProductTargetRowIndex] = {
+                  ...newItems[newProductTargetRowIndex],
+                  product_id: p.id,
+                  product_name: p.name,
+                  description: p.description || '',
+                  unit: p.unit || 'pièce',
+                  unit_price: p.selling_price || p.unit_price || 0,
+                  tax_rate: p.tax_rate || 19,
+                  total: (newItems[newProductTargetRowIndex].quantity || 1) * (p.selling_price || p.unit_price || 0),
+                };
+              }
+              return { ...prev, items: newItems };
+            });
+          }
+          setShowNewProductModal(false);
+          setNewProductInitialName('');
+          setNewProductTargetRowIndex(null);
+        }}
+      />
+
+      {/* CSV Import Modal */}
+      <Dialog open={showCsvImport} onOpenChange={setShowCsvImport}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Ajouter des articles</DialogTitle>
+            <DialogTitle>Importer des articles en masse (CSV)</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                value={productSearchTerm}
-                onChange={(e) => setProductSearchTerm(e.target.value)}
-                placeholder="Rechercher un article..."
-                className="pl-10"
-                autoFocus
-              />
+            <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
+              <p className="font-medium mb-2">Format attendu :</p>
+              <code className="block bg-white border rounded p-2 text-xs font-mono">
+                nom,quantite,prix_unitaire,taxe,description<br/>
+                Article A,2,100.000,19,Description optionnelle<br/>
+                Article B,1,50.000,0,
+              </code>
             </div>
-            <div className="max-h-96 overflow-y-auto">
-              {filteredProducts.map(product => (
-                <div
-                  key={product.id}
-                  className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer"
-                  onClick={() => addItem(product)}
-                >
-                  <div>
-                    <p className="font-medium">{product.name}</p>
-                    <p className="text-sm text-gray-500">{product.sku} • {product.category}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">{product.selling_price?.toFixed(3)} TND</p>
-                    <p className="text-sm text-gray-500">Stock: {product.quantity_in_stock}</p>
-                  </div>
-                </div>
-              ))}
-              {filteredProducts.length === 0 && (
-                <p className="text-center text-gray-400 py-8">Aucun article trouvé</p>
-              )}
+            <div
+              className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-violet-400 transition-colors"
+              onClick={() => document.getElementById('csv-file-input').click()}
+            >
+              <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm text-gray-600">Cliquez pour sélectionner un fichier CSV</p>
+              <p className="text-xs text-gray-400 mt-1">ou glissez-déposez ici</p>
+              <input
+                id="csv-file-input"
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                    const lines = ev.target.result.split('\n').filter(l => l.trim());
+                    const newItems = [];
+                    lines.slice(1).forEach(line => {
+                      const [name, qty, price, tax, desc] = line.split(',');
+                      if (!name?.trim()) return;
+                      newItems.push({
+                        id: Date.now() + Math.random(),
+                        product_id: null,
+                        product_name: name.trim(),
+                        description: desc?.trim() || '',
+                        quantity: parseFloat(qty) || 1,
+                        unit: 'pièce',
+                        unit_price: parseFloat(price) || 0,
+                        tax_rate: parseFloat(tax) || 19,
+                        discount: 0,
+                        total: (parseFloat(qty) || 1) * (parseFloat(price) || 0),
+                      });
+                    });
+                    if (newItems.length > 0) {
+                      setFormData(prev => ({ ...prev, items: [...prev.items, ...newItems] }));
+                      setShowCsvImport(false);
+                    }
+                  };
+                  reader.readAsText(file);
+                  e.target.value = '';
+                }}
+              />
             </div>
           </div>
         </DialogContent>

@@ -37,6 +37,7 @@ import {
   Calendar,
   PlusCircle,
   MinusCircle,
+  Download,
 } from 'lucide-react';
 
 const JournalEntries = () => {

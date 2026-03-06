@@ -3,6 +3,9 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
 from datetime import datetime, timedelta, timezone
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 from models.user import UserCreate, UserLogin, User, UserUpdate, PasswordUpdate, ForgotPassword, ResetPassword
 from utils.auth import get_password_hash, verify_password, create_access_token
 from utils.helpers import generate_random_token
@@ -159,11 +162,18 @@ async def login(user_data: UserLogin):
             detail="Incorrect email or password"
         )
     
+    # Compte créé via OAuth (pas de mot de passe défini)
+    if not user.get("password_hash"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Ce compte a été créé via Google ou Facebook. Utilisez le bouton correspondant pour vous connecter."
+        )
+
     # Verify password
     if not verify_password(user_data.password, user["password_hash"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password"
+            detail="Email ou mot de passe incorrect"
         )
     
     # Create access token
@@ -183,28 +193,109 @@ async def login(user_data: UserLogin):
 async def google_login(token: dict):
     """
     Google OAuth login
-    Expects: {"credential": "google_id_token"}
-    In production, verify token with Google API
+    Expects: {"credential": "google_id_token"} — JWT signé par Google
+    Vérifie le token via google-auth si GOOGLE_CLIENT_ID est défini dans .env.
     """
     credential = token.get("credential")
-    
-    if not credential:
+    access_token_google = token.get("access_token")
+
+    if not credential and not access_token_google:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Google credential is required"
+            detail="Google credential ou access_token est requis"
         )
     
-    # TODO: In production, verify token with Google:
-    # from google.oauth2 import id_token
-    # from google.auth.transport import requests
-    # idinfo = id_token.verify_oauth2_token(credential, requests.Request(), GOOGLE_CLIENT_ID)
-    
-    # For now, extract email and name from token (mock)
-    # In production, get from verified idinfo
-    email = token.get("email", "google@example.com")
-    name = token.get("name", "Google User")
-    google_id = token.get("sub", "mock_google_id")
-    picture = token.get("picture")
+    google_client_id = os.environ.get("GOOGLE_CLIENT_ID")
+    email = None
+    name = None
+    google_id = None
+    picture = None
+
+    if access_token_google:
+        # Approche access_token → appel à /userinfo Google (plus simple, sans dépendance SSL)
+        try:
+            import requests as req_lib
+            resp = req_lib.get(
+                "https://www.googleapis.com/oauth2/v2/userinfo",
+                headers={"Authorization": f"Bearer {access_token_google}"},
+                timeout=10
+            )
+            if resp.status_code != 200:
+                logger.error(f"[Google Auth] userinfo failed: {resp.status_code} {resp.text}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=f"Token Google invalide (userinfo: {resp.status_code})"
+                )
+            user_info = resp.json()
+            logger.info(f"[Google Auth] userinfo OK: email={user_info.get('email')}")
+            email = user_info.get("email")
+            name = user_info.get("name")
+            google_id = user_info.get("id")
+            picture = user_info.get("picture")
+
+            if not email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Email non fourni par Google"
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"[Google Auth] ERREUR userinfo : {type(e).__name__}: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Échec vérification token Google : {str(e)}"
+            )
+    elif credential and google_client_id and not credential.startswith("mock_"):
+        # Vérification ID token (fallback)
+        try:
+            import base64, json as _json
+            parts = credential.split(".")
+            if len(parts) == 3:
+                pad = parts[1] + "=" * (4 - len(parts[1]) % 4)
+                payload = _json.loads(base64.urlsafe_b64decode(pad))
+                logger.info(f"[Google Auth] ID token: aud={payload.get('aud')} email={payload.get('email')}")
+
+            from google.oauth2 import id_token as google_id_token
+            from google.auth.transport import requests as google_requests
+            import requests as req_lib
+
+            request_session = google_requests.Request(session=req_lib.Session())
+            idinfo = google_id_token.verify_oauth2_token(
+                credential,
+                request_session,
+                google_client_id,
+                clock_skew_in_seconds=30
+            )
+            email = idinfo.get("email")
+            name = idinfo.get("name")
+            google_id = idinfo.get("sub")
+            picture = idinfo.get("picture")
+
+            if not email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Email non fourni par Google"
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"[Google Auth] ERREUR verify_oauth2_token : {type(e).__name__}: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Échec vérification token Google : {str(e)}"
+            )
+    elif not google_client_id:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="GOOGLE_CLIENT_ID non configuré sur le serveur. Ajoutez-le dans backend/.env"
+        )
+    else:
+        # credential commence par "mock_" : usage local de test uniquement
+        email = token.get("email", "google@example.com")
+        name = token.get("name", "Google User")
+        google_id = token.get("sub", "mock_google_id")
+        picture = token.get("picture")
     
     # Check if user exists
     user = await db.users.find_one({"email": email})

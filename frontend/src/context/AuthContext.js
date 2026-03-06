@@ -42,15 +42,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const loginWithGoogle = async () => {
+  const loginWithGoogle = async (tokenData) => {
     try {
-      // Mock Google OAuth for now - in production this would use actual Google OAuth
-      const response = await authAPI.googleLogin({ 
-        credential: 'mock_google_credential_' + Date.now(),
-        email: 'user@gmail.com',
-        name: 'Google User',
-        sub: 'google_user_' + Date.now()
-      });
+      // tokenData peut contenir access_token (useGoogleLogin) ou credential (GoogleLogin)
+      const payload = tokenData.access_token
+        ? { access_token: tokenData.access_token }
+        : { credential: tokenData.credential };
+      const response = await authAPI.googleLogin(payload);
       
       const { access_token, user: userData } = response.data;
       

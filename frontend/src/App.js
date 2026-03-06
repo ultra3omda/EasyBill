@@ -57,6 +57,8 @@ import JournalEntries from './pages/JournalEntries';
 import GeneralLedger from './pages/GeneralLedger';
 import TrialBalance from './pages/TrialBalance';
 import AuxiliaryLedgers from './pages/AuxiliaryLedgers';
+import CashDashboard from './pages/CashDashboard';
+import ChatbotPage from './pages/ChatbotPage';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -64,14 +66,23 @@ const ProtectedRoute = ({ children }) => {
   const [checkingCompany, setCheckingCompany] = useState(true);
 
   useEffect(() => {
+    // Reset à chaque changement d'utilisateur
+    setHasCompany(null);
+    setCheckingCompany(true);
+
     const checkCompany = async () => {
       if (user) {
         try {
           const response = await companiesAPI.list();
-          setHasCompany(response.data.length > 0);
+          setHasCompany(response.data && response.data.length > 0);
         } catch (error) {
-          console.error('Error checking company:', error);
-          setHasCompany(false);
+          console.error('Erreur vérification entreprise:', error);
+          if (error.response?.status === 401) {
+            // Token invalide → retour login
+            setHasCompany(null);
+          } else {
+            setHasCompany(false);
+          }
         }
       }
       setCheckingCompany(false);
@@ -84,18 +95,22 @@ const ProtectedRoute = ({ children }) => {
 
   if (loading || checkingCompany) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 to-amber-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mx-auto mb-4"></div>
+          <p className="text-gray-500 text-sm">Chargement…</p>
+        </div>
       </div>
     );
   }
 
   if (!user) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
   }
 
   if (hasCompany === false) {
-    return <Navigate to="/onboarding" />;
+    // Pas d'entreprise → onboarding (création de la première entreprise)
+    return <Navigate to="/onboarding" replace />;
   }
 
   return children;
@@ -338,6 +353,10 @@ const AppRoutes = () => {
       <Route path="/income-statement" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/cash-flow" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       
+      {/* Nouveaux modules */}
+      <Route path="/cash" element={<ProtectedRoute><CashDashboard /></ProtectedRoute>} />
+      <Route path="/chatbot" element={<ProtectedRoute><ChatbotPage /></ProtectedRoute>} />
+
       {/* Paramètres Routes */}
       <Route path="/collaborators" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/roles-permissions" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />

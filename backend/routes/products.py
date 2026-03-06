@@ -69,6 +69,25 @@ async def create_product(
     company = await get_current_company(current_user, company_id)
     
     product_dict = product_data.dict(exclude_unset=True)
+
+    # Normalisation : unit_price (ancien) → selling_price
+    if product_dict.get("unit_price") is not None and not product_dict.get("selling_price"):
+        product_dict["selling_price"] = product_dict.pop("unit_price")
+    else:
+        product_dict.pop("unit_price", None)
+
+    # Normalisation : stock_quantity (legacy) → quantity_in_stock
+    if product_dict.get("stock_quantity") is not None and product_dict.get("quantity_in_stock") is None:
+        product_dict["quantity_in_stock"] = product_dict.pop("stock_quantity")
+    else:
+        product_dict.pop("stock_quantity", None)
+
+    # Normalisation : min_stock (legacy) → min_stock_level
+    if product_dict.get("min_stock") is not None and product_dict.get("min_stock_level") is None:
+        product_dict["min_stock_level"] = product_dict.pop("min_stock")
+    else:
+        product_dict.pop("min_stock", None)
+
     product_dict.update({
         "company_id": ObjectId(company_id),
         "quantity_in_stock": product_dict.get("quantity_in_stock", 0),

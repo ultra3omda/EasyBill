@@ -1,0 +1,11 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: easybill-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - easybill_mongo_data:/data/db
+
+volumes:
+  easybill_mongo_data:

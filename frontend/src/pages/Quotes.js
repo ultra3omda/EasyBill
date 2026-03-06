@@ -36,6 +36,7 @@ const Quotes = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [selectedQuote, setSelectedQuote] = useState(null);
 
   useEffect(() => {
     if (currentCompany) {
@@ -384,7 +385,7 @@ const Quotes = () => {
 
       <QuoteFormModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => { setModalOpen(false); setSelectedQuote(null); }}
         onSuccess={loadQuotes}
         quote={selectedQuote}
       />

@@ -58,7 +58,10 @@ import {
   Check,
   Clock,
   Info,
-  CheckCircle
+  CheckCircle,
+  Banknote,
+  Wallet,
+  Bot
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -271,6 +274,16 @@ const AppLayout = ({ children }) => {
         { icon: ClipboardCheck, label: 'Notes de débours', path: '/sales/disbursements' },
         { icon: CreditCard, label: 'Paiements', path: '/sales/payments' },
         { icon: AlertCircle, label: 'Rappels', path: '/sales/reminders' }
+      ]
+    },
+    {
+      type: 'group',
+      key: 'caisse',
+      icon: Banknote,
+      label: 'Caisse & Cash',
+      items: [
+        { icon: Wallet, label: 'Tableau de bord caisse', path: '/cash' },
+        { icon: Bot, label: 'Assistant chatbot', path: '/chatbot' },
       ]
     },
     {
