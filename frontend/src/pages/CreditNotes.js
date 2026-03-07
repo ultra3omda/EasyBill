@@ -141,6 +141,58 @@ const CreditNotes = () => {
     return labels[reason] || reason;
   };
 
+  // Factures filtrées par client sélectionné
+  const filteredInvoices = formData.customer_id
+    ? invoices.filter(i => i.customer_id === formData.customer_id)
+    : invoices;
+
+  // Quand une facture est sélectionnée → pré-remplir les articles
+  const handleInvoiceSelect = async (invoiceId) => {
+    setFormData(prev => ({ ...prev, invoice_id: invoiceId, items: [] }));
+    if (!invoiceId) return;
+    try {
+      const res = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}/api/invoices/${invoiceId}?company_id=${currentCompany.id}`,
+        { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
+      );
+      const inv = await res.json();
+      if (inv.items && inv.items.length > 0) {
+        const mappedItems = inv.items.map(item => {
+          const subtotal = item.quantity * item.unit_price;
+          const discountAmount = subtotal * ((item.discount || 0) / 100);
+          const afterDiscount = subtotal - discountAmount;
+          const total = afterDiscount + afterDiscount * ((item.tax_rate || 0) / 100);
+          return {
+            description: item.description || item.product_name || '',
+            quantity: item.quantity || 1,
+            unit_price: item.unit_price || 0,
+            tax_rate: item.tax_rate || 0,
+            discount: item.discount || 0,
+            total: parseFloat(total.toFixed(3)),
+          };
+        });
+        setFormData(prev => ({ ...prev, invoice_id: invoiceId, items: mappedItems }));
+      } else {
+        setFormData(prev => ({
+          ...prev, invoice_id: invoiceId,
+          items: [{ description: '', quantity: 1, unit_price: 0, tax_rate: 19, discount: 0, total: 0 }]
+        }));
+      }
+    } catch (e) {
+      console.error('Erreur chargement facture', e);
+    }
+  };
+
+  // Quand le client change → réinitialiser la facture et les articles
+  const handleCustomerChange = (customerId) => {
+    setFormData(prev => ({
+      ...prev,
+      customer_id: customerId,
+      invoice_id: '',
+      items: [{ description: '', quantity: 1, unit_price: 0, tax_rate: 19, discount: 0, total: 0 }]
+    }));
+  };
+
   const calculateTotal = () => formData.items.reduce((sum, item) => sum + item.total, 0);
   const filteredDocs = docs.filter(d => d.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) || d.number?.toLowerCase().includes(searchTerm.toLowerCase()));
 
@@ -241,7 +293,7 @@ const CreditNotes = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Client *</Label>
-                <Select value={formData.customer_id} onValueChange={(v) => setFormData({...formData, customer_id: v})}>
+                <Select value={formData.customer_id} onValueChange={handleCustomerChange}>
                   <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
                   <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.display_name}</SelectItem>)}</SelectContent>
                 </Select>
@@ -250,10 +302,29 @@ const CreditNotes = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Facture d'origine</Label>
-                <Select value={formData.invoice_id} onValueChange={(v) => setFormData({...formData, invoice_id: v})}>
-                  <SelectTrigger><SelectValue placeholder="Sélectionner (optionnel)" /></SelectTrigger>
-                  <SelectContent>{invoices.map(i => <SelectItem key={i.id} value={i.id}>{i.number} - {(i.total || 0).toFixed(2)} TND</SelectItem>)}</SelectContent>
+                <Label>
+                  Facture d'origine
+                  {formData.customer_id && filteredInvoices.length === 0 && (
+                    <span className="ml-2 text-xs text-orange-500">Aucune facture pour ce client</span>
+                  )}
+                </Label>
+                <Select
+                  value={formData.invoice_id}
+                  onValueChange={handleInvoiceSelect}
+                  disabled={!formData.customer_id}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={formData.customer_id ? 'Sélectionner une facture' : 'Choisir un client d\'abord'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredInvoices.map(i => (
+                      <SelectItem key={i.id} value={i.id}>
+                        {i.number} — {(i.total || 0).toFixed(3)} TND
+                        {i.status === 'paid' && ' ✓ Payée'}
+                        {i.status === 'sent' && ' · Envoyée'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
               <div>

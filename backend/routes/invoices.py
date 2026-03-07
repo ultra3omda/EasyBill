@@ -10,6 +10,7 @@ from utils.dependencies import get_current_user, get_current_company
 from utils.helpers import generate_document_number, calculate_document_totals
 from services.accounting_sync_service import accounting_sync_service
 from services.email_service import email_service
+from routes.cash_accounts import auto_record_cash_movement
 
 logger = logging.getLogger(__name__)
 
@@ -222,6 +223,10 @@ async def update_invoice(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
     
     update_data = {k: v for k, v in invoice_update.dict(exclude_unset=True).items()}
+    if hasattr(invoice_update, '__fields_set__'):
+        for k in (invoice_update.__fields_set__ or set()):
+            if k not in update_data:
+                update_data[k] = getattr(invoice_update, k, None)
     
     # Recalculate totals if items updated
     if 'items' in update_data and update_data['items']:
@@ -472,25 +477,31 @@ async def mark_invoice_paid(
     request: Request,
     company_id: str = Query(...),
     amount: Optional[float] = Query(None),
+    payment_method: Optional[str] = Query("cash"),
     current_user: dict = Depends(get_current_user)
 ):
-    """Mark invoice as paid (fully or partially)."""
+    """
+    Marque une facture comme payée et génère les deux écritures comptables :
+    1. Écriture de vente  : 411 Clients / 707 Ventes + 4351 TVA  (si pas encore créée)
+    2. Écriture règlement : 521/531 Trésorerie / 411 Clients      (selon mode de paiement)
+    """
     company = await get_current_company(current_user, company_id)
-    
+
     invoice = await db.invoices.find_one({
         "_id": ObjectId(invoice_id),
         "company_id": ObjectId(company_id)
     })
-    
+
     if not invoice:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
-    
+
     payment_amount = amount if amount is not None else invoice.get("balance_due", 0)
     new_amount_paid = invoice.get("amount_paid", 0) + payment_amount
     new_balance = invoice.get("total", 0) - new_amount_paid
-    
     new_status = "paid" if new_balance <= 0 else "partial"
-    
+    now = datetime.now(timezone.utc)
+
+    # ── 1. Mettre à jour la facture ─────────────────────────────────────────
     await db.invoices.update_one(
         {"_id": ObjectId(invoice_id)},
         {
@@ -498,28 +509,106 @@ async def mark_invoice_paid(
                 "amount_paid": new_amount_paid,
                 "balance_due": max(0, new_balance),
                 "status": new_status,
-                "paid_at": datetime.now(timezone.utc) if new_status == "paid" else None,
-                "updated_at": datetime.now(timezone.utc)
+                "paid_at": now if new_status == "paid" else None,
+                "updated_at": now
             }
         }
     )
-    
-    # Update customer balance
+
+    # ── 2. Mettre à jour la balance client ──────────────────────────────────
     if invoice.get("customer_id"):
         await db.customers.update_one(
             {"_id": invoice["customer_id"]},
-            {
-                "$inc": {
-                    "total_paid": payment_amount,
-                    "balance": -payment_amount
-                }
-            }
+            {"$inc": {"total_paid": payment_amount, "balance": -payment_amount}}
         )
-    
+
+    # ── 3. Écriture de vente 411/707+4351 (si pas encore générée) ──────────
+    try:
+        # Marquer temporairement comme "sent" pour que sync_invoice accepte la synchro
+        old_status = invoice.get("status")
+        if not invoice.get("accounting_entry_id") and old_status not in ["sent", "paid"]:
+            await db.invoices.update_one(
+                {"_id": ObjectId(invoice_id)},
+                {"$set": {"status": "sent"}}
+            )
+        await accounting_sync_service.sync_invoice(invoice_id)
+        # Remettre le vrai statut
+        await db.invoices.update_one(
+            {"_id": ObjectId(invoice_id)},
+            {"$set": {"status": new_status}}
+        )
+    except Exception as e:
+        logger.error(f"Erreur sync écriture vente facture {invoice_id}: {str(e)}")
+
+    # ── 4. Écriture règlement selon mode de paiement ────────────────────────
+    try:
+        PAYMENT_METHOD_MAP = {
+            "cash":     ("531", "Caisse en monnaie nationale", "cash"),
+            "check":    ("521", "Banques - Chèques encaissés", "bank"),
+            "transfer": ("521", "Banques - Virements reçus", "bank"),
+            "card":     ("521", "Banques - TPE", "bank"),
+            "e_dinar":  ("531", "Caisse électronique (e-Dinar)", "cash"),
+        }
+        treasury_account, treasury_name, journal_type = PAYMENT_METHOD_MAP.get(
+            payment_method or "cash", ("531", "Caisse en monnaie nationale", "cash")
+        )
+
+        customer = await db.customers.find_one({"_id": invoice.get("customer_id")})
+        customer_name = customer.get("display_name", "") if customer else ""
+        inv_number = invoice.get("number", "")
+
+        lines = [
+            {
+                "account_code": treasury_account,
+                "account_name": treasury_name,
+                "debit": round(payment_amount, 3),
+                "credit": 0,
+                "description": f"Encaissement facture {inv_number}"
+            },
+            {
+                "account_code": "411",
+                "account_name": "Clients",
+                "debit": 0,
+                "credit": round(payment_amount, 3),
+                "description": f"Règlement client facture {inv_number}"
+            }
+        ]
+
+        await accounting_sync_service._create_journal_entry(
+            company_id=company_id,
+            date=now,
+            journal_type=journal_type,
+            description=f"Règlement facture {inv_number} - {customer_name} ({payment_method})",
+            lines=lines,
+            document_type="payment",
+            document_id=invoice_id,
+            reference=None
+        )
+    except Exception as e:
+        logger.error(f"Erreur sync écriture règlement facture {invoice_id}: {str(e)}")
+
+    # ── 5. Alimenter la caisse si paiement en espèces ──────────────────────
+    try:
+        await auto_record_cash_movement(
+            company_id=company_id,
+            amount=payment_amount,
+            movement_type="in",
+            label=f"Encaissement facture {invoice.get('number', '')} - {customer_name}",
+            payment_method=payment_method or "cash",
+            customer_id=str(invoice.get("customer_id")) if invoice.get("customer_id") else None,
+            customer_name=customer_name,
+            invoice_id=invoice_id,
+            reference=invoice.get("number"),
+            notes=f"Paiement {payment_method} — Mark-paid",
+            movement_date=now,
+        )
+    except Exception as e:
+        logger.error(f"Erreur alimentation caisse facture {invoice_id}: {str(e)}")
+
     await log_invoice_action(
         company_id, str(current_user["_id"]), current_user.get("full_name", ""),
-        "Paiement", f"{invoice.get('number', '')} - {payment_amount} TND",
+        "Paiement", f"{invoice.get('number', '')} - {payment_amount} TND ({payment_method})",
         request.client.host if request.client else None
     )
-    
+
     return {"message": "Payment recorded", "new_status": new_status, "balance_due": max(0, new_balance)}

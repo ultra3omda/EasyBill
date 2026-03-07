@@ -109,6 +109,7 @@ const SalesDocumentForm = ({
   const [showCsvImport, setShowCsvImport] = useState(false);
   const [activeSearchRowIndex, setActiveSearchRowIndex] = useState(null);
   const [rowSearchTerm, setRowSearchTerm] = useState('');
+  const [dropdownPosition, setDropdownPosition] = useState(null);
   const [showNewProductModal, setShowNewProductModal] = useState(false);
   const [newProductInitialName, setNewProductInitialName] = useState('');
   const [newProductTargetRowIndex, setNewProductTargetRowIndex] = useState(null);
@@ -160,11 +161,53 @@ const SalesDocumentForm = ({
   useEffect(() => {
     loadData();
     if (document) {
-      setFormData({
-        ...formData,
-        ...document,
-        items: document.items || []
-      });
+      // Convertir une date ISO en yyyy-MM-dd pour les <input type="date">
+      const toDateStr = (val) => {
+        if (!val) return '';
+        const s = typeof val === 'string' ? val : String(val);
+        return s.length >= 10 ? s.slice(0, 10) : s;
+      };
+      setFormData(prev => ({
+        ...prev,
+        date: toDateStr(document.date) || prev.date,
+        due_date: toDateStr(document.due_date || document.valid_until) || prev.due_date,
+        customer_id: document.customer_id || '',
+        reference: document.reference || '',
+        subject: document.subject || '',
+        billing_address: document.billing_address || '',
+        shipping_address: document.shipping_address || '',
+        payment_condition: document.payment_terms || document.payment_condition || 'immediate',
+        notes: document.notes || '',
+        terms: document.terms || '',
+        watermark: document.watermark || '',
+        pdf_language: document.language || 'fr',
+        discount_type: document.discount_type || 'amount',
+        discount_value: document.discount_value || 0,
+        fiscal_stamp: document.fiscal_stamp ?? 1,
+        show_fiscal_stamp: document.show_fiscal_stamp ?? true,
+        show_description: document.show_description ?? true,
+        show_unit: document.show_unit ?? true,
+        show_ttc_price: document.show_ttc_price ?? false,
+        show_photos: document.show_photos ?? false,
+        show_billing_address: document.show_billing_address ?? true,
+        show_shipping_address: document.show_shipping_address ?? false,
+        show_terms: document.show_terms ?? true,
+        show_bank_details: document.show_bank_details ?? true,
+        category: document.category || 'main',
+        remarks: document.remarks || '',
+        items: (document.items || []).map(item => ({
+          id: item.id || Math.random().toString(36).slice(2),
+          product_id: item.product_id || '',
+          product_name: item.product_name || item.description || '',
+          description: item.description || '',
+          quantity: item.quantity || 1,
+          unit: item.unit || 'pièce',
+          unit_price: item.unit_price || 0,
+          tax_rate: item.tax_rate || 0,
+          discount: item.discount || 0,
+          total: item.total || 0,
+        })),
+      }));
       if (document.customer_id) {
         loadCustomerDetails(document.customer_id);
       }
@@ -317,14 +360,57 @@ const SalesDocumentForm = ({
       return;
     }
 
+    // Convertit une adresse (string ou objet) en string plate
+    const addrToStr = (addr) => {
+      if (!addr) return undefined;
+      if (typeof addr === 'string') return addr || undefined;
+      if (typeof addr === 'object') {
+        const parts = [addr.street || addr.line1 || addr.address, addr.postal_code || addr.zip, addr.city, addr.country].filter(Boolean);
+        return parts.join(', ') || undefined;
+      }
+      return String(addr) || undefined;
+    };
+
     const documentData = {
-      ...formData,
-      number: documentNumber,
+      customer_id: formData.customer_id,
+      date: formData.date,
+      valid_until: formData.due_date,
+      subject: formData.subject || undefined,
+      payment_terms: formData.payment_condition || undefined,
+      notes: formData.notes || undefined,
+      language: formData.pdf_language || 'fr',
+      watermark: formData.watermark || undefined,
+      billing_address: addrToStr(formData.billing_address),
+      shipping_address: addrToStr(formData.shipping_address),
+      reference: formData.reference || undefined,
+      terms: formData.terms || undefined,
+      remarks: formData.remarks || undefined,
+      discount_type: formData.discount_type,
+      discount_value: parseFloat(formData.discount_value) || 0,
+      fiscal_stamp: parseFloat(formData.fiscal_stamp) || 0,
+      show_fiscal_stamp: formData.show_fiscal_stamp,
+      category: formData.category,
+      show_description: formData.show_description,
+      show_unit: formData.show_unit,
+      show_ttc_price: formData.show_ttc_price,
+      show_billing_address: formData.show_billing_address,
+      show_shipping_address: formData.show_shipping_address,
+      show_terms: formData.show_terms,
+      show_bank_details: formData.show_bank_details,
+      items: formData.items.map(item => ({
+        product_id: item.product_id || null,
+        description: item.description || item.product_name || '',
+        quantity: parseFloat(item.quantity) || 1,
+        unit_price: parseFloat(item.unit_price) || 0,
+        tax_rate: parseFloat(item.tax_rate) || 0,
+        discount: parseFloat(item.discount) || 0,
+        total: parseFloat(item.total) || 0,
+      })),
       subtotal: parseFloat(totals.subtotal),
       total_discount: parseFloat(totals.totalDiscount),
       total_tax: parseFloat(totals.taxAmount),
-      fiscal_stamp: parseFloat(totals.fiscalStamp),
       total: parseFloat(totals.total),
+      number: documentNumber,
       status: action === 'send' ? 'sent' : 'draft'
     };
 
@@ -540,100 +626,34 @@ const SalesDocumentForm = ({
               {formData.items.map((item, index) => (
                 <TableRow key={item.id}>
                   <TableCell>
-                    <div className="relative">
-                      {/* Combobox style Select */}
-                      <button
-                        type="button"
-                        onClick={() => {
+                    {/* Combobox */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        if (activeSearchRowIndex === index) {
+                          setActiveSearchRowIndex(null);
+                        } else {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setDropdownPosition({ top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 300) });
                           setRowSearchTerm('');
-                          setActiveSearchRowIndex(activeSearchRowIndex === index ? null : index);
-                        }}
-                        className="flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring font-medium"
-                      >
-                        <span className={item.product_name ? '' : 'text-muted-foreground'}>
-                          {item.product_name || 'Sélectionner un article'}
-                        </span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-50 shrink-0 ml-2"><path d="m6 9 6 6 6-6"/></svg>
-                      </button>
+                          setActiveSearchRowIndex(index);
+                        }
+                      }}
+                      className="flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring font-medium"
+                    >
+                      <span className={item.product_name ? '' : 'text-muted-foreground'}>
+                        {item.product_name || 'Sélectionner un article'}
+                      </span>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-50 shrink-0 ml-2"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
 
-                      {/* Dropdown autocomplete */}
-                      {activeSearchRowIndex === index && (
-                        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg">
-                          {/* Barre de recherche */}
-                          <div className="p-2 border-b">
-                            <div className="relative">
-                              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                              <input
-                                autoFocus
-                                value={rowSearchTerm}
-                                onChange={(e) => setRowSearchTerm(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Escape' && setActiveSearchRowIndex(null)}
-                                placeholder="Rechercher..."
-                                className="w-full pl-7 pr-3 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-violet-500"
-                              />
-                            </div>
-                          </div>
-                          {/* Liste */}
-                          <div className="max-h-48 overflow-y-auto">
-                            {products
-                              .filter(p =>
-                                !rowSearchTerm ||
-                                p.name?.toLowerCase().includes(rowSearchTerm.toLowerCase()) ||
-                                p.sku?.toLowerCase().includes(rowSearchTerm.toLowerCase())
-                              )
-                              .slice(0, 8)
-                              .map(product => (
-                                <div
-                                  key={product.id}
-                                  className="flex items-center justify-between px-3 py-2 hover:bg-violet-50 cursor-pointer border-b last:border-0"
-                                  onMouseDown={(e) => { e.preventDefault(); selectProductForRow(index, product); setActiveSearchRowIndex(null); }}
-                                >
-                                  <div className="min-w-0">
-                                    <p className="font-medium text-sm truncate">{product.name}</p>
-                                    <p className="text-xs text-gray-400">{[product.sku, product.category].filter(Boolean).join(' • ')}</p>
-                                  </div>
-                                  <p className="text-sm text-violet-600 ml-3 shrink-0 font-medium">{(product.selling_price || 0).toFixed(3)} TND</p>
-                                </div>
-                              ))}
-                            {products.filter(p => !rowSearchTerm || p.name?.toLowerCase().includes(rowSearchTerm.toLowerCase())).length === 0 && !rowSearchTerm && (
-                              <p className="text-center text-gray-400 text-xs py-3">Aucun article dans le catalogue</p>
-                            )}
-                          </div>
-                          {/* Créer nouveau article */}
-                          <div className="border-t p-2">
-                            <button
-                              type="button"
-                              className="flex items-center gap-2 w-full px-2 py-1.5 text-sm text-violet-600 hover:bg-violet-50 rounded font-medium"
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                setActiveSearchRowIndex(null);
-                                setNewProductInitialName(rowSearchTerm || item.product_name || '');
-                                setNewProductTargetRowIndex(index);
-                                setShowNewProductModal(true);
-                              }}
-                            >
-                              <Plus className="w-4 h-4 shrink-0" />
-                              {rowSearchTerm
-                                ? <>Créer <strong className="mx-1">"{rowSearchTerm}"</strong> comme nouvel article</>
-                                : 'Créer un nouvel article'}
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Overlay pour fermer le dropdown */}
-                      {activeSearchRowIndex === index && (
-                        <div className="fixed inset-0 z-40" onClick={() => setActiveSearchRowIndex(null)} />
-                      )}
-
-                      <Textarea
-                        value={item.description}
-                        onChange={(e) => updateItem(index, 'description', e.target.value)}
-                        placeholder="Description"
-                        className="mt-1 text-sm"
-                        rows={1}
-                      />
-                    </div>
+                    <Textarea
+                      value={item.description}
+                      onChange={(e) => updateItem(index, 'description', e.target.value)}
+                      placeholder="Description"
+                      className="mt-1 text-sm"
+                      rows={1}
+                    />
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
@@ -704,28 +724,6 @@ const SalesDocumentForm = ({
               <QrCode className="w-4 h-4 mr-2" />
               Barcode & QRCode Scanner
             </Button>
-          </div>
-
-          {/* Description Editor */}
-          <div className="mt-6">
-            <Label className="text-sm text-gray-600">Description</Label>
-            <div className="border rounded-lg mt-1">
-              <div className="flex gap-1 p-2 border-b bg-gray-50">
-                <Button variant="ghost" size="icon" className="w-8 h-8"><Bold className="w-4 h-4" /></Button>
-                <Button variant="ghost" size="icon" className="w-8 h-8"><Italic className="w-4 h-4" /></Button>
-                <Button variant="ghost" size="icon" className="w-8 h-8"><Link className="w-4 h-4" /></Button>
-                <Button variant="ghost" size="icon" className="w-8 h-8"><List className="w-4 h-4" /></Button>
-                <Button variant="ghost" size="icon" className="w-8 h-8"><AlignLeft className="w-4 h-4" /></Button>
-                <Button variant="ghost" size="icon" className="w-8 h-4"><Image className="w-4 h-4" /></Button>
-              </div>
-              <Textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Description additionnelle..."
-                className="border-0 focus:ring-0"
-                rows={3}
-              />
-            </div>
           </div>
 
           {/* Discount */}
@@ -1040,6 +1038,75 @@ const SalesDocumentForm = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Dropdown article — position fixed pour sortir du overflow du tableau */}
+      {activeSearchRowIndex !== null && dropdownPosition && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setActiveSearchRowIndex(null)} />
+          <div
+            style={{ position: 'fixed', top: dropdownPosition.top, left: dropdownPosition.left, width: dropdownPosition.width, zIndex: 9999 }}
+            className="bg-white border rounded-lg shadow-2xl"
+          >
+            <div className="p-2 border-b">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <input
+                  autoFocus
+                  value={rowSearchTerm}
+                  onChange={(e) => setRowSearchTerm(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Escape' && setActiveSearchRowIndex(null)}
+                  placeholder="Rechercher un article..."
+                  className="w-full pl-7 pr-3 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-violet-500"
+                />
+              </div>
+            </div>
+            <div className="max-h-56 overflow-y-auto">
+              {products
+                .filter(p =>
+                  !rowSearchTerm ||
+                  p.name?.toLowerCase().includes(rowSearchTerm.toLowerCase()) ||
+                  p.sku?.toLowerCase().includes(rowSearchTerm.toLowerCase())
+                )
+                .slice(0, 10)
+                .map(product => (
+                  <div
+                    key={product.id}
+                    className="flex items-center justify-between px-3 py-2.5 hover:bg-violet-50 cursor-pointer border-b last:border-0"
+                    onMouseDown={(e) => { e.preventDefault(); selectProductForRow(activeSearchRowIndex, product); setActiveSearchRowIndex(null); }}
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">{product.name}</p>
+                      <p className="text-xs text-gray-400">{[product.sku, product.category].filter(Boolean).join(' • ')}</p>
+                    </div>
+                    <p className="text-sm text-violet-600 ml-3 shrink-0 font-medium">{(product.selling_price || 0).toFixed(3)} TND</p>
+                  </div>
+                ))}
+              {products.filter(p => !rowSearchTerm || p.name?.toLowerCase().includes(rowSearchTerm.toLowerCase())).length === 0 && (
+                <p className="text-center text-gray-400 text-xs py-4">Aucun article trouvé</p>
+              )}
+            </div>
+            <div className="border-t p-2">
+              <button
+                type="button"
+                className="flex items-center gap-2 w-full px-2 py-1.5 text-sm text-violet-600 hover:bg-violet-50 rounded font-medium"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  const idx = activeSearchRowIndex;
+                  setActiveSearchRowIndex(null);
+                  setNewProductInitialName(rowSearchTerm || '');
+                  setNewProductTargetRowIndex(idx);
+                  setShowNewProductModal(true);
+                }}
+              >
+                <Plus className="w-4 h-4 shrink-0" />
+                {rowSearchTerm
+                  ? <>Créer <strong className="mx-1">"{rowSearchTerm}"</strong> comme nouvel article</>
+                  : 'Créer un nouvel article'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

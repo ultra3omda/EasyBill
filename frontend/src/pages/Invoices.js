@@ -8,6 +8,21 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+import { Label } from '../components/ui/label';
 import axios from 'axios';
 import {
   Table,
@@ -24,8 +39,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
-import { Plus, Search, Filter, Download, Send, Eye, Edit, Trash2, MoreVertical, FileText, CreditCard, CheckCircle, Printer } from 'lucide-react';
+import { Plus, Search, Filter, Download, Send, Eye, Edit, Trash2, MoreVertical, FileText, CreditCard, CheckCircle, Printer, Banknote, Building2, CreditCard as CardIcon } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
+
+const PAYMENT_METHODS = [
+  { value: 'cash',     label: 'Espèces',          icon: '💵', account: '531 Caisse' },
+  { value: 'check',    label: 'Chèque',            icon: '📋', account: '521 Banques' },
+  { value: 'transfer', label: 'Virement bancaire', icon: '🏦', account: '521 Banques' },
+  { value: 'card',     label: 'Carte bancaire',    icon: '💳', account: '521 Banques - TPE' },
+  { value: 'e_dinar',  label: 'e-Dinar',           icon: '📱', account: '531 Caisse élec.' },
+];
 
 const Invoices = () => {
   const { t } = useLanguage();
@@ -34,6 +57,11 @@ const Invoices = () => {
   const [invoices, setInvoices] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Modale de paiement
+  const [paymentModal, setPaymentModal] = useState({ open: false, invoiceId: null, invoiceNumber: '' });
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cash');
+  const [markingPaid, setMarkingPaid] = useState(false);
 
   useEffect(() => {
     if (currentCompany) {
@@ -79,16 +107,27 @@ const Invoices = () => {
     }
   };
 
-  const handleMarkPaid = async (invoiceId) => {
+  const openPaymentModal = (invoice) => {
+    setPaymentModal({ open: true, invoiceId: invoice.id, invoiceNumber: invoice.number });
+    setSelectedPaymentMethod('cash');
+  };
+
+  const handleMarkPaid = async () => {
+    if (!paymentModal.invoiceId) return;
+    setMarkingPaid(true);
     try {
-      await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/invoices/${invoiceId}/mark-paid?company_id=${currentCompany.id}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      toast({ title: 'Succès', description: 'Facture marquée comme payée' });
+      await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}/api/invoices/${paymentModal.invoiceId}/mark-paid?company_id=${currentCompany.id}&payment_method=${selectedPaymentMethod}`,
+        { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
+      );
+      const method = PAYMENT_METHODS.find(m => m.value === selectedPaymentMethod);
+      toast({ title: 'Succès', description: `Facture ${paymentModal.invoiceNumber} payée par ${method?.label} — écritures comptables générées` });
+      setPaymentModal({ open: false, invoiceId: null, invoiceNumber: '' });
       loadInvoices();
     } catch (error) {
-      toast({ title: 'Erreur', description: 'Erreur lors du paiement', variant: 'destructive' });
+      toast({ title: 'Erreur', description: 'Erreur lors de l\'enregistrement du paiement', variant: 'destructive' });
+    } finally {
+      setMarkingPaid(false);
     }
   };
 
@@ -343,7 +382,7 @@ const Invoices = () => {
                                 </DropdownMenuItem>
                               )}
                               {invoice.status !== 'paid' && (
-                                <DropdownMenuItem onClick={() => handleMarkPaid(invoice.id)}>
+                                <DropdownMenuItem onClick={() => openPaymentModal(invoice)}>
                                   <CheckCircle className="w-4 h-4 mr-2" />
                                   Marquer payée
                                 </DropdownMenuItem>
@@ -366,6 +405,63 @@ const Invoices = () => {
         </Card>
       </div>
 
+
+      {/* ── Modale mode de règlement ─────────────────────────────────── */}
+      <Dialog open={paymentModal.open} onOpenChange={(o) => !o && setPaymentModal({ open: false, invoiceId: null, invoiceNumber: '' })}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              Enregistrer le paiement
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-gray-600">
+              Facture <span className="font-semibold text-gray-900">{paymentModal.invoiceNumber}</span> — choisissez le mode de règlement pour générer les écritures comptables correctes.
+            </p>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Mode de règlement</Label>
+              <div className="grid grid-cols-1 gap-2">
+                {PAYMENT_METHODS.map((m) => (
+                  <button
+                    key={m.value}
+                    type="button"
+                    onClick={() => setSelectedPaymentMethod(m.value)}
+                    className={`flex items-center justify-between px-4 py-3 rounded-lg border-2 transition-all text-left ${
+                      selectedPaymentMethod === m.value
+                        ? 'border-violet-500 bg-violet-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">{m.icon}</span>
+                      <span className="font-medium text-sm">{m.label}</span>
+                    </div>
+                    <span className="text-xs text-gray-400 font-mono">{m.account}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700 space-y-1">
+              <p className="font-semibold">Écritures générées automatiquement :</p>
+              <p>① Vente : <span className="font-mono">411 Clients → 707 Ventes + 4351 TVA</span></p>
+              <p>② Règlement : <span className="font-mono">{PAYMENT_METHODS.find(m => m.value === selectedPaymentMethod)?.account} → 411 Clients</span></p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPaymentModal({ open: false, invoiceId: null, invoiceNumber: '' })}>
+              Annuler
+            </Button>
+            <Button onClick={handleMarkPaid} disabled={markingPaid} className="bg-green-600 hover:bg-green-700 text-white">
+              {markingPaid ? 'Enregistrement...' : 'Confirmer le paiement'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </AppLayout>
   );

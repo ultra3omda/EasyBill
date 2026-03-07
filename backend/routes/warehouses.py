@@ -65,6 +65,11 @@ async def create_warehouse(data: WarehouseCreate, company_id: str = Query(...), 
         count = await db.warehouses.count_documents({"company_id": ObjectId(company_id)})
         data.code = f"ENT{count + 1:03d}"
     
+    # Si c'est le premier entrepôt, le définir comme défaut automatiquement
+    existing_count = await db.warehouses.count_documents({"company_id": ObjectId(company_id)})
+    if existing_count == 0:
+        data.is_default = True
+
     # If this is default, unset others
     if data.is_default:
         await db.warehouses.update_many({"company_id": ObjectId(company_id)}, {"$set": {"is_default": False}})
@@ -105,6 +110,13 @@ async def list_warehouses(company_id: str = Query(...), current_user: dict = Dep
         await db.warehouses.insert_one(default_warehouse)
         warehouses = await db.warehouses.find({"company_id": ObjectId(company_id)}).sort("name", 1).to_list(100)
     
+    # Si aucun entrepôt n'est marqué is_default, le premier devient automatiquement défaut
+    has_default = any(w.get("is_default") for w in warehouses)
+    if not has_default and len(warehouses) > 0:
+        first_id = warehouses[0]["_id"]
+        await db.warehouses.update_one({"_id": first_id}, {"$set": {"is_default": True}})
+        warehouses[0]["is_default"] = True
+
     # Calculate stats for each warehouse
     for w in warehouses:
         stock = await db.stock_levels.find({"warehouse_id": w["_id"]}).to_list(1000)

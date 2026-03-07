@@ -38,6 +38,8 @@ import {
   PlusCircle,
   MinusCircle,
   Download,
+  AlertTriangle,
+  Wrench,
 } from 'lucide-react';
 
 const JournalEntries = () => {
@@ -140,6 +142,32 @@ const JournalEntries = () => {
       currency: 'TND',
       minimumFractionDigits: 3,
     }).format(value || 0);
+  };
+
+  const [fixing, setFixing] = useState(false);
+  const [fixReport, setFixReport] = useState(null);
+  const [showFixReport, setShowFixReport] = useState(false);
+
+  const fixPaidInvoices = async () => {
+    if (!companyId) return;
+    if (!window.confirm('Analyser et corriger les écritures de règlement manquantes pour les factures payées ?')) return;
+    setFixing(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}/api/journal-entries/fix-paid-invoices?company_id=${companyId}`,
+        { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await res.json();
+      setFixReport(data);
+      setShowFixReport(true);
+      fetchEntries();
+      toast.success(`Analyse terminée : ${data.analyzed} factures analysées`);
+    } catch (e) {
+      toast.error('Erreur lors de la correction');
+    } finally {
+      setFixing(false);
+    }
   };
 
   const exportToExcel = async () => {
@@ -386,6 +414,20 @@ const JournalEntries = () => {
             <Button variant="outline" onClick={exportToExcel}>
               <Download className="w-4 h-4 mr-2" />
               Exporter Excel
+            </Button>
+            <Button
+              variant="outline"
+              onClick={fixPaidInvoices}
+              disabled={fixing}
+              className="border-orange-300 text-orange-700 hover:bg-orange-50"
+              title="Corriger les écritures de règlement manquantes pour les factures payées"
+            >
+              {fixing ? (
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle className="w-4 h-4 mr-2" />
+              )}
+              Corriger règlements
             </Button>
             <Button
               onClick={() => {
@@ -892,6 +934,91 @@ const JournalEntries = () => {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* ── Rapport de correction des règlements ───────────────────────────── */}
+      <Dialog open={showFixReport} onOpenChange={setShowFixReport}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wrench className="w-5 h-5 text-orange-600" />
+              Rapport de correction des règlements
+            </DialogTitle>
+          </DialogHeader>
+
+          {fixReport && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-blue-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-blue-700">{fixReport.analyzed}</p>
+                  <p className="text-xs text-blue-600">Factures analysées</p>
+                </div>
+                <div className="bg-green-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-green-700">
+                    {fixReport.details?.filter(d => d.action === 'règlement_créé').length || 0}
+                  </p>
+                  <p className="text-xs text-green-600">Règlements créés</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-gray-700">
+                    {fixReport.details?.filter(d => d.action === 'règlement_déjà_présent').length || 0}
+                  </p>
+                  <p className="text-xs text-gray-600">Déjà corrects</p>
+                </div>
+              </div>
+
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium text-gray-600">Facture</th>
+                      <th className="px-3 py-2 text-left font-medium text-gray-600">Action</th>
+                      <th className="px-3 py-2 text-left font-medium text-gray-600">Mode / Compte</th>
+                      <th className="px-3 py-2 text-right font-medium text-gray-600">Montant</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fixReport.details?.map((d, i) => (
+                      <tr key={i} className="border-t">
+                        <td className="px-3 py-2 font-mono text-violet-600">{d.invoice}</td>
+                        <td className="px-3 py-2">
+                          {d.action === 'règlement_créé' && (
+                            <span className="inline-flex items-center gap-1 text-green-700 bg-green-50 px-2 py-0.5 rounded-full text-xs">
+                              <CheckCircle className="w-3 h-3" /> Créé
+                            </span>
+                          )}
+                          {d.action === 'règlement_déjà_présent' && (
+                            <span className="inline-flex items-center gap-1 text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full text-xs">
+                              OK déjà présent
+                            </span>
+                          )}
+                          {d.action === 'écriture_vente_créée' && (
+                            <span className="inline-flex items-center gap-1 text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full text-xs">
+                              <Plus className="w-3 h-3" /> Vente ajoutée
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-xs text-gray-500">
+                          {d.payment_method && <span className="font-medium">{d.payment_method}</span>}
+                          {d.account && <span className="ml-1 font-mono text-violet-600">{d.account}</span>}
+                          {d.entry_ref && <span className="font-mono">{d.entry_ref}</span>}
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono text-sm">
+                          {d.amount != null ? `${d.amount.toFixed(3)} TND` : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button onClick={() => setShowFixReport(false)}>Fermer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </AppLayout>
   );
 };

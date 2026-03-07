@@ -59,6 +59,12 @@ import TrialBalance from './pages/TrialBalance';
 import AuxiliaryLedgers from './pages/AuxiliaryLedgers';
 import CashDashboard from './pages/CashDashboard';
 import ChatbotPage from './pages/ChatbotPage';
+import LegalJournals from './pages/LegalJournals';
+import FiscalYears from './pages/FiscalYears';
+import Bilan from './pages/Bilan';
+import IncomeStatement from './pages/IncomeStatement';
+import CashFlow from './pages/CashFlow';
+import FinancialStatements from './pages/FinancialStatements';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -346,12 +352,12 @@ const AppRoutes = () => {
       <Route path="/balances" element={<ProtectedRoute><TrialBalance /></ProtectedRoute>} />
       <Route path="/balance-tiers" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/balance-generale" element={<ProtectedRoute><TrialBalance /></ProtectedRoute>} />
-      <Route path="/legal-journals" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/fiscal-years" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/financial-statements" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/bilan" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/income-statement" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/cash-flow" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/legal-journals" element={<ProtectedRoute><LegalJournals /></ProtectedRoute>} />
+      <Route path="/fiscal-years" element={<ProtectedRoute><FiscalYears /></ProtectedRoute>} />
+      <Route path="/financial-statements" element={<ProtectedRoute><FinancialStatements /></ProtectedRoute>} />
+      <Route path="/bilan" element={<ProtectedRoute><Bilan /></ProtectedRoute>} />
+      <Route path="/income-statement" element={<ProtectedRoute><IncomeStatement /></ProtectedRoute>} />
+      <Route path="/cash-flow" element={<ProtectedRoute><CashFlow /></ProtectedRoute>} />
       
       {/* Nouveaux modules */}
       <Route path="/cash" element={<ProtectedRoute><CashDashboard /></ProtectedRoute>} />

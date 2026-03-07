@@ -30,6 +30,11 @@ from routes import country_configs         # C - Multi-country accounting
 from routes import reminder_engine_routes  # D - Reminder engine
 from routes import ai_assistant            # E - AI-ready hooks
 
+# ── Modules comptables avancés ───────────────────────────────────────────
+from routes import legal_journals          # Journaux légaux
+from routes import fiscal_years            # Exercices comptables
+from routes import financial_statements    # États financiers (Bilan, Résultat, Flux)
+
 # PDF routes optionnels (WeasyPrint nécessite Pango/GTK, pas toujours dispo sur Windows)
 try:
     from routes import pdf
@@ -106,6 +111,11 @@ app.include_router(chatbot.router)
 app.include_router(country_configs.router)
 app.include_router(reminder_engine_routes.router)
 app.include_router(ai_assistant.router)
+
+# ── Modules comptables avancés ────────────────────────────────────────────
+app.include_router(legal_journals.router)
+app.include_router(fiscal_years.router)
+app.include_router(financial_statements.router)
 
 # Root endpoint
 @app.get("/")

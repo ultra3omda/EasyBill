@@ -205,7 +205,13 @@ async def update_quote(
     if not existing:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quote not found")
     
+    # Inclure les champs définis ET les champs extra (extra = "allow")
     update_data = {k: v for k, v in quote_update.dict(exclude_unset=True).items()}
+    # Ajouter les champs extra non déclarés dans le modèle
+    if hasattr(quote_update, '__fields_set__'):
+        for k in (quote_update.__fields_set__ or set()):
+            if k not in update_data:
+                update_data[k] = getattr(quote_update, k, None)
     
     # Recalculate totals if items updated
     if 'items' in update_data and update_data['items']:

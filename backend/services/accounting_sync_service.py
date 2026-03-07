@@ -97,11 +97,14 @@ class AccountingSyncService:
             # Créer l'écriture
             entry = {
                 "company_id": ObjectId(company_id),
+                "entry_number": reference,
                 "date": date,
                 "reference": reference,
                 "description": description,
                 "journal_type": journal_type,
                 "lines": lines,
+                "total_debit": round(total_debit, 3),
+                "total_credit": round(total_credit, 3),
                 "document_type": document_type,
                 "document_id": ObjectId(document_id),
                 "status": "posted",  # Automatiquement validée
@@ -229,38 +232,47 @@ class AccountingSyncService:
             logger.error(f"Erreur sync facture {invoice_id}: {str(e)}")
             return None
     
+    # Mapping complet des modes de règlement vers les comptes comptables tunisiens
+    PAYMENT_METHOD_MAP = {
+        "cash":     ("531", "Caisse en monnaie nationale", "cash"),
+        "check":    ("521", "Banques - Chèques encaissés", "bank"),
+        "transfer": ("521", "Banques - Virements reçus", "bank"),
+        "card":     ("521", "Banques - TPE", "bank"),
+        "e_dinar":  ("531", "Caisse électronique (e-Dinar)", "cash"),
+    }
+
     async def sync_payment(self, payment_id: str) -> Optional[str]:
         """
-        Synchronise un paiement client
-        Génère l'écriture: Débit 521 Banque (ou 531 Caisse) / Crédit 411 Clients
+        Synchronise un paiement client.
+        Génère l'écriture de règlement selon le mode de paiement :
+          - Espèces  : Débit 531 Caisse       / Crédit 411 Clients
+          - Chèque   : Débit 521 Banques      / Crédit 411 Clients
+          - Virement : Débit 521 Banques      / Crédit 411 Clients
+          - Carte    : Débit 521 Banques-TPE  / Crédit 411 Clients
+          - e-Dinar  : Débit 531 Caisse élec. / Crédit 411 Clients
         """
-        
         try:
             payment = await self.db.payments.find_one({"_id": ObjectId(payment_id)})
-            
+
             if not payment:
                 logger.error(f"Paiement {payment_id} non trouvé")
                 return None
-            
+
             # Vérifier si déjà synchronisé
             if payment.get("accounting_entry_id"):
                 logger.info(f"Paiement {payment_id} déjà synchronisé")
                 return payment.get("accounting_entry_id")
-            
+
             company_id = str(payment["company_id"])
             amount = payment.get("amount", 0)
-            payment_method = payment.get("payment_method", "bank")
-            
-            # Déterminer le compte de trésorerie
-            if payment_method == "cash":
-                treasury_account = "531"
-                treasury_name = "Caisse en monnaie nationale"
-                journal_type = "cash"
-            else:
-                treasury_account = "521"
-                treasury_name = "Banques"
-                journal_type = "bank"
-            
+            payment_method = payment.get("payment_method", "transfer")
+            ref = payment.get("reference") or payment.get("number", "")
+
+            # Résoudre le compte de trésorerie
+            treasury_account, treasury_name, journal_type = self.PAYMENT_METHOD_MAP.get(
+                payment_method, ("521", "Banques", "bank")
+            )
+
             # Construire les lignes d'écriture
             lines = [
                 {
@@ -268,37 +280,35 @@ class AccountingSyncService:
                     "account_name": treasury_name,
                     "debit": round(amount, 3),
                     "credit": 0,
-                    "description": f"Encaissement {payment.get('reference', '')}"
+                    "description": f"Encaissement {ref}"
                 },
                 {
                     "account_code": "411",
                     "account_name": "Clients",
                     "debit": 0,
                     "credit": round(amount, 3),
-                    "description": f"Règlement client {payment.get('reference', '')}"
+                    "description": f"Règlement client {ref}"
                 }
             ]
-            
-            # Créer l'écriture
+
             entry_id = await self._create_journal_entry(
                 company_id=company_id,
                 date=payment.get("date", datetime.now(timezone.utc)),
                 journal_type=journal_type,
-                description=f"Règlement client {payment.get('reference', '')} - {payment.get('customer_name', '')}",
+                description=f"Règlement client {ref} - {payment.get('customer_name', '')} ({payment_method})",
                 lines=lines,
                 document_type="payment",
                 document_id=payment_id
             )
-            
+
             if entry_id:
-                # Mettre à jour le paiement avec l'ID de l'écriture
                 await self.db.payments.update_one(
                     {"_id": ObjectId(payment_id)},
                     {"$set": {"accounting_entry_id": entry_id}}
                 )
-            
+
             return entry_id
-            
+
         except Exception as e:
             logger.error(f"Erreur sync paiement {payment_id}: {str(e)}")
             return None
@@ -442,18 +452,14 @@ class AccountingSyncService:
             
             company_id = str(payment["company_id"])
             amount = payment.get("amount", 0)
-            payment_method = payment.get("payment_method", "bank")
-            
-            # Déterminer le compte de trésorerie
-            if payment_method == "cash":
-                treasury_account = "531"
-                treasury_name = "Caisse en monnaie nationale"
-                journal_type = "cash"
-            else:
-                treasury_account = "521"
-                treasury_name = "Banques"
-                journal_type = "bank"
-            
+            payment_method = payment.get("payment_method", "transfer")
+            ref = payment.get("reference") or payment.get("number", "")
+
+            # Résoudre le compte de trésorerie (même mapping que pour les clients)
+            treasury_account, treasury_name, journal_type = self.PAYMENT_METHOD_MAP.get(
+                payment_method, ("521", "Banques", "bank")
+            )
+
             # Construire les lignes d'écriture
             lines = [
                 {
@@ -461,14 +467,14 @@ class AccountingSyncService:
                     "account_name": "Fournisseurs d'exploitation",
                     "debit": round(amount, 3),
                     "credit": 0,
-                    "description": f"Règlement fournisseur {payment.get('reference', '')}"
+                    "description": f"Règlement fournisseur {ref}"
                 },
                 {
                     "account_code": treasury_account,
                     "account_name": treasury_name,
                     "debit": 0,
                     "credit": round(amount, 3),
-                    "description": f"Décaissement {payment.get('reference', '')}"
+                    "description": f"Décaissement {ref}"
                 }
             ]
             
@@ -477,7 +483,7 @@ class AccountingSyncService:
                 company_id=company_id,
                 date=payment.get("date", datetime.now(timezone.utc)),
                 journal_type=journal_type,
-                description=f"Règlement fournisseur {payment.get('reference', '')} - {payment.get('supplier_name', '')}",
+                description=f"Règlement fournisseur {ref} - {payment.get('supplier_name', '')} ({payment_method})",
                 lines=lines,
                 document_type="supplier_payment",
                 document_id=payment_id

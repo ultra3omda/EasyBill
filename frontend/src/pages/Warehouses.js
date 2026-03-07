@@ -61,8 +61,8 @@ const Warehouses = () => {
     } catch (error) { toast({ title: 'Erreur', description: error.message, variant: 'destructive' }); }
   };
 
-  const openCreate = () => { setSelectedWarehouse(null); setFormData({ name: '', code: '', address: '', city: '', phone: '', manager: '', is_default: false, notes: '' }); setModalOpen(true); };
-  const openEdit = (w) => { setSelectedWarehouse(w); setFormData({ name: w.name || '', code: w.code || '', address: w.address || '', city: w.city || '', phone: w.phone || '', manager: w.manager || '', is_default: w.is_default || false, notes: w.notes || '' }); setModalOpen(true); };
+  const openCreate = () => { setSelectedWarehouse(null); setFormData({ name: '', code: '', address: '', city: '', phone: '', manager: '', is_default: warehouses.length === 0, notes: '' }); setModalOpen(true); };
+  const openEdit = (w) => { setSelectedWarehouse(w); setFormData({ name: w.name || '', code: w.code || '', address: w.address || '', city: w.city || '', phone: w.phone || '', manager: w.manager || '', is_default: w.is_default || warehouses.length === 1, notes: w.notes || '' }); setModalOpen(true); };
 
   const filteredWarehouses = warehouses.filter(w => w.name?.toLowerCase().includes(searchTerm.toLowerCase()) || w.code?.toLowerCase().includes(searchTerm.toLowerCase()));
   const stats = { total: filteredWarehouses.length, products: filteredWarehouses.reduce((s, w) => s + (w.product_count || 0), 0), value: filteredWarehouses.reduce((s, w) => s + (w.total_value || 0), 0) };

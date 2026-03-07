@@ -28,17 +28,26 @@ def serialize_entry(e: dict) -> dict:
         }
         serialized_lines.append(serialized_line)
     
+    # Calculer les totaux depuis les lignes si non stockés (compatibilité écritures auto-générées)
+    computed_debit = round(sum(l.get("debit", 0) for l in e.get("lines", [])), 3)
+    computed_credit = round(sum(l.get("credit", 0) for l in e.get("lines", [])), 3)
+    total_debit = e.get("total_debit") or computed_debit
+    total_credit = e.get("total_credit") or computed_credit
+
+    # entry_number : utiliser reference si entry_number absent
+    entry_number = e.get("entry_number") or e.get("reference")
+
     return {
         "id": str(e["_id"]),
         "company_id": str(e.get("company_id")) if e.get("company_id") else None,
-        "entry_number": e.get("entry_number"),
+        "entry_number": entry_number,
         "date": e.get("date").isoformat() if e.get("date") else None,
         "reference": e.get("reference"),
         "description": e.get("description"),
         "journal_type": e.get("journal_type", "general"),
         "lines": serialized_lines,
-        "total_debit": e.get("total_debit", 0),
-        "total_credit": e.get("total_credit", 0),
+        "total_debit": total_debit,
+        "total_credit": total_credit,
         "status": e.get("status", "draft"),
         "document_type": e.get("document_type"),
         "document_id": str(e.get("document_id")) if isinstance(e.get("document_id"), ObjectId) else e.get("document_id"),
@@ -433,6 +442,187 @@ async def delete_entry(
     
     return {"message": "Entry deleted"}
 
+
+
+@router.post("/fix-totals")
+async def fix_entry_totals(
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Recalcule total_debit, total_credit et entry_number pour les écritures auto-générées"""
+    company = await get_current_company(current_user, company_id)
+
+    entries = await db.journal_entries.find({"company_id": ObjectId(company_id)}).to_list(None)
+    fixed = 0
+
+    for e in entries:
+        updates = {}
+
+        # Recalcul des totaux depuis les lignes
+        lines = e.get("lines", [])
+        computed_debit = round(sum(l.get("debit", 0) for l in lines), 3)
+        computed_credit = round(sum(l.get("credit", 0) for l in lines), 3)
+
+        if e.get("total_debit", 0) != computed_debit or e.get("total_credit", 0) != computed_credit:
+            updates["total_debit"] = computed_debit
+            updates["total_credit"] = computed_credit
+
+        # Corriger entry_number manquant
+        if not e.get("entry_number") and e.get("reference"):
+            updates["entry_number"] = e["reference"]
+
+        if updates:
+            await db.journal_entries.update_one({"_id": e["_id"]}, {"$set": updates})
+            fixed += 1
+
+    return {"fixed": fixed, "total": len(entries)}
+
+
+@router.post("/fix-paid-invoices")
+async def fix_paid_invoices_missing_settlement(
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Analyse les factures payées (status=paid/partial) et génère les écritures de règlement
+    manquantes (521/531 → 411) pour celles qui n'ont qu'une écriture de vente.
+    """
+    from services.accounting_sync_service import accounting_sync_service
+    from datetime import timezone
+
+    company = await get_current_company(current_user, company_id)
+
+    # Mapping modes de règlement → comptes
+    PAYMENT_METHOD_MAP = {
+        "cash":     ("531", "Caisse en monnaie nationale", "cash"),
+        "check":    ("521", "Banques - Chèques encaissés", "bank"),
+        "transfer": ("521", "Banques - Virements reçus", "bank"),
+        "card":     ("521", "Banques - TPE", "bank"),
+        "e_dinar":  ("531", "Caisse électronique (e-Dinar)", "cash"),
+    }
+
+    # Récupérer toutes les factures payées ou partiellement payées
+    invoices = await db.invoices.find({
+        "company_id": ObjectId(company_id),
+        "status": {"$in": ["paid", "partial"]}
+    }).to_list(None)
+
+    results = []
+
+    for invoice in invoices:
+        invoice_id = str(invoice["_id"])
+        inv_number = invoice.get("number", "")
+        amount_paid = invoice.get("amount_paid", 0)
+
+        # ── 1. Vérifier si l'écriture de vente existe ──────────────────────
+        sale_entry = await db.journal_entries.find_one({
+            "company_id": ObjectId(company_id),
+            "document_id": invoice["_id"],
+            "document_type": "invoice",
+            "lines": {"$elemMatch": {"account_code": "411", "debit": {"$gt": 0}}}
+        })
+
+        # Créer l'écriture de vente si manquante
+        if not sale_entry and not invoice.get("accounting_entry_id"):
+            # Forcer le statut "sent" momentanément pour que sync_invoice accepte
+            await db.invoices.update_one(
+                {"_id": invoice["_id"]},
+                {"$set": {"status": "sent"}}
+            )
+            await accounting_sync_service.sync_invoice(invoice_id)
+            await db.invoices.update_one(
+                {"_id": invoice["_id"]},
+                {"$set": {"status": invoice.get("status", "paid")}}
+            )
+            results.append({
+                "invoice": inv_number,
+                "action": "écriture_vente_créée"
+            })
+
+        # ── 2. Vérifier si l'écriture de règlement existe ──────────────────
+        # L'écriture de règlement crédite le compte 411 et débite 521/531
+        settlement_entry = await db.journal_entries.find_one({
+            "company_id": ObjectId(company_id),
+            "document_id": invoice["_id"],
+            "document_type": {"$in": ["payment", "invoice"]},
+            "lines": {"$elemMatch": {"account_code": "411", "credit": {"$gt": 0}}}
+        })
+
+        if settlement_entry:
+            results.append({
+                "invoice": inv_number,
+                "action": "règlement_déjà_présent",
+                "entry_ref": settlement_entry.get("reference") or settlement_entry.get("entry_number")
+            })
+            continue
+
+        # ── 3. Déterminer le mode de règlement ─────────────────────────────
+        # Chercher dans les paiements liés à cette facture
+        payment = await db.payments.find_one({
+            "company_id": ObjectId(company_id),
+            "allocations.invoice_id": invoice["_id"]
+        })
+
+        if payment:
+            payment_method = payment.get("payment_method", "cash")
+            payment_ref = payment.get("reference") or payment.get("number", "")
+            paid_date = payment.get("date", datetime.now(timezone.utc))
+        else:
+            # Pas de paiement lié → utiliser espèces par défaut (cas mark-paid sans méthode)
+            payment_method = "cash"
+            payment_ref = inv_number
+            paid_date = invoice.get("paid_at") or invoice.get("updated_at") or datetime.now(timezone.utc)
+
+        treasury_account, treasury_name, journal_type = PAYMENT_METHOD_MAP.get(
+            payment_method, ("531", "Caisse en monnaie nationale", "cash")
+        )
+
+        # Récupérer le nom du client
+        customer = await db.customers.find_one({"_id": invoice.get("customer_id")})
+        customer_name = customer.get("display_name", "") if customer else ""
+
+        # ── 4. Créer l'écriture de règlement manquante ─────────────────────
+        lines = [
+            {
+                "account_code": treasury_account,
+                "account_name": treasury_name,
+                "debit": round(amount_paid, 3),
+                "credit": 0,
+                "description": f"Encaissement facture {inv_number}"
+            },
+            {
+                "account_code": "411",
+                "account_name": "Clients",
+                "debit": 0,
+                "credit": round(amount_paid, 3),
+                "description": f"Règlement client facture {inv_number}"
+            }
+        ]
+
+        entry_id = await accounting_sync_service._create_journal_entry(
+            company_id=company_id,
+            date=paid_date,
+            journal_type=journal_type,
+            description=f"Règlement facture {inv_number} - {customer_name} ({payment_method})",
+            lines=lines,
+            document_type="payment",
+            document_id=invoice_id,
+            reference=None
+        )
+
+        results.append({
+            "invoice": inv_number,
+            "action": "règlement_créé",
+            "payment_method": payment_method,
+            "account": treasury_account,
+            "amount": amount_paid,
+            "entry_id": entry_id
+        })
+
+    return {
+        "analyzed": len(invoices),
+        "details": results
+    }
 
 
 @router.get("/export/excel")

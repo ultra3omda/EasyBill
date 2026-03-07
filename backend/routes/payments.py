@@ -8,6 +8,7 @@ from typing import Optional, List
 from pydantic import BaseModel, Field
 from utils.dependencies import get_current_user, get_current_company
 from services.accounting_sync_service import accounting_sync_service
+from routes.cash_accounts import auto_record_cash_movement
 
 logger = logging.getLogger(__name__)
 
@@ -167,7 +168,47 @@ async def create_payment(
         await accounting_sync_service.sync_payment(str(result.inserted_id))
     except Exception as e:
         logger.error(f"Erreur synchronisation comptable paiement {result.inserted_id}: {str(e)}")
-    
+
+    # ── Alimentation de la caisse pour les paiements en espèces ────────────
+    try:
+        payment_method = payment_data.payment_method
+        if payment_data.type == "received":
+            movement_type = "in"
+            # Construire le label depuis les allocations
+            if payment_data.allocations:
+                inv = await db.invoices.find_one({"_id": ObjectId(payment_data.allocations[0].invoice_id)})
+                inv_number = inv.get("number", "") if inv else ""
+                label = f"Encaissement {inv_number} - {number}"
+            else:
+                label = f"Encaissement client - {number}"
+        else:
+            movement_type = "out"
+            label = f"Décaissement fournisseur - {number}"
+
+        # Résoudre le nom du client
+        cust_name = None
+        cust_id_str = None
+        if payment_data.customer_id:
+            cust = await db.customers.find_one({"_id": ObjectId(payment_data.customer_id)})
+            cust_name = cust.get("display_name") if cust else None
+            cust_id_str = payment_data.customer_id
+
+        await auto_record_cash_movement(
+            company_id=company_id,
+            amount=payment_data.amount,
+            movement_type=movement_type,
+            label=label,
+            payment_method=payment_method,
+            customer_id=cust_id_str,
+            customer_name=cust_name,
+            invoice_id=payment_data.allocations[0].invoice_id if payment_data.allocations else None,
+            reference=number,
+            notes=payment_data.notes,
+            movement_date=payment_data.date,
+        )
+    except Exception as e:
+        logger.error(f"Erreur alimentation caisse paiement {result.inserted_id}: {str(e)}")
+
     return {"id": str(result.inserted_id), "number": number, "message": "Payment recorded successfully"}
 
 

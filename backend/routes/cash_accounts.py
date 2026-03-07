@@ -139,6 +139,193 @@ async def _update_account_balance(account_id: str, delta: float):
     )
 
 
+# Modes de paiement traités comme "espèces" dans la caisse
+CASH_PAYMENT_METHODS = {"cash", "e_dinar"}
+
+
+async def auto_record_cash_movement(
+    company_id: str,
+    amount: float,
+    movement_type: str,   # "in" ou "out"
+    label: str,
+    payment_method: str = "cash",
+    customer_id: Optional[str] = None,
+    customer_name: Optional[str] = None,
+    invoice_id: Optional[str] = None,
+    reference: Optional[str] = None,
+    notes: Optional[str] = None,
+    movement_date: Optional[datetime] = None,
+):
+    """
+    Enregistre automatiquement un mouvement dans le compte caisse par défaut.
+    Crée le compte caisse 'Caisse principale' s'il n'existe pas.
+    N'agit que pour les modes de paiement en espèces (cash, e_dinar).
+    """
+    if payment_method not in CASH_PAYMENT_METHODS:
+        return None  # Pas un paiement espèces → rien à faire dans la caisse
+
+    # Trouver ou créer le compte caisse par défaut
+    cash_account = await db.cash_accounts.find_one({
+        "company_id": ObjectId(company_id),
+        "is_default": True
+    })
+
+    if not cash_account:
+        # Prendre le premier compte disponible
+        cash_account = await db.cash_accounts.find_one({
+            "company_id": ObjectId(company_id)
+        })
+
+    if not cash_account:
+        # Aucun compte caisse → créer automatiquement "Caisse principale"
+        result = await db.cash_accounts.insert_one({
+            "company_id": ObjectId(company_id),
+            "name": "Caisse principale",
+            "currency": "TND",
+            "initial_balance": 0.0,
+            "balance": 0.0,
+            "is_default": True,
+            "description": "Compte caisse créé automatiquement",
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        })
+        cash_account = await db.cash_accounts.find_one({"_id": result.inserted_id})
+        logger.info(f"[CAISSE] Compte caisse principal créé automatiquement pour company {company_id}")
+
+    account_id = cash_account["_id"]
+    delta = amount if movement_type == "in" else -amount
+    new_balance = cash_account["balance"] + delta
+
+    txn_date = movement_date or datetime.now(timezone.utc)
+
+    # Créer la transaction dans cash_transactions
+    txn_doc = {
+        "company_id": ObjectId(company_id),
+        "cash_account_id": account_id,
+        "type": movement_type,
+        "amount": round(amount, 3),
+        "payment_method": payment_method,
+        "label": label,
+        "reference": reference,
+        "date": txn_date,
+        "customer_id": ObjectId(customer_id) if customer_id else None,
+        "customer_name": customer_name,
+        "supplier_id": None,
+        "invoice_id": ObjectId(invoice_id) if invoice_id else None,
+        "notes": notes,
+        "balance_after": round(new_balance, 3),
+        "auto_generated": True,
+        "created_at": datetime.now(timezone.utc),
+    }
+
+    await db.cash_transactions.insert_one(txn_doc)
+    await db.cash_accounts.update_one(
+        {"_id": account_id},
+        {"$inc": {"balance": delta}, "$set": {"updated_at": datetime.now(timezone.utc)}}
+    )
+
+    logger.info(f"[CAISSE] Mouvement {movement_type} {amount} TND enregistré — solde: {new_balance} TND")
+    return new_balance
+
+
+# ─────────────────────────────────────────────
+# Migration — Factures payées sans transaction caisse
+# ─────────────────────────────────────────────
+
+@router.post("/fix-paid-invoices-cash", status_code=200)
+async def fix_paid_invoices_cash_transactions(
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Analyse les factures payées (paid/partial) et crée les transactions caisse
+    manquantes pour celles réglées en espèces (cash, e_dinar).
+    """
+    await get_current_company(current_user, company_id)
+
+    # Récupérer toutes les factures payées ou partiellement payées
+    invoices = await db.invoices.find({
+        "company_id": ObjectId(company_id),
+        "status": {"$in": ["paid", "partial"]},
+        "amount_paid": {"$gt": 0}
+    }).to_list(None)
+
+    results = []
+
+    for invoice in invoices:
+        invoice_id = str(invoice["_id"])
+        inv_number = invoice.get("number", "")
+        amount_paid = invoice.get("amount_paid", 0)
+
+        # Vérifier si une transaction caisse existe déjà pour cette facture
+        existing_txn = await db.cash_transactions.find_one({
+            "company_id": ObjectId(company_id),
+            "invoice_id": invoice["_id"]
+        })
+        if existing_txn:
+            results.append({"invoice": inv_number, "action": "déjà_présent"})
+            continue
+
+        # Chercher le paiement lié pour connaître le mode
+        payment = await db.payments.find_one({
+            "company_id": ObjectId(company_id),
+            "allocations.invoice_id": invoice["_id"]
+        })
+        payment_method = payment.get("payment_method", "cash") if payment else "cash"
+
+        # Seulement pour les paiements en espèces
+        if payment_method not in CASH_PAYMENT_METHODS:
+            # Vérifier si l'écriture de règlement comptable indique une caisse
+            journal_entry = await db.journal_entries.find_one({
+                "company_id": ObjectId(company_id),
+                "document_id": invoice["_id"],
+                "lines": {"$elemMatch": {"account_code": {"$in": ["531"]}, "debit": {"$gt": 0}}}
+            })
+            if not journal_entry:
+                results.append({"invoice": inv_number, "action": "ignoré_non_espèces", "method": payment_method})
+                continue
+            payment_method = "cash"  # L'écriture 531 confirme que c'est espèces
+
+        # Récupérer le client
+        customer = await db.customers.find_one({"_id": invoice.get("customer_id")})
+        customer_name = customer.get("display_name", "") if customer else ""
+        customer_id_str = str(invoice["customer_id"]) if invoice.get("customer_id") else None
+
+        # Date du paiement
+        paid_at = invoice.get("paid_at") or invoice.get("updated_at") or datetime.now(timezone.utc)
+
+        try:
+            new_balance = await auto_record_cash_movement(
+                company_id=company_id,
+                amount=amount_paid,
+                movement_type="in",
+                label=f"Encaissement facture {inv_number} - {customer_name} (migration)",
+                payment_method=payment_method,
+                customer_id=customer_id_str,
+                customer_name=customer_name,
+                invoice_id=invoice_id,
+                reference=inv_number,
+                notes="Transaction créée par migration automatique",
+                movement_date=paid_at,
+            )
+            results.append({
+                "invoice": inv_number,
+                "action": "transaction_créée",
+                "amount": amount_paid,
+                "payment_method": payment_method,
+                "new_balance": new_balance
+            })
+        except Exception as e:
+            results.append({"invoice": inv_number, "action": "erreur", "detail": str(e)})
+
+    created = sum(1 for r in results if r["action"] == "transaction_créée")
+    return {
+        "analyzed": len(invoices),
+        "created": created,
+        "details": results
+    }
+
+
 # ─────────────────────────────────────────────
 # Comptes Caisse — CRUD
 # ─────────────────────────────────────────────

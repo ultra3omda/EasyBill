@@ -14,7 +14,7 @@ import {
 } from '../components/ui/table';
 import {
   Banknote, TrendingUp, TrendingDown, Plus, RefreshCw, Wallet,
-  Users, AlertCircle, Calendar, ArrowUpRight, ArrowDownRight
+  Users, AlertCircle, Calendar, ArrowUpRight, ArrowDownRight, Wrench
 } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
 import { cashAPI } from '../services/api';
@@ -49,6 +49,31 @@ export default function CashDashboard() {
     cash_account_id: '', type: 'in', amount: '', payment_method: 'cash',
     label: '', reference: '', notes: ''
   });
+  const [migrating, setMigrating] = useState(false);
+
+  const fixPaidInvoicesCash = async () => {
+    if (!currentCompany) return;
+    if (!window.confirm('Analyser les factures payées en espèces et créer les transactions caisse manquantes ?')) return;
+    setMigrating(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}/api/cash/fix-paid-invoices-cash?company_id=${currentCompany.id}`,
+        { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await res.json();
+      const created = data.details?.filter(d => d.action === 'transaction_créée').length || 0;
+      toast({
+        title: created > 0 ? 'Migration réussie' : 'Aucune correction nécessaire',
+        description: `${data.analyzed} factures analysées · ${created} transaction(s) caisse créée(s)`
+      });
+      load();
+    } catch (e) {
+      toast({ title: 'Erreur', description: 'Erreur lors de la migration', variant: 'destructive' });
+    } finally {
+      setMigrating(false);
+    }
+  };
 
   const load = useCallback(async () => {
     if (!currentCompany) return;
@@ -126,6 +151,16 @@ export default function CashDashboard() {
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={load}>
               <RefreshCw className="h-4 w-4 mr-1" /> Actualiser
+            </Button>
+            <Button
+              variant="outline" size="sm"
+              onClick={fixPaidInvoicesCash}
+              disabled={migrating}
+              className="border-orange-300 text-orange-700 hover:bg-orange-50"
+              title="Créer les transactions caisse manquantes pour les factures déjà payées en espèces"
+            >
+              {migrating ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <Wrench className="h-4 w-4 mr-1" />}
+              Corriger caisse
             </Button>
             <Button size="sm" onClick={() => { setTransactionType('in'); setShowTransactionModal(true); }}
               className="bg-green-600 hover:bg-green-700">
