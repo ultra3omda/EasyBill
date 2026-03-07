@@ -29,13 +29,13 @@ npm run start
 
 Ou avec npx : `npx craco start`
 
-L’app est disponible sur **http://localhost:3001**.
+L’app est disponible sur **http://localhost:3000**.
 
 Le frontend utilise `REACT_APP_BACKEND_URL=http://localhost:8000` (défini dans `frontend/.env`).
 
 ## Premier utilisateur
 
-1. Ouvrir http://localhost:3001
+1. Ouvrir http://localhost:3000
 2. Cliquer sur **S’inscrire** et créer un compte
 3. Après connexion, créer une **entreprise** pour accéder au tableau de bord
 
