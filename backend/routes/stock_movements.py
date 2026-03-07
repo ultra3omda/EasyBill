@@ -189,6 +189,8 @@ async def get_stock_levels(company_id: str = Query(...), warehouse_id: Optional[
     products = await db.products.find({"company_id": ObjectId(company_id)}).to_list(1000)
     
     result = []
+    products_with_levels = set()
+
     for product in products:
         query = {"product_id": product["_id"]}
         if warehouse_id:
@@ -197,18 +199,94 @@ async def get_stock_levels(company_id: str = Query(...), warehouse_id: Optional[
         levels = await db.stock_levels.find(query).to_list(100)
         
         for level in levels:
-            warehouse = await db.warehouses.find_one({"_id": level["warehouse_id"]})
+            products_with_levels.add(str(product["_id"]))
+            wh = await db.warehouses.find_one({"_id": level["warehouse_id"]})
+            qty = level.get("quantity", 0)
+            min_stock = product.get("min_stock_level", product.get("min_stock", 0))
             result.append({
                 "product_id": str(product["_id"]),
                 "product_name": product.get("name"),
                 "product_sku": product.get("sku"),
                 "warehouse_id": str(level["warehouse_id"]),
-                "warehouse_name": warehouse.get("name") if warehouse else "",
-                "quantity": level.get("quantity", 0),
+                "warehouse_name": wh.get("name") if wh else "Inconnu",
+                "quantity": qty,
                 "unit_cost": level.get("unit_cost", 0),
-                "total_value": level.get("quantity", 0) * level.get("unit_cost", 0),
-                "min_stock": product.get("min_stock", 0),
-                "is_low_stock": level.get("quantity", 0) <= product.get("min_stock", 0)
+                "total_value": qty * level.get("unit_cost", 0),
+                "min_stock": min_stock,
+                "is_low_stock": qty <= min_stock
             })
-    
+
+    # Auto-migrer les produits avec quantity_in_stock > 0 sans entrée stock_levels
+    # vers le premier entrepôt disponible de l'entreprise
+    default_warehouse = await db.warehouses.find_one({"company_id": ObjectId(company_id)})
+
+    for product in products:
+        pid = str(product["_id"])
+        if pid not in products_with_levels:
+            qty = product.get("quantity_in_stock", 0)
+            if qty and qty > 0:
+                min_stock = product.get("min_stock_level", product.get("min_stock", 0))
+                unit_cost = product.get("purchase_price", 0)
+
+                if default_warehouse:
+                    wh_id = default_warehouse["_id"]
+                    # Créer l'entrée stock_levels dans l'entrepôt par défaut
+                    await db.stock_levels.insert_one({
+                        "warehouse_id": wh_id,
+                        "product_id": product["_id"],
+                        "quantity": qty,
+                        "unit_cost": unit_cost,
+                        "created_at": datetime.now(timezone.utc),
+                        "updated_at": datetime.now(timezone.utc)
+                    })
+                    # Créer le mouvement d'entrée initial
+                    await db.stock_movements.insert_one({
+                        "company_id": ObjectId(company_id),
+                        "product_id": product["_id"],
+                        "product_name": product.get("name"),
+                        "warehouse_id": wh_id,
+                        "warehouse_name": default_warehouse.get("name", ""),
+                        "type": "in",
+                        "quantity": qty,
+                        "unit_cost": unit_cost,
+                        "total_value": qty * unit_cost,
+                        "reason": "Stock initial (migration automatique)",
+                        "reference": None,
+                        "notes": "Entrée créée automatiquement lors de la migration du stock",
+                        "stock_before": 0,
+                        "stock_after": qty,
+                        "created_at": datetime.now(timezone.utc),
+                        "created_by_name": "Système"
+                    })
+
+                    # Inclure dans le résultat si le filtre entrepôt correspond
+                    if not warehouse_id or str(wh_id) == warehouse_id:
+                        result.append({
+                            "product_id": pid,
+                            "product_name": product.get("name"),
+                            "product_sku": product.get("sku"),
+                            "warehouse_id": str(wh_id),
+                            "warehouse_name": default_warehouse.get("name", ""),
+                            "quantity": qty,
+                            "unit_cost": unit_cost,
+                            "total_value": qty * unit_cost,
+                            "min_stock": min_stock,
+                            "is_low_stock": qty <= min_stock
+                        })
+                else:
+                    # Pas d'entrepôt : afficher sans warehouse uniquement en mode "tous"
+                    if not warehouse_id:
+                        result.append({
+                            "product_id": pid,
+                            "product_name": product.get("name"),
+                            "product_sku": product.get("sku"),
+                            "warehouse_id": None,
+                            "warehouse_name": "Non assigné",
+                            "quantity": qty,
+                            "unit_cost": unit_cost,
+                            "total_value": qty * unit_cost,
+                            "min_stock": min_stock,
+                            "is_low_stock": qty <= min_stock
+                        })
+
     return result

@@ -97,13 +97,54 @@ async def create_product(
     })
     
     result = await db.products.insert_one(product_dict)
-    
+    product_id = result.inserted_id
+
+    # Si un stock initial est défini, créer un mouvement + niveau de stock
+    initial_qty = product_dict.get("quantity_in_stock", 0)
+    if initial_qty and initial_qty > 0:
+        # Chercher le premier entrepôt de l'entreprise
+        warehouse = await db.warehouses.find_one({"company_id": ObjectId(company_id)})
+        if warehouse:
+            warehouse_id = warehouse["_id"]
+            unit_cost = product_dict.get("purchase_price", 0)
+
+            # Créer ou mettre à jour le niveau de stock
+            await db.stock_levels.insert_one({
+                "warehouse_id": warehouse_id,
+                "product_id": product_id,
+                "quantity": initial_qty,
+                "unit_cost": unit_cost,
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
+            })
+
+            # Créer le mouvement de stock initial
+            await db.stock_movements.insert_one({
+                "company_id": ObjectId(company_id),
+                "product_id": product_id,
+                "product_name": product_dict.get("name"),
+                "warehouse_id": warehouse_id,
+                "warehouse_name": warehouse.get("name", ""),
+                "type": "in",
+                "quantity": initial_qty,
+                "unit_cost": unit_cost,
+                "total_value": initial_qty * unit_cost,
+                "reason": "Stock initial à la création de l'article",
+                "reference": None,
+                "notes": "Entrée automatique lors de la création",
+                "stock_before": 0,
+                "stock_after": initial_qty,
+                "created_at": datetime.now(timezone.utc),
+                "created_by": current_user["_id"],
+                "created_by_name": current_user.get("full_name", "")
+            })
+
     await log_product_action(
         company_id, str(current_user["_id"]), current_user.get("full_name", ""),
         "Créer", product_data.name, request.client.host if request.client else None
     )
-    
-    return {"id": str(result.inserted_id), "message": "Product created successfully"}
+
+    return {"id": str(product_id), "message": "Product created successfully"}
 
 
 @router.get("/")

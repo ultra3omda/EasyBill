@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { customersAPI } from '../services/api';
 import { useCompany } from '../hooks/useCompany';
@@ -33,6 +34,7 @@ import { Plus, Search, Filter, Download, Eye, Edit, Trash2, MoreVertical, Mail, 
 import { toast } from '../hooks/use-toast';
 
 const Customers = () => {
+  const navigate = useNavigate();
   const { t } = useLanguage();
   const { currentCompany } = useCompany();
   const [customers, setCustomers] = useState([]);

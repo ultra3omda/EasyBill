@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
-import { Plus, Search, Eye, Edit, Trash2, MoreVertical, Truck, Users, FileText, TrendingDown, UserPlus, ChevronDown } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Trash2, MoreVertical, Truck, Users, FileText, TrendingDown, TrendingUp, UserPlus, ChevronDown } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
 import { useCompany } from '../hooks/useCompany';
 import { suppliersAPI } from '../services/api';

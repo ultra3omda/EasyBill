@@ -57,9 +57,8 @@ const webpackConfig = {
             '**/build/**',
             '**/dist/**',
             '**/coverage/**',
-            '**/public/**',
-        ],
-      };
+          ],
+        };
 
       // Add health check plugin to webpack if enabled
       if (config.enableHealthCheck && healthPluginInstance) {
