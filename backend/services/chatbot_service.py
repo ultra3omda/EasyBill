@@ -82,9 +82,15 @@ class ChatbotParser:
         re.IGNORECASE
     )
     _DESC_PATTERN = re.compile(
-        r"(?:pour|objet|description|travaux?|service|article|prestation|installation|r[ée]paration)\s+(.{3,80}?)(?:\s+\d|\s*$)",
+        r"((?:r[ée]paration|installation|prestation|travaux?|service|article|objet|description|maintenance|peinture)\s+[A-Za-zÀ-ÿ\u0600-\u06FF\s]{0,80}?)(?:\s+\d|\s*$)",
         re.IGNORECASE
     )
+    # Mots-clés qui marquent le début de la description (après le nom du client)
+    _DESC_START_KEYWORDS = [
+        r"\br[ée]paration\b", r"\binstallation\b", r"\bprestation\b", r"\btravaux?\b",
+        r"\bservice\b", r"\barticle\b", r"\bobjet\b", r"\bdescription\b", r"\bmaintenance\b",
+        r"\bpeinture\b", r"\bd[ée]m[ée]nagement\b",
+    ]
 
     def _match_any(self, text: str, patterns: list) -> bool:
         return any(re.search(p, text, re.IGNORECASE) for p in patterns)
@@ -99,10 +105,19 @@ class ChatbotParser:
                 return None
         return None
 
-    def _extract_client_name(self, text: str) -> Optional[str]:
+    def _extract_client_name(self, text: str, trim_before_desc: bool = True) -> Optional[str]:
         match = self._CLIENT_PATTERN.search(text)
         if match:
-            return match.group(1).strip()
+            raw = match.group(1).strip()
+            if trim_before_desc:
+                # Couper avant un mot-clé de description : "Mohamed Sahli réparation moteur" → "Mohamed Sahli"
+                for kw in self._DESC_START_KEYWORDS:
+                    m = re.search(kw, raw, re.IGNORECASE)
+                    if m:
+                        before = raw[:m.start()].strip()
+                        if len(before) >= 2:
+                            return before
+            return raw
         # Fallback: dernier mot majuscule
         words = [w for w in text.split() if w[0:1].isupper() and len(w) > 2]
         return words[-1] if words else None
@@ -198,12 +213,18 @@ class ChatbotParser:
     def _build_response(self, intent: ChatbotIntent, entities: dict, missing: list) -> str:
         if missing:
             labels = {
-                "amount": "le montant",
-                "client_name": "le nom du client",
-                "description": "la description"
+                "amount": "le montant (ex: 250 dt)",
+                "client_name": "le nom complet du client (ex: Mohamed Sahli)",
+                "description": "la description (ex: réparation moteur)"
+            }
+            examples = {
+                "amount": "facture 250 dt pour Mohamed Sahli réparation moteur",
+                "client_name": "facture 250 dt pour Mohamed Sahli réparation moteur",
+                "description": "facture 250 dt pour Ahmed installation clim",
             }
             missing_str = ", ".join(labels.get(f, f) for f in missing)
-            return f"Il manque : {missing_str}. Pouvez-vous préciser ?"
+            ex = examples.get(missing[0], "facture 250 dt pour Mohamed Sahli réparation moteur") if missing else ""
+            return f"Il manque : {missing_str}. Exemple : « {ex} »"
 
         client = entities.get("client_name", "")
         amount = entities.get("amount", "")
