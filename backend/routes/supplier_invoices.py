@@ -32,7 +32,10 @@ def serialize_si(s: dict) -> dict:
         "due_date": s["due_date"].isoformat() if isinstance(s.get("due_date"), datetime) else s.get("due_date"),
         "items": s.get("items", []),
         "subtotal": s.get("subtotal", 0),
+        "fodec": s.get("fodec", 0),             # FODEC 1% du HT (spécifique Tunisie)
+        "assiette_tva": s.get("assiette_tva", 0),
         "total_tax": s.get("total_tax", 0),
+        "timbre": s.get("timbre", 0),           # Timbre fiscal (spécifique Tunisie)
         "total_discount": s.get("total_discount", 0),
         "total": s.get("total", 0),
         "amount_paid": s.get("amount_paid", 0),
@@ -238,3 +241,168 @@ async def delete_supplier_invoice(doc_id: str, request: Request, company_id: str
     await db.supplier_invoices.delete_one({"_id": ObjectId(doc_id)})
     await log_action(company_id, str(current_user["_id"]), current_user.get("full_name", ""), "Supprimer", doc.get("number", ""), request.client.host if request.client else None)
     return {"message": "Supplier invoice deleted"}
+
+
+# ─── Paiement d'une facture fournisseur ───────────────────────────────────────
+
+PAYMENT_METHOD_MAP = {
+    "cash":     {"account": "531000", "name": "Caisse"},
+    "check":    {"account": "521000", "name": "Banques — Chèque"},
+    "transfer": {"account": "521000", "name": "Banques — Virement"},
+    "card":     {"account": "521000", "name": "Banques — Carte"},
+    "e_dinar":  {"account": "531000", "name": "Caisse — E-Dinar"},
+}
+
+@router.post("/{doc_id}/mark-paid")
+async def mark_supplier_invoice_paid(
+    doc_id: str,
+    company_id: str = Query(...),
+    payment_method: str = Query("transfer"),
+    payment_reference: Optional[str] = Query(None),
+    current_user: dict = Depends(get_current_user)
+):
+    """Marquer une facture fournisseur comme payée et créer l'écriture de règlement."""
+    company = await get_current_company(current_user, company_id)
+
+    inv = await db.supplier_invoices.find_one({"_id": ObjectId(doc_id), "company_id": ObjectId(company_id)})
+    if not inv:
+        raise HTTPException(status_code=404, detail="Facture non trouvée")
+    if inv.get("status") == "paid":
+        raise HTTPException(status_code=400, detail="Facture déjà payée")
+
+    now = datetime.now(timezone.utc)
+    amount = inv.get("balance_due") or inv.get("total", 0)
+    user_name = current_user.get("full_name") or current_user.get("email", "")
+    inv_number = inv.get("number") or str(doc_id)
+    supplier_name = inv.get("supplier_name") or ""
+
+    # ── Mise à jour de la facture ──────────────────────────────────────────────
+    await db.supplier_invoices.update_one(
+        {"_id": ObjectId(doc_id)},
+        {"$set": {
+            "status": "paid",
+            "amount_paid": amount,
+            "balance_due": 0,
+            "paid_at": now,
+            "payment_method": payment_method,
+            "payment_reference": payment_reference,
+            "updated_at": now
+        }}
+    )
+
+    # ── Mise à jour solde fournisseur ──────────────────────────────────────────
+    if inv.get("supplier_id"):
+        await db.suppliers.update_one(
+            {"_id": inv["supplier_id"]},
+            {"$inc": {"balance": -amount, "total_paid": amount}}
+        )
+
+    # ── Écriture comptable de règlement (401 / 521 ou 531) ─────────────────────
+    method_info = PAYMENT_METHOD_MAP.get(payment_method, PAYMENT_METHOD_MAP["transfer"])
+    treasury_account = method_info["account"]
+    treasury_name    = method_info["name"]
+
+    # Trouver le dernier numéro d'écriture
+    last = await db.journal_entries.find_one(
+        {"company_id": ObjectId(company_id)},
+        sort=[("created_at", -1)]
+    )
+    try:
+        last_num = int((last.get("entry_number") or "EC-00000").split("-")[-1])
+    except Exception:
+        last_num = 0
+
+    entry_number = f"EC-{(last_num + 1):05d}"
+    payment_desc = f"Règlement {inv_number} - {supplier_name} ({method_info['name']})"
+    if payment_reference:
+        payment_desc += f" — Réf: {payment_reference}"
+
+    journal_entry = {
+        "company_id": ObjectId(company_id),
+        "entry_number": entry_number,
+        "date": now,
+        "reference": inv_number,
+        "payment_reference": payment_reference,
+        "description": payment_desc,
+        "journal_type": "bank" if payment_method in ("transfer", "check", "card") else "cash",
+        "lines": [
+            {
+                "account_code": "401",
+                "account_name": "Fournisseurs",
+                "debit": round(amount, 3),
+                "credit": 0,
+                "description": f"Règlement facture {inv_number}"
+            },
+            {
+                "account_code": treasury_account,
+                "account_name": treasury_name,
+                "debit": 0,
+                "credit": round(amount, 3),
+                "description": f"Paiement {method_info['name']}"
+            }
+        ],
+        "total_debit": round(amount, 3),
+        "total_credit": round(amount, 3),
+        "status": "posted",
+        "document_type": "supplier_payment",
+        "document_id": ObjectId(doc_id),
+        "payment_method": payment_method,
+        "created_by": current_user["_id"],
+        "created_at": now
+    }
+    je_result = await db.journal_entries.insert_one(journal_entry)
+
+    # ── Cash register pour paiements en espèces ───────────────────────────────
+    if payment_method in ("cash", "e_dinar"):
+        try:
+            from routes.cash_accounts import auto_record_cash_movement
+            await auto_record_cash_movement(
+                db=db,
+                company_id=company_id,
+                amount=-amount,   # sortie de caisse
+                description=f"Paiement fournisseur {inv_number} - {supplier_name}",
+                reference=inv_number,
+                payment_method=payment_method,
+                user_id=str(current_user["_id"])
+            )
+        except Exception as e:
+            logger.warning(f"Cash register update failed: {e}")
+
+    await log_action(company_id, str(current_user["_id"]), user_name,
+                     "Paiement", f"{inv_number} ({payment_method})")
+
+    return {
+        "message": f"Facture {inv_number} marquée payée",
+        "payment_method": payment_method,
+        "amount": amount,
+        "journal_entry_id": str(je_result.inserted_id),
+        "entry_number": entry_number
+    }
+
+
+@router.get("/{doc_id}/payments")
+async def get_supplier_invoice_payments(
+    doc_id: str,
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Récupère les écritures de paiement liées à une facture fournisseur."""
+    await get_current_company(current_user, company_id)
+    entries = await db.journal_entries.find({
+        "company_id": ObjectId(company_id),
+        "document_id": ObjectId(doc_id),
+        "document_type": "supplier_payment"
+    }).sort("created_at", -1).to_list(20)
+
+    result = []
+    for e in entries:
+        result.append({
+            "id": str(e["_id"]),
+            "entry_number": e.get("entry_number"),
+            "date": e.get("date").isoformat() if e.get("date") else None,
+            "amount": e.get("total_debit", 0),
+            "payment_method": e.get("payment_method"),
+            "payment_reference": e.get("payment_reference"),
+            "description": e.get("description"),
+        })
+    return result

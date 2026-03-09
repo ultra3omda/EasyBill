@@ -65,6 +65,8 @@ import Bilan from './pages/Bilan';
 import IncomeStatement from './pages/IncomeStatement';
 import CashFlow from './pages/CashFlow';
 import FinancialStatements from './pages/FinancialStatements';
+import InvoiceScanner from './pages/InvoiceScanner';
+import BankReconciliation from './pages/BankReconciliation';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -330,6 +332,10 @@ const AppRoutes = () => {
       <Route path="/purchases/purchase-orders" element={<ProtectedRoute><PurchaseOrders /></ProtectedRoute>} />
       <Route path="/purchases/supplier-invoices" element={<ProtectedRoute><SupplierInvoices /></ProtectedRoute>} />
       <Route path="/purchases/supplier-payments" element={<ProtectedRoute><SupplierPayments /></ProtectedRoute>} />
+      <Route path="/invoice-scanner" element={<ProtectedRoute><InvoiceScanner /></ProtectedRoute>} />
+      <Route path="/purchases/invoice-scanner" element={<ProtectedRoute><InvoiceScanner /></ProtectedRoute>} />
+      <Route path="/bank-reconciliation" element={<ProtectedRoute><BankReconciliation /></ProtectedRoute>} />
+      <Route path="/purchases/bank-reconciliation" element={<ProtectedRoute><BankReconciliation /></ProtectedRoute>} />
 
       
       {/* Stock Routes with /stock prefix */}

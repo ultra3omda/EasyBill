@@ -19,7 +19,7 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-
+#test
 async def create_default_chart_of_accounts_for_company(company_id: ObjectId):
     """Initialize Tunisian chart of accounts for new company"""
     from data.tunisian_chart_of_accounts import TUNISIAN_CHART_OF_ACCOUNTS
