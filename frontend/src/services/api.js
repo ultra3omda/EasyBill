@@ -299,6 +299,7 @@ export const cashAPI = {
 export const chatbotAPI = {
   sendMessage: (companyId, data) => apiClient.post(`/chatbot/message?company_id=${companyId}`, data),
   getLogs: (companyId, limit = 50) => apiClient.get(`/chatbot/logs?company_id=${companyId}&limit=${limit}`),
+  getHistory: (companyId, limit = 20) => apiClient.get(`/chatbot/history?company_id=${companyId}&limit=${limit}`),
   getIntents: () => apiClient.get('/chatbot/intents'),
 };
 
