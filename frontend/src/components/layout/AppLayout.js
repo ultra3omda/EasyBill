@@ -61,7 +61,8 @@ import {
   CheckCircle,
   Banknote,
   Wallet,
-  Bot
+  Bot,
+  Scan
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -295,7 +296,9 @@ const AppLayout = ({ children }) => {
         { icon: FileText, label: 'Bons de commande', path: '/purchases/purchase-orders' },
         { icon: FileInput, label: 'Bons de réception', path: '/purchases/receipts' },
         { icon: Receipt, label: 'Factures fournisseur', path: '/purchases/supplier-invoices' },
-        { icon: CreditCard, label: 'Paiements', path: '/purchases/supplier-payments' }
+        { icon: CreditCard, label: 'Paiements', path: '/purchases/supplier-payments' },
+        { icon: Scan, label: 'Scanner une facture', path: '/purchases/invoice-scanner' },
+        { icon: Building2, label: 'Lettrage bancaire', path: '/purchases/bank-reconciliation' }
       ]
     },
     {
