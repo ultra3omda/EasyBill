@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 import sys
 
 # Configuration
-BASE_URL = "https://test-et-implement.preview.emergentagent.com/api"
+BASE_URL = "https://invoice-ai-match.preview.emergentagent.com/api"
 
 # Global variables
 auth_token = None

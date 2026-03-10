@@ -7,7 +7,7 @@ import httpx
 import asyncio
 from datetime import datetime
 
-BASE_URL = "https://test-et-implement.preview.emergentagent.com/api"
+BASE_URL = "https://invoice-ai-match.preview.emergentagent.com/api"
 
 # Utiliser un compte existant
 TEST_EMAIL = "testuser@easybill.com"

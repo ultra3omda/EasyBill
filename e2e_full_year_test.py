@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 import uuid
 
 # Configuration
-BASE_URL = "https://test-et-implement.preview.emergentagent.com/api"
+BASE_URL = "https://invoice-ai-match.preview.emergentagent.com/api"
 TEST_EMAIL = f"test-e2e-{int(datetime.now().timestamp())}@easybill.com"
 TEST_PASSWORD = "TestE2E2025!"
 COMPANY_NAME = "TechSolutions SARL"

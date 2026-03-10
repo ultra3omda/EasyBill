@@ -469,7 +469,7 @@ const filtered = Array.isArray(vouchers) ? vouchers.filter(...) : [];
 ### Status: ✅ DÉPLOYÉ AVEC SUCCÈS
 
 **URLs:**
-- Preview: https://test-et-implement.preview.emergentagent.com
+- Preview: https://invoice-ai-match.preview.emergentagent.com
 - Production: https://test-et-implement.emergent.host
 - Custom domain: easybill.tn (configuration DNS en cours)
 
@@ -625,7 +625,7 @@ const filtered = Array.isArray(vouchers) ? vouchers.filter(...) : [];
 - 🎨 UX moderne (TailwindCSS + Shadcn UI)
 
 **Accès:**
-- Preview: https://test-et-implement.preview.emergentagent.com
+- Preview: https://invoice-ai-match.preview.emergentagent.com
 - Production: https://test-et-implement.emergent.host
 - Custom domain: easybill.tn (en configuration)
 

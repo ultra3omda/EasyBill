@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 # Configuration
-BASE_URL = "https://test-et-implement.preview.emergentagent.com/api"
+BASE_URL = "https://invoice-ai-match.preview.emergentagent.com/api"
 TEST_EMAIL = f"accounting-test-{datetime.now().strftime('%Y%m%d%H%M%S')}@easybill.com"
 TEST_PASSWORD = "TestPass123!"
 COMPANY_ID = None  # Will be set after registration

@@ -562,7 +562,7 @@ agent_communication:
       - These must be defined BEFORE line 147 where /{doc_id} is defined
       
       TEST ENVIRONMENT:
-      - Backend URL: https://test-et-implement.preview.emergentagent.com/api
+      - Backend URL: https://invoice-ai-match.preview.emergentagent.com/api
       - Test user: testuser@easybill.com
       - Company ID: 69774dbbdb057f6d21416ad8
       - All tests run via backend_test.py script
@@ -650,7 +650,7 @@ agent_communication:
       - OAuth buttons are clickable (mock implementation as expected)
       
       TEST ENVIRONMENT:
-      - Frontend URL: https://test-et-implement.preview.emergentagent.com
+      - Frontend URL: https://invoice-ai-match.preview.emergentagent.com
       - Test user created: testuser1769432908@easybill.com
       - All pages tested with Playwright automation
       - Screenshots captured for all pages
@@ -1001,8 +1001,8 @@ agent_communication:
       ❌ Frontend/Backend integration is broken due to API contract mismatch
       
       TEST ENVIRONMENT:
-      - Frontend URL: https://test-et-implement.preview.emergentagent.com/login
-      - Backend URL: https://test-et-implement.preview.emergentagent.com/api
+      - Frontend URL: https://invoice-ai-match.preview.emergentagent.com/login
+      - Backend URL: https://invoice-ai-match.preview.emergentagent.com/api
       - Test date: 2026-01-27
       - Screenshots captured: 6 images showing complete flow
       
@@ -1099,7 +1099,7 @@ agent_communication:
       ✅ Synchronisation automatique: Hooks intégrés et fonctionnels (vérifié par E2E tests précédents)
       
       TEST ENVIRONMENT:
-      - Backend URL: https://test-et-implement.preview.emergentagent.com/api
+      - Backend URL: https://invoice-ai-match.preview.emergentagent.com/api
       - Test user: accounting-test-20260126214549@easybill.com
       - Company ID: 6977e08de1209da9576cc7ed
       - Test file: /app/backend_accounting_test.py
@@ -1208,7 +1208,7 @@ agent_communication:
     message: |
       ❌ PROBLÈME SIGNALÉ PAR L'UTILISATEUR (2026-01-28):
       "Continuer avec Google" ne fonctionne pas en mode preview, alors qu'elle fonctionnait auparavant.
-      URL: https://test-et-implement.preview.emergentagent.com
+      URL: https://invoice-ai-match.preview.emergentagent.com
       Demande de test urgent pour identifier pourquoi OAuth ne marche plus.
   
   - agent: "testing"

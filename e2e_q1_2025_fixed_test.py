@@ -11,7 +11,7 @@ from typing import Dict, Optional
 import json
 
 # Configuration
-BASE_URL = "https://test-et-implement.preview.emergentagent.com/api"
+BASE_URL = "https://invoice-ai-match.preview.emergentagent.com/api"
 TEST_EMAIL = f"easybill-e2e-fixed-{int(datetime.now().timestamp())}@test.com"
 TEST_PASSWORD = "EasyBill2025Fixed!"
 
