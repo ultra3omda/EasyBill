@@ -2262,3 +2262,771 @@ Et dans `App.js` (routes frontend) :
 5. **Déclaration CNSS** : Générer une DS7 trimestrielle → vérifier les totaux
 6. **Intégration comptable** : Valider la paie → vérifier l'écriture 6311/421/431/4353
 7. **PDF** : Télécharger un bulletin → vérifier le format et les calculs
+
+
+
+---
+---
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PARTIE 3 — CONFIGURATION DYNAMIQUE & LOI DE FINANCES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+## PROBLÈME
+
+Les taux fiscaux, sociaux et les paramètres de paie **changent chaque année** avec la Loi de Finances. 
+Actuellement tout est hardcodé dans `tunisian_hr_config.py`. 
+Il faut un **système de configuration dynamique** stocké en MongoDB, versionné par exercice/loi de finances, et administrable via le frontend.
+
+### Principes :
+1. **Les valeurs par défaut** viennent de `tunisian_hr_config.py` (seed initial)
+2. **Les configurations actives** sont stockées en MongoDB par `company_id`
+3. **L'utilisateur peut modifier** les taux sans toucher au code
+4. **Historique** : chaque modification est tracée (qui, quand, valeur avant/après)
+5. **Loi de finances** : l'utilisateur peut charger un "preset" de loi de finances (2024, 2025...) qui met à jour tous les taux d'un coup
+6. **Contrats** : activation/désactivation par entreprise
+
+---
+
+## ÉTAPE 11 — Backend : Système de configuration dynamique
+
+### 11.1 — Collection MongoDB `company_hr_config`
+
+```python
+# Document MongoDB pour la configuration RH/paie d'une entreprise
+company_hr_config_doc = {
+    "_id": ObjectId,
+    "company_id": ObjectId,               # Lié à l'entreprise
+    
+    # ── Métadonnées ──
+    "active_finance_law": "LF_2025",      # Loi de finances active
+    "last_updated": datetime,
+    "updated_by": ObjectId,
+    "version": 3,                          # Versionning (incrémenté à chaque modif)
+    
+    # ══════════════════════════════════════════════════════════════
+    # A. BARÈME IRPP (modifiable par l'utilisateur)
+    # ══════════════════════════════════════════════════════════════
+    "irpp_config": {
+        "brackets": [
+            {"min": 0,      "max": 5000,    "rate": 0,    "label": "Tranche exonérée"},
+            {"min": 5000.001, "max": 20000, "rate": 26,   "label": "Tranche 1"},
+            {"min": 20000.001, "max": 30000, "rate": 28,  "label": "Tranche 2"},
+            {"min": 30000.001, "max": 50000, "rate": 32,  "label": "Tranche 3"},
+            {"min": 50000.001, "max": None,  "rate": 35,  "label": "Tranche supérieure"},
+        ],
+        "css_rate": 1.0,                   # CSS : 1%
+        "css_active": True,                # Activable/désactivable
+        "professional_expenses_rate": 10,  # Déduction frais pro : 10%
+        "professional_expenses_cap": 2000, # Plafond annuel : 2000 TND
+        "family_deductions": {
+            "chef_de_famille": 300,
+            "conjoint_sans_revenu": 260,
+            "enfant": 100,
+            "enfant_handicape": 2000,
+            "parent_a_charge": 150,
+            "etudiant_sans_bourse": 1000,
+            "max_enfants": 4,
+        },
+        "effective_date": "2025-01-01",
+        "source": "Loi de Finances 2025",
+    },
+    
+    # ══════════════════════════════════════════════════════════════
+    # B. COTISATIONS CNSS
+    # ══════════════════════════════════════════════════════════════
+    "cnss_config": {
+        "regime": "general",               # general / agricole / non_salaries
+        "employee_rate": 9.18,
+        "employer_rate": 16.57,
+        "breakdown": {
+            "vieillesse_invalidite": {"employee": 4.74, "employer": 7.76},
+            "maladie_maternite": {"employee": 3.17, "employer": 5.08},
+            "prestations_familiales": {"employee": 0, "employer": 2.61},
+            "accident_travail": {"employee": 0, "employer": 0.5},  # Variable par secteur
+            "chomage": {"employee": 1.27, "employer": 0.62},
+        },
+        "accident_travail_sector": "bureau_administration",  # Sélectionnable
+        "accident_travail_custom_rate": None,                 # Override possible
+        "plafond_mensuel": None,           # Pas de plafond en Tunisie (null = illimité)
+        "effective_date": "2025-01-01",
+    },
+    
+    # ══════════════════════════════════════════════════════════════
+    # C. TAXES PARAFISCALES (TFP, FOPROLOS)
+    # ══════════════════════════════════════════════════════════════
+    "parafiscal_config": {
+        "tfp": {
+            "active": True,
+            "rate_industrie": 2.0,         # Secteur industrie : 2%
+            "rate_autres": 1.0,            # Autres secteurs : 1%
+            "applied_rate": 2.0,           # Taux appliqué pour cette entreprise
+            "base": "salaire_brut",
+        },
+        "foprolos": {
+            "active": True,
+            "rate": 1.0,
+            "base": "salaire_brut",
+        },
+        "contribution_conjoncturelle": {
+            "active": False,               # Désactivée par défaut (sauf LF spéciale)
+            "rate": 0,
+        },
+    },
+    
+    # ══════════════════════════════════════════════════════════════
+    # D. SMIG / SMAG
+    # ══════════════════════════════════════════════════════════════
+    "minimum_wages": {
+        "smig_48h_monthly": 472.368,
+        "smig_40h_monthly": 407.944,
+        "smig_48h_hourly": 2.271,
+        "smig_40h_hourly": 2.353,
+        "smag_daily": 16.856,
+        "last_revision": "2023-05-01",
+        "enforce_minimum": True,           # Alerter si salaire < SMIG
+    },
+    
+    # ══════════════════════════════════════════════════════════════
+    # E. TYPES DE CONTRATS (activation/désactivation)
+    # ══════════════════════════════════════════════════════════════
+    "contract_types_config": {
+        "CDI":           {"active": True,  "customizable": False, "order": 1},
+        "CDD":           {"active": True,  "customizable": False, "order": 2},
+        "CIVP":          {"active": True,  "customizable": True,  "order": 3},
+        "CAIP":          {"active": False, "customizable": True,  "order": 4},
+        "SIVP":          {"active": True,  "customizable": True,  "order": 5},
+        "CTT":           {"active": False, "customizable": True,  "order": 6},
+        "TEMPS_PARTIEL": {"active": True,  "customizable": True,  "order": 7},
+        "SAISONNIER":    {"active": False, "customizable": True,  "order": 8},
+        "APPRENTISSAGE": {"active": False, "customizable": True,  "order": 9},
+        "STAGE_CONV":    {"active": True,  "customizable": True,  "order": 10},
+        "KARAMA":        {"active": False, "customizable": True,  "order": 11},
+    },
+    # L'utilisateur peut aussi ajouter des types personnalisés :
+    "custom_contract_types": [
+        # {"code": "FREELANCE", "name": "Freelance/Prestataire", "active": True, ...}
+    ],
+    
+    # ══════════════════════════════════════════════════════════════
+    # F. RUBRIQUES DE PAIE (activation/désactivation + personnalisation)
+    # ══════════════════════════════════════════════════════════════
+    "payroll_rubrics_config": {
+        "gains": {
+            "SAL_BASE":                {"active": True, "mandatory": True,  "editable": False},
+            "PRIM_ANCIENNETE":         {"active": True, "mandatory": False, "editable": True, "custom_rates": None},
+            "PRIM_RENDEMENT":          {"active": True, "mandatory": False, "editable": True},
+            "PRIM_TRANSPORT":          {"active": True, "mandatory": False, "editable": True, "default_amount": 0},
+            "PRIM_PANIER":             {"active": True, "mandatory": False, "editable": True, "default_amount": 0},
+            "PRIM_PRESENCE":           {"active": False,"mandatory": False, "editable": True},
+            "PRIM_RESPONSABILITE":     {"active": False,"mandatory": False, "editable": True},
+            "PRIM_RISQUE":             {"active": False,"mandatory": False, "editable": True},
+            "PRIM_SALISSURE":          {"active": False,"mandatory": False, "editable": True},
+            "INDEMNITE_LOGEMENT":      {"active": False,"mandatory": False, "editable": True},
+            "INDEMNITE_REPRESENTATION":{"active": False,"mandatory": False, "editable": True},
+            "HEURES_SUP_25":           {"active": True, "mandatory": False, "editable": True, "rate": 1.25},
+            "HEURES_SUP_50":           {"active": True, "mandatory": False, "editable": True, "rate": 1.50},
+            "HEURES_SUP_75":           {"active": True, "mandatory": False, "editable": True, "rate": 1.75},
+            "HEURES_SUP_100":          {"active": True, "mandatory": False, "editable": True, "rate": 2.00},
+            "TREIZIEME_MOIS":          {"active": False,"mandatory": False, "editable": True},
+            "CONGE_PAYE":              {"active": True, "mandatory": True,  "editable": False},
+            "AVANTAGE_NATURE":         {"active": False,"mandatory": False, "editable": True},
+        },
+        "deductions": {
+            "CNSS_SAL":       {"active": True, "mandatory": True,  "editable": False},
+            "IRPP":           {"active": True, "mandatory": True,  "editable": False},
+            "CSS":            {"active": True, "mandatory": True,  "editable": False},
+            "AVANCE_SALAIRE": {"active": True, "mandatory": False, "editable": True},
+            "PRET":           {"active": True, "mandatory": False, "editable": True},
+            "CESSION_SALAIRE":{"active": False,"mandatory": False, "editable": True},
+            "RET_SYNDICALE":  {"active": False,"mandatory": False, "editable": True},
+            "MUTUELLE":       {"active": False,"mandatory": False, "editable": True},
+            "OPPOSITION":     {"active": False,"mandatory": False, "editable": True},
+        },
+        # Rubriques personnalisées ajoutées par l'utilisateur
+        "custom_gains": [],
+        "custom_deductions": [],
+    },
+    
+    # ══════════════════════════════════════════════════════════════
+    # G. TYPES DE CONGÉS (activation/désactivation + personnalisation)
+    # ══════════════════════════════════════════════════════════════
+    "leave_types_config": {
+        "ANNUEL":          {"active": True,  "days": 12, "paid": True,  "editable_days": True},
+        "MALADIE":         {"active": True,  "days": None, "paid": True,  "editable_days": False},
+        "MATERNITE":       {"active": True,  "days": 60, "paid": True,  "editable_days": True},
+        "PATERNITE":       {"active": True,  "days": 2,  "paid": True,  "editable_days": True},
+        "MARIAGE":         {"active": True,  "days": 3,  "paid": True,  "editable_days": True},
+        "MARIAGE_ENFANT":  {"active": True,  "days": 1,  "paid": True,  "editable_days": True},
+        "DECES_CONJOINT":  {"active": True,  "days": 3,  "paid": True,  "editable_days": True},
+        "DECES_PARENT":    {"active": True,  "days": 3,  "paid": True,  "editable_days": True},
+        "NAISSANCE":       {"active": True,  "days": 2,  "paid": True,  "editable_days": True},
+        "CIRCONCISION":    {"active": True,  "days": 1,  "paid": True,  "editable_days": True},
+        "PELERINAGE":      {"active": True,  "days": 30, "paid": False, "editable_days": True},
+        "SANS_SOLDE":      {"active": True,  "days": None, "paid": False, "editable_days": False},
+        "FORMATION":       {"active": False, "days": 10, "paid": True,  "editable_days": True},
+        "SYNDICAL":        {"active": False, "days": 6,  "paid": True,  "editable_days": True},
+        "ALLAITEMENT":     {"active": True,  "days": None, "paid": True,  "editable_days": False},
+    },
+    # Congés personnalisés
+    "custom_leave_types": [],
+    
+    # ══════════════════════════════════════════════════════════════
+    # H. CATÉGORIES PROFESSIONNELLES
+    # ══════════════════════════════════════════════════════════════
+    "professional_categories_config": {
+        "use_default": True,   # Utiliser les catégories standard (OS1→DIR)
+        "custom_categories": [],  # L'utilisateur peut ajouter les siennes
+    },
+    
+    # ══════════════════════════════════════════════════════════════
+    # I. JOURS FÉRIÉS (personnalisables)
+    # ══════════════════════════════════════════════════════════════
+    "public_holidays_config": {
+        "use_default_tn": True,  # Jours fériés tunisiens par défaut
+        "custom_holidays": [],   # Jours supplémentaires (ex: jour de congé entreprise)
+        "excluded_holidays": [], # Jours fériés officiels que l'entreprise ne respecte pas
+    },
+    
+    # ══════════════════════════════════════════════════════════════
+    # J. CONFIGURATION COMPTABLE DE LA PAIE
+    # ══════════════════════════════════════════════════════════════
+    "accounting_config": {
+        "journal_code": "PA",              # Code du journal de paie
+        "journal_name": "Journal de Paie",
+        "auto_generate_entries": True,     # Génération automatique des écritures à la validation
+        "accounts_mapping": {
+            # Comptes débit (charges)
+            "salaires_appointements": "6311",
+            "primes_gratifications": "6313",
+            "indemnites": "6318",
+            "heures_supplementaires": "6312",
+            "cnss_patronale": "6341",
+            "tfp": "6358",
+            "foprolos": "6358",
+            "accident_travail": "6342",
+            "contribution_conjoncturelle": "6358",
+            
+            # Comptes crédit (dettes)
+            "personnel_remunerations_dues": "421",
+            "cnss_a_payer": "431",        # CNSS salariale + patronale
+            "irpp_a_payer": "4353",       # IRPP + CSS
+            "tfp_foprolos_a_payer": "4358",
+            "avances_personnel": "4251",   # Avances sur salaire
+            "oppositions_saisies": "4271",
+            "banque_virement_salaire": "521",
+            
+            # Comptes auxiliaires (optionnel)
+            "use_auxiliary_accounts": True,  # Créer un sous-compte par employé (421001, 421002...)
+        },
+        "grouping": "global",              # global = 1 écriture pour toute l'entreprise / individuel = 1 par employé
+    },
+
+    # ══════════════════════════════════════════════════════════════
+    # K. DÉCLARATIONS
+    # ══════════════════════════════════════════════════════════════
+    "declarations_config": {
+        "cnss_quarterly": True,
+        "irpp_monthly": True,
+        "annual_declaration": True,
+        "auto_reminder_days_before": 5,    # Alerte X jours avant deadline
+        "company_cnss_number": "",         # N° employeur CNSS
+        "company_tax_id": "",              # Matricule fiscal
+        "declaration_format": "standard",  # standard / xml / csv
+    },
+    
+    # ══════════════════════════════════════════════════════════════
+    # L. HISTORIQUE DES MODIFICATIONS (audit trail)
+    # ══════════════════════════════════════════════════════════════
+    "change_history": [
+        # Auto-populated :
+        # {
+        #     "date": "2025-01-15T10:30:00",
+        #     "user_id": "...",
+        #     "user_name": "Ahmed",
+        #     "section": "irpp_config",
+        #     "field": "brackets[1].rate",
+        #     "old_value": 25,
+        #     "new_value": 26,
+        #     "reason": "Application Loi de Finances 2025"
+        # }
+    ],
+}
+```
+
+### 11.2 — Presets "Loi de Finances" (chargement en 1 clic)
+
+```python
+# Collection MongoDB : `finance_law_presets`
+# Presets pré-enregistrés pour chaque Loi de Finances
+
+FINANCE_LAW_PRESETS = {
+    "LF_2024": {
+        "name": "Loi de Finances 2024",
+        "year": 2024,
+        "effective_date": "2024-01-01",
+        "irpp_brackets": [
+            {"min": 0, "max": 5000, "rate": 0},
+            {"min": 5000.001, "max": 20000, "rate": 26},
+            {"min": 20000.001, "max": 30000, "rate": 28},
+            {"min": 30000.001, "max": 50000, "rate": 32},
+            {"min": 50000.001, "max": None, "rate": 35},
+        ],
+        "css_rate": 1.0,
+        "css_active": True,
+        "cnss_employee_rate": 9.18,
+        "cnss_employer_rate": 16.57,
+        "tfp_rate_industrie": 2.0,
+        "tfp_rate_autres": 1.0,
+        "foprolos_rate": 1.0,
+        "smig_48h": 472.368,
+        "smig_40h": 407.944,
+        "professional_expenses_rate": 10,
+        "professional_expenses_cap": 2000,
+        "family_deductions": {
+            "chef_de_famille": 300,
+            "conjoint_sans_revenu": 260,
+            "enfant": 100,
+            "enfant_handicape": 2000,
+            "parent_a_charge": 150,
+            "etudiant_sans_bourse": 1000,
+            "max_enfants": 4,
+        },
+        "changes_summary": [
+            "Maintien du barème IRPP à 5 tranches",
+            "CSS maintenue à 1%",
+            "Pas de modification des taux CNSS",
+        ],
+    },
+    "LF_2025": {
+        "name": "Loi de Finances 2025",
+        "year": 2025,
+        "effective_date": "2025-01-01",
+        "irpp_brackets": [
+            {"min": 0, "max": 5000, "rate": 0},
+            {"min": 5000.001, "max": 20000, "rate": 26},
+            {"min": 20000.001, "max": 30000, "rate": 28},
+            {"min": 30000.001, "max": 50000, "rate": 32},
+            {"min": 50000.001, "max": None, "rate": 35},
+        ],
+        "css_rate": 1.0,
+        "css_active": True,
+        "cnss_employee_rate": 9.18,
+        "cnss_employer_rate": 16.57,
+        "tfp_rate_industrie": 2.0,
+        "tfp_rate_autres": 1.0,
+        "foprolos_rate": 1.0,
+        "smig_48h": 472.368,   # ⚠️ Vérifier si revalorisation en 2025
+        "smig_40h": 407.944,
+        "professional_expenses_rate": 10,
+        "professional_expenses_cap": 2000,
+        "family_deductions": {
+            "chef_de_famille": 300,
+            "conjoint_sans_revenu": 260,
+            "enfant": 100,
+            "enfant_handicape": 2000,
+            "parent_a_charge": 150,
+            "etudiant_sans_bourse": 1000,
+            "max_enfants": 4,
+        },
+        "changes_summary": [
+            "⚠️ Vérifier les modifications exactes de la LF 2025",
+            "Vérifier si le SMIG a été revalorisé",
+            "Vérifier si de nouvelles contributions ont été ajoutées",
+        ],
+    },
+}
+```
+
+### 11.3 — Routes backend configuration
+
+Créer `backend/routes/hr_config.py` :
+
+```
+# ── Lecture de la configuration ──
+GET    /api/hr/config                           → Configuration RH complète de l'entreprise
+GET    /api/hr/config/irpp                      → Barème IRPP actif
+GET    /api/hr/config/cnss                      → Taux CNSS actifs
+GET    /api/hr/config/parafiscal                → TFP, FOPROLOS
+GET    /api/hr/config/contract-types            → Types de contrats (actifs + inactifs)
+GET    /api/hr/config/leave-types               → Types de congés (actifs + inactifs)
+GET    /api/hr/config/rubrics                   → Rubriques de paie (actifs + inactifs)
+GET    /api/hr/config/accounting                → Configuration comptable de la paie
+GET    /api/hr/config/minimum-wages             → SMIG/SMAG
+GET    /api/hr/config/holidays                  → Jours fériés
+
+# ── Modification de la configuration ──
+PUT    /api/hr/config/irpp                      → Modifier le barème IRPP
+PUT    /api/hr/config/cnss                      → Modifier les taux CNSS
+PUT    /api/hr/config/parafiscal                → Modifier TFP/FOPROLOS
+PUT    /api/hr/config/minimum-wages             → Modifier SMIG/SMAG
+PUT    /api/hr/config/accounting                → Modifier la config comptable paie
+
+# ── Activation/désactivation ──
+PUT    /api/hr/config/contract-types/{code}     → Activer/désactiver un type de contrat
+PUT    /api/hr/config/leave-types/{code}        → Activer/désactiver un type de congé
+PUT    /api/hr/config/rubrics/{code}            → Activer/désactiver une rubrique de paie
+
+# ── Éléments personnalisés ──
+POST   /api/hr/config/contract-types/custom     → Ajouter un type de contrat personnalisé
+POST   /api/hr/config/leave-types/custom        → Ajouter un type de congé personnalisé
+POST   /api/hr/config/rubrics/custom            → Ajouter une rubrique de paie personnalisée
+DELETE /api/hr/config/contract-types/custom/{code} → Supprimer un type personnalisé
+DELETE /api/hr/config/leave-types/custom/{code}    → Supprimer
+DELETE /api/hr/config/rubrics/custom/{code}        → Supprimer
+
+# ── Jours fériés ──
+POST   /api/hr/config/holidays                  → Ajouter un jour férié personnalisé
+PUT    /api/hr/config/holidays/{id}             → Modifier
+DELETE /api/hr/config/holidays/{id}             → Supprimer
+PUT    /api/hr/config/holidays/exclude/{code}   → Exclure un jour férié officiel
+
+# ── Loi de Finances (presets) ──
+GET    /api/hr/config/finance-laws              → Liste des presets disponibles (LF_2024, LF_2025...)
+POST   /api/hr/config/finance-laws/apply/{code} → Appliquer un preset (met à jour IRPP, CNSS, etc. en 1 clic)
+POST   /api/hr/config/finance-laws/custom       → Créer un preset personnalisé (pour les années futures)
+
+# ── Initialisation / Reset ──
+POST   /api/hr/config/initialize                → Initialiser la config (1er lancement — seed depuis tunisian_hr_config.py)
+POST   /api/hr/config/reset/{section}           → Reset une section aux valeurs par défaut
+
+# ── Historique ──
+GET    /api/hr/config/history                   → Historique de toutes les modifications
+GET    /api/hr/config/history/{section}         → Historique d'une section
+```
+
+### 11.4 — Logique d'initialisation
+
+Quand un utilisateur accède pour la **première fois** au module RH :
+1. Vérifier si `company_hr_config` existe pour cette `company_id`
+2. Si non → créer avec les valeurs par défaut de `tunisian_hr_config.py`
+3. Appliquer le preset `LF_2025` automatiquement
+4. Tous les types de contrats sont activés par défaut (l'utilisateur désactive ce qu'il ne veut pas)
+
+### 11.5 — Le moteur de paie `payroll_engine.py` DOIT lire la config MongoDB
+
+**IMPORTANT** : `payroll_engine.py` ne doit JAMAIS lire directement `tunisian_hr_config.py` pour les calculs. Il doit :
+1. Charger la config depuis `company_hr_config` (MongoDB)
+2. Si pas de config → initialiser puis charger
+3. Utiliser les taux configurés (pas les taux hardcodés)
+
+```python
+async def get_active_config(company_id: str) -> dict:
+    """
+    Récupère la configuration RH active de l'entreprise.
+    Si elle n'existe pas, l'initialise avec les valeurs par défaut.
+    """
+    config = await db.company_hr_config.find_one({"company_id": ObjectId(company_id)})
+    if not config:
+        config = await initialize_default_config(company_id)
+    return config
+
+async def calculate_payslip(employee: dict, month: int, year: int, extras: dict = None) -> dict:
+    config = await get_active_config(employee["company_id"])
+    
+    cnss_rate = config["cnss_config"]["employee_rate"]        # Pas hardcodé !
+    irpp_brackets = config["irpp_config"]["brackets"]          # Pas hardcodé !
+    css_rate = config["irpp_config"]["css_rate"]               # Pas hardcodé !
+    tfp_rate = config["parafiscal_config"]["tfp"]["applied_rate"]
+    foprolos_rate = config["parafiscal_config"]["foprolos"]["rate"]
+    # ...
+```
+
+---
+
+## ÉTAPE 12 — Frontend : Pages de configuration
+
+### 12.1 — Page principale `HRConfig.js`
+
+Page de configuration avec des **onglets** :
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  ⚙️ Configuration RH & Paie              [Loi de Finances ▼]  │
+├──────┬──────────┬──────────┬──────┬──────┬──────┬──────┬───────┤
+│ IRPP │   CNSS   │TFP/FOPRO│ SMIG │Contrats│Congés│Rubri.│Compta│
+├──────┴──────────┴──────────┴──────┴──────┴──────┴──────┴───────┤
+│                                                                 │
+│  [Contenu de l'onglet sélectionné]                             │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 12.2 — Onglet IRPP
+
+```
+┌───────────────────────────────────────────────────────────────────┐
+│  Barème IRPP — Impôt sur le Revenu des Personnes Physiques       │
+│  Source : Loi de Finances 2025    Effective : 01/01/2025          │
+│                                                                   │
+│  ┌──────────────┬──────────────┬───────┬────────────────────────┐ │
+│  │  Tranche min │  Tranche max │ Taux  │ Label                  │ │
+│  ├──────────────┼──────────────┼───────┼────────────────────────┤ │
+│  │     0 TND    │  5 000 TND   │  0%   │ Tranche exonérée       │ │
+│  │  5 001 TND   │ 20 000 TND   │ 26%   │ Tranche 1          [✏️]│ │
+│  │ 20 001 TND   │ 30 000 TND   │ 28%   │ Tranche 2          [✏️]│ │
+│  │ 30 001 TND   │ 50 000 TND   │ 32%   │ Tranche 3          [✏️]│ │
+│  │ 50 001 TND   │    ∞         │ 35%   │ Tranche supérieure [✏️]│ │
+│  └──────────────┴──────────────┴───────┴────────────────────────┘ │
+│  [+ Ajouter une tranche]                                         │
+│                                                                   │
+│  CSS (Contribution Sociale de Solidarité) : [1.0 %] ☑ Active     │
+│  Frais professionnels : [10 %] — Plafond annuel : [2000 TND]     │
+│                                                                   │
+│  Déductions familiales :                                          │
+│  Chef de famille : [300] TND/an    Conjoint : [260] TND/an       │
+│  Enfant : [100] TND/an (max [4])   Handicapé : [2000] TND/an    │
+│  Parent à charge : [150] TND/an    Étudiant : [1000] TND/an      │
+│                                                                   │
+│  [💾 Enregistrer]  [↩️ Réinitialiser aux valeurs par défaut]     │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+### 12.3 — Onglet CNSS
+
+```
+┌───────────────────────────────────────────────────────────────────┐
+│  Cotisations CNSS — Régime : [Général ▼]                         │
+│                                                                   │
+│  Part salariale : 9,18%    Part patronale : 16,57%               │
+│  Total : 25,75%                                                   │
+│                                                                   │
+│  Détail :                                                         │
+│  ┌─────────────────────────────┬────────────┬───────────────────┐ │
+│  │ Branche                     │ Salariale  │ Patronale         │ │
+│  ├─────────────────────────────┼────────────┼───────────────────┤ │
+│  │ Vieillesse/Invalidité       │  4,74% [✏️]│  7,76% [✏️]      │ │
+│  │ Maladie/Maternité           │  3,17% [✏️]│  5,08% [✏️]      │ │
+│  │ Prestations familiales      │  0,00%     │  2,61% [✏️]      │ │
+│  │ Accident du travail         │  0,00%     │  [0,50%] [✏️]    │ │
+│  │ Assurance chômage           │  1,27% [✏️]│  0,62% [✏️]      │ │
+│  └─────────────────────────────┴────────────┴───────────────────┘ │
+│                                                                   │
+│  Secteur d'activité (taux accident travail) :                     │
+│  [Bureau/Administration ▼] → 0,50%                                │
+│  ☐ Utiliser un taux personnalisé : [____%]                        │
+│                                                                   │
+│  Plafond mensuel : [Aucun (illimité)] ☐ Définir un plafond       │
+│                                                                   │
+│  [💾 Enregistrer]                                                 │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+### 12.4 — Onglet Contrats
+
+```
+┌───────────────────────────────────────────────────────────────────┐
+│  Types de Contrats de Travail                                     │
+│                                                                   │
+│  ┌──────┬────────────────────────────────────────┬───────┬──────┐ │
+│  │ Code │ Nom                                    │ Actif │      │ │
+│  ├──────┼────────────────────────────────────────┼───────┼──────┤ │
+│  │ CDI  │ Contrat à Durée Indéterminée          │ ☑ ON  │  🔒  │ │
+│  │ CDD  │ Contrat à Durée Déterminée            │ ☑ ON  │  🔒  │ │
+│  │ CIVP │ Contrat Initiation Vie Professionnelle │ ☑ ON  │ [✏️] │ │
+│  │ CAIP │ Contrat Adaptation Insertion Prof.     │ ☐ OFF │ [✏️] │ │
+│  │ SIVP │ Stage Initiation Vie Professionnelle   │ ☑ ON  │ [✏️] │ │
+│  │ CTT  │ Contrat Travail Temporaire (Intérim)   │ ☐ OFF │ [✏️] │ │
+│  │ T.P. │ Contrat Temps Partiel                  │ ☑ ON  │ [✏️] │ │
+│  │ SAIS │ Contrat Saisonnier                     │ ☐ OFF │ [✏️] │ │
+│  │ APPR │ Contrat d'Apprentissage                │ ☐ OFF │ [✏️] │ │
+│  │ STAG │ Convention de Stage                     │ ☑ ON  │ [✏️] │ │
+│  │ KARA │ Contrat Karama                         │ ☐ OFF │ [✏️] │ │
+│  └──────┴────────────────────────────────────────┴───────┴──────┘ │
+│                                                                   │
+│  🔒 = Contrat obligatoire (ne peut pas être désactivé)            │
+│  [✏️] = Cliquer pour voir/modifier les paramètres du contrat      │
+│                                                                   │
+│  [+ Ajouter un type de contrat personnalisé]                      │
+│                                                                   │
+│  En cliquant sur [✏️], un drawer/modal s'ouvre avec :             │
+│  - Description du contrat                                         │
+│  - Durée max                                                      │
+│  - CNSS applicable : oui/non                                      │
+│  - IRPP applicable : oui/non                                      │
+│  - Congés applicables : oui/non                                   │
+│  - Période d'essai par catégorie                                  │
+│  - Préavis                                                        │
+│  - Référence réglementaire                                        │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+### 12.5 — Onglet Congés (même principe)
+
+Même interface que les contrats : 
+- Liste de tous les types de congés avec toggle ON/OFF
+- Nombre de jours modifiable pour chaque type
+- Possibilité d'ajouter des types personnalisés
+- Les congés obligatoires (annuel, maladie) sont verrouillés
+
+### 12.6 — Onglet Rubriques de paie
+
+```
+┌───────────────────────────────────────────────────────────────────┐
+│  Rubriques de Paie                                                │
+│                                                                   │
+│  ━━ GAINS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
+│  ┌────────────────────────────────┬───────┬──────────┬──────────┐ │
+│  │ Rubrique                       │ Actif │ Imposable│ Soumis   │ │
+│  │                                │       │ IRPP     │ CNSS     │ │
+│  ├────────────────────────────────┼───────┼──────────┼──────────┤ │
+│  │ 🔒 Salaire de base            │ ☑ ON  │ ☑ Oui    │ ☑ Oui    │ │
+│  │ Prime d'ancienneté             │ ☑ ON  │ ☑ Oui    │ ☑ Oui    │ │
+│  │ Prime de rendement             │ ☑ ON  │ ☑ Oui    │ ☑ Oui    │ │
+│  │ Prime de transport             │ ☑ ON  │ ☑ Oui    │ ☑ Oui    │ │
+│  │ Prime de panier                │ ☑ ON  │ ☑ Oui    │ ☑ Oui    │ │
+│  │ Prime de présence              │ ☐ OFF │ ☑ Oui    │ ☑ Oui    │ │
+│  │ Prime de responsabilité        │ ☐ OFF │ ☑ Oui    │ ☑ Oui    │ │
+│  │ Heures sup 25%                 │ ☑ ON  │ ☑ Oui    │ ☑ Oui    │ │
+│  │ Heures sup 50%                 │ ☑ ON  │ ☑ Oui    │ ☑ Oui    │ │
+│  │ ...                            │       │          │          │ │
+│  └────────────────────────────────┴───────┴──────────┴──────────┘ │
+│  [+ Ajouter une rubrique de gain personnalisée]                   │
+│                                                                   │
+│  ━━ RETENUES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
+│  ┌────────────────────────────────┬───────┬──────────────────────┐ │
+│  │ Rubrique                       │ Actif │ Taux / Calcul        │ │
+│  ├────────────────────────────────┼───────┼──────────────────────┤ │
+│  │ 🔒 CNSS salariale             │ ☑ ON  │ 9,18% du brut        │ │
+│  │ 🔒 IRPP                       │ ☑ ON  │ Barème progressif     │ │
+│  │ 🔒 CSS                        │ ☑ ON  │ 1,00%                │ │
+│  │ Avance sur salaire             │ ☑ ON  │ Montant fixe         │ │
+│  │ Remboursement prêt             │ ☑ ON  │ Montant fixe         │ │
+│  │ Cession sur salaire            │ ☐ OFF │ Max 33,33%           │ │
+│  │ Cotisation syndicale           │ ☐ OFF │ Variable             │ │
+│  │ Mutuelle complémentaire        │ ☐ OFF │ Variable             │ │
+│  └────────────────────────────────┴───────┴──────────────────────┘ │
+│  [+ Ajouter une retenue personnalisée]                            │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+### 12.7 — Onglet Configuration comptable
+
+```
+┌───────────────────────────────────────────────────────────────────┐
+│  Configuration Comptable de la Paie                               │
+│                                                                   │
+│  Journal de paie :                                                │
+│  Code : [PA]   Nom : [Journal de Paie]                           │
+│  ☑ Générer automatiquement les écritures à la validation          │
+│  Regroupement : ○ Global (1 écriture/mois) ○ Individuel (/empl.)│
+│                                                                   │
+│  ━━ MAPPING DES COMPTES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
+│                                                                   │
+│  ── Comptes de charge (Débit) ──                                  │
+│  Salaires et appointements      : [6311 ▼] ← sélecteur PCE       │
+│  Primes et gratifications       : [6313 ▼]                        │
+│  Indemnités                     : [6318 ▼]                        │
+│  Heures supplémentaires         : [6312 ▼]                        │
+│  CNSS patronale                 : [6341 ▼]                        │
+│  TFP                            : [6358 ▼]                        │
+│  FOPROLOS                       : [6358 ▼]                        │
+│  Accident du travail            : [6342 ▼]                        │
+│                                                                   │
+│  ── Comptes de dette (Crédit) ──                                  │
+│  Personnel — Rémunérations dues : [421 ▼]                         │
+│  CNSS à payer                   : [431 ▼]                         │
+│  IRPP + CSS à payer             : [4353 ▼]                        │
+│  TFP + FOPROLOS à payer         : [4358 ▼]                        │
+│  Avances personnel              : [4251 ▼]                        │
+│  Banque (virement salaire)      : [521 ▼]                         │
+│                                                                   │
+│  ☑ Utiliser des comptes auxiliaires par employé (421001, 421002...)│
+│                                                                   │
+│  [💾 Enregistrer]                                                 │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+### 12.8 — Bandeau "Loi de Finances"
+
+En haut de la page de configuration, un **bandeau permanent** :
+
+```
+┌───────────────────────────────────────────────────────────────────┐
+│  📋 Loi de Finances active : LF 2025                             │
+│  [Charger LF 2024] [Charger LF 2025] [➕ Créer un preset]       │
+│                                                                   │
+│  ⚠️ Attention : Charger une Loi de Finances écrasera les taux    │
+│  IRPP, CNSS, TFP, FOPROLOS et SMIG. Les modifications manuelles │
+│  seront perdues. Voulez-vous continuer ?                          │
+│  [✅ Confirmer] [❌ Annuler]                                     │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## ÉTAPE 13 — Routes dans `server.py` et `App.js`
+
+### `server.py` — ajouter :
+```python
+from routes import hr_config
+app.include_router(hr_config.router)
+```
+
+### `App.js` — ajouter :
+```jsx
+<Route path="/hr/config" element={<ProtectedRoute><HRConfig /></ProtectedRoute>} />
+```
+
+### `AppLayout.js` — dans le menu RH, ajouter :
+```javascript
+{ icon: Settings, label: 'Configuration RH', path: '/hr/config' },
+```
+
+---
+
+## CONTRAINTES TECHNIQUES — CONFIGURATION
+
+1. **La configuration est PAR ENTREPRISE** (`company_id`) — chaque entreprise peut avoir ses propres taux
+2. **Les valeurs obligatoires ne peuvent PAS être désactivées** : CDI/CDD (contrats), CNSS/IRPP/CSS (retenues), Salaire de base (gain), Congé annuel/maladie (congés)
+3. **L'historique** (`change_history`) est **en append-only** — jamais supprimé
+4. **Lors du calcul de paie**, le moteur doit TOUJOURS lire la config MongoDB, jamais les valeurs hardcodées
+5. **Les presets** Loi de Finances ne modifient que les taux fiscaux/sociaux, PAS les activations de contrats/congés/rubriques
+6. **Validation côté backend** : vérifier que les taux sont raisonnables (ex: CNSS salariale entre 0% et 50%, pas 9000%)
+7. **Chaque sélecteur de compte comptable** doit proposer la liste des comptes du PCE tunisien (existant dans `tunisian_chart_of_accounts.py`)
+8. **Les modifications de configuration** ne sont PAS rétroactives — elles s'appliquent aux calculs futurs uniquement
+
+---
+
+## RÉSUMÉ FINAL COMPLET — TOUS LES CHANGEMENTS (3 PARTIES)
+
+| # | Fichier | Action | Partie |
+|---|---------|--------|--------|
+| 1 | `backend/services/bank_ai_engine.py` | CRÉER | Bancaire |
+| 2 | `backend/routes/bank_reconciliation.py` | MODIFIER | Bancaire |
+| 3 | `frontend/src/pages/BankReconciliation.js` | MODIFIER | Bancaire |
+| 4 | `backend/data/tunisian_hr_config.py` | CRÉER | RH |
+| 5 | `backend/services/payroll_engine.py` | CRÉER | RH |
+| 6 | `backend/services/hr_declarations_service.py` | CRÉER | RH |
+| 7 | `backend/routes/hr_employees.py` | CRÉER | RH |
+| 8 | `backend/routes/hr_payroll.py` | CRÉER | RH |
+| 9 | `backend/routes/hr_leave.py` | CRÉER | RH |
+| 10 | `backend/routes/hr_declarations.py` | CRÉER | RH |
+| 11 | `backend/routes/hr_config.py` | CRÉER | Config |
+| 12 | `frontend/src/pages/HRConfig.js` | CRÉER | Config |
+| 13 | `backend/server.py` | MODIFIER | RH + Config |
+| 14 | `frontend/src/pages/HRDashboard.js` | CRÉER | RH |
+| 15 | `frontend/src/pages/Employees.js` | CRÉER | RH |
+| 16 | `frontend/src/pages/EmployeeDetail.js` | CRÉER | RH |
+| 17 | `frontend/src/pages/Payroll.js` | CRÉER | RH |
+| 18 | `frontend/src/pages/LeaveManagement.js` | CRÉER | RH |
+| 19 | `frontend/src/pages/HRDeclarations.js` | CRÉER | RH |
+| 20 | `frontend/src/App.js` | MODIFIER | RH + Config |
+| 21 | `frontend/src/components/layout/AppLayout.js` | MODIFIER | RH + Config |
+
+**Total : 21 fichiers (13 à créer, 8 à modifier)**
+
+---
+
+## TEST — CONFIGURATION
+
+1. **Initialisation** : Premier accès → la config est créée avec les valeurs par défaut LF 2025
+2. **IRPP** : Modifier une tranche (ex: 26% → 25%) → vérifier que le calcul de paie utilise le nouveau taux
+3. **CNSS** : Changer le taux accident travail (0,5% → 2%) → vérifier les charges patronales
+4. **Contrats** : Désactiver CIVP → vérifier qu'il n'apparaît plus dans le formulaire de création d'employé
+5. **Congés** : Désactiver "Pèlerinage" → vérifier qu'il n'apparaît plus dans les demandes de congé
+6. **Rubriques** : Activer "Prime de risque" → vérifier qu'elle apparaît dans le calcul de paie
+7. **Loi de Finances** : Charger LF 2024 → vérifier que tous les taux sont mis à jour
+8. **Historique** : Vérifier que chaque modification est tracée avec utilisateur/date/avant/après
+9. **Comptable** : Changer le compte 6311 → 631100 → vérifier que l'écriture de paie utilise le nouveau compte
+10. **Rubriques personnalisées** : Ajouter une "Prime exceptionnelle COVID" → la retrouver dans le calcul de paie
