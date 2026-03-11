@@ -234,9 +234,9 @@ const SupplierInvoices = () => {
         <Card className="p-4"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><Input placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" /></div></Card>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-violet-100 rounded-lg"><Receipt className="w-5 h-5 text-violet-600" /></div><div><p className="text-sm text-gray-600">Total facturé</p><p className="text-2xl font-bold text-violet-600">{stats.total.toFixed(2)} TND</p></div></div></Card>
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-green-100 rounded-lg"><CreditCard className="w-5 h-5 text-green-600" /></div><div><p className="text-sm text-gray-600">Payé</p><p className="text-2xl font-bold text-green-600">{stats.paid.toFixed(2)} TND</p></div></div></Card>
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-red-100 rounded-lg"><Receipt className="w-5 h-5 text-red-600" /></div><div><p className="text-sm text-gray-600">À payer</p><p className="text-2xl font-bold text-red-600">{stats.pending.toFixed(2)} TND</p></div></div></Card>
+          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-violet-100 rounded-lg"><Receipt className="w-5 h-5 text-violet-600" /></div><div><p className="text-sm text-gray-600">Total facturé</p><p className="text-2xl font-bold text-violet-600">{stats.total.toFixed(3)} TND</p></div></div></Card>
+          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-green-100 rounded-lg"><CreditCard className="w-5 h-5 text-green-600" /></div><div><p className="text-sm text-gray-600">Payé</p><p className="text-2xl font-bold text-green-600">{stats.paid.toFixed(3)} TND</p></div></div></Card>
+          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-red-100 rounded-lg"><Receipt className="w-5 h-5 text-red-600" /></div><div><p className="text-sm text-gray-600">À payer</p><p className="text-2xl font-bold text-red-600">{stats.pending.toFixed(3)} TND</p></div></div></Card>
         </div>
 
         <Card>
@@ -255,8 +255,8 @@ const SupplierInvoices = () => {
                       <TableCell>{doc.supplier_name}</TableCell>
                       <TableCell>{doc.date ? new Date(doc.date).toLocaleDateString('fr-FR') : '-'}</TableCell>
                       <TableCell>{doc.due_date ? new Date(doc.due_date).toLocaleDateString('fr-FR') : '-'}</TableCell>
-                      <TableCell className="font-semibold">{(doc.total || 0).toFixed(2)} TND</TableCell>
-                      <TableCell className="font-semibold text-red-600">{(doc.balance_due || 0).toFixed(2)} TND</TableCell>
+                      <TableCell className="font-semibold">{(doc.total || 0).toFixed(3)} TND</TableCell>
+                      <TableCell className="font-semibold text-red-600">{(doc.balance_due || 0).toFixed(3)} TND</TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-0.5">
                           <Badge className={statusConfig.className}>{statusConfig.label}</Badge>
@@ -316,7 +316,7 @@ const SupplierInvoices = () => {
                     <div><Label className="text-xs">Prix HT</Label><Input type="number" value={item.unit_price} onChange={(e) => handleItemChange(index, 'unit_price', parseFloat(e.target.value) || 0)} /></div>
                     <div><Label className="text-xs">TVA %</Label><Input type="number" value={item.tax_rate} onChange={(e) => handleItemChange(index, 'tax_rate', parseFloat(e.target.value) || 0)} /></div>
                     <div><Label className="text-xs">Remise %</Label><Input type="number" value={item.discount} onChange={(e) => handleItemChange(index, 'discount', parseFloat(e.target.value) || 0)} /></div>
-                    <div><Label className="text-xs">Total</Label><Input type="number" value={item.total.toFixed(2)} disabled className="bg-gray-100" /></div>
+                    <div><Label className="text-xs">Total</Label><Input type="number" value={item.total.toFixed(3)} disabled className="bg-gray-100" /></div>
                   </div>
                 </div>
               ))}

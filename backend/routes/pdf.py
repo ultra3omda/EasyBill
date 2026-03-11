@@ -46,6 +46,13 @@ async def get_invoice_pdf(
     # Get company details
     company_doc = await db.companies.find_one({"_id": ObjectId(company_id)})
     
+    # Bank accounts to display in footer (from cash_accounts with show_in_footer)
+    bank_accounts_raw = await db.cash_accounts.find({
+        "company_id": ObjectId(company_id),
+        "show_in_footer": True
+    }).to_list(10)
+    bank_accounts = [{"bank_name": b.get("bank_name", ""), "rib": b.get("rib", "")} for b in bank_accounts_raw if b.get("bank_name") or b.get("rib")]
+    
     # Serialize for PDF
     invoice_data = {
         "number": invoice.get("number", ""),
@@ -60,6 +67,7 @@ async def get_invoice_pdf(
         "total": invoice.get("total", 0),
         "notes": invoice.get("notes", ""),
         "payment_terms": invoice.get("payment_terms", "À réception"),
+        "show_bank_details": invoice.get("show_bank_details", True),
     }
     
     customer_data = {
@@ -82,9 +90,7 @@ async def get_invoice_pdf(
         "legal_form": company_doc.get("legal_form", ""),
         "capital": company_doc.get("capital", ""),
         "rc_number": company_doc.get("rc_number", ""),
-        "bank_name": company_doc.get("bank_name", ""),
-        "bank_rib": company_doc.get("bank_rib", ""),
-        "bank_iban": company_doc.get("bank_iban", ""),
+        "bank_accounts": bank_accounts if bank_accounts else [{"bank_name": company_doc.get("bank_name", ""), "rib": company_doc.get("bank_rib", "") or company_doc.get("bank_iban", "")}],
     }
     
     # Generate PDF

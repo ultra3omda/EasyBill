@@ -303,7 +303,7 @@ const InvoiceFormModal = ({ open, onClose, onSuccess, invoice }) => {
                       <Label className="text-xs">Total TTC</Label>
                       <Input
                         type="number"
-                        value={item.total.toFixed(2)}
+                        value={item.total.toFixed(3)}
                         disabled
                         className="bg-gray-100"
                       />
@@ -318,7 +318,7 @@ const InvoiceFormModal = ({ open, onClose, onSuccess, invoice }) => {
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="text-right">
                 <p className="text-sm text-gray-600">Total TTC</p>
-                <p className="text-2xl font-bold text-violet-600">{calculateTotal().toFixed(2)} TND</p>
+                <p className="text-2xl font-bold text-violet-600">{calculateTotal().toFixed(3)} TND</p>
               </div>
             </div>
           </div>

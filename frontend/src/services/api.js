@@ -1,7 +1,9 @@
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+// REACT_APP_USE_PROXY=true : requêtes via proxy (same-origin, pas de CORS)
+const USE_PROXY = process.env.REACT_APP_USE_PROXY === 'true';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+const API = USE_PROXY ? '/api' : `${BACKEND_URL}/api`;
 
 // Create axios instance with default config
 const apiClient = axios.create({
@@ -30,10 +32,13 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Unauthorized - clear token and redirect to login
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Ne pas rediriger si c'est une requête de login (login, google, facebook, register)
+      const isAuthRequest = error.config?.url && /^\/auth\/(login|google|facebook|register)/.test(error.config.url);
+      if (!isAuthRequest) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -43,7 +48,7 @@ apiClient.interceptors.response.use(
 export const authAPI = {
   register: (data) => apiClient.post('/auth/register', data),
   login: (data) => apiClient.post('/auth/login', data),
-  googleLogin: (data) => apiClient.post('/auth/google', data),
+  googleLogin: (data) => apiClient.post('/auth/google', data, { timeout: 20000 }),
   facebookLogin: (data) => apiClient.post('/auth/facebook', data),
   forgotPassword: (data) => apiClient.post('/auth/forgot-password', data),
   resetPassword: (data) => apiClient.post('/auth/reset-password', data),
@@ -114,6 +119,20 @@ export const warehousesAPI = {
   delete: (companyId, id) => apiClient.delete(`/warehouses/${id}?company_id=${companyId}`),
 };
 
+// Import/Export API
+export const importExportAPI = {
+  importCustomers: (companyId, formData) => apiClient.post(`/import-export/customers/import?company_id=${companyId}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  importOdooInvoices: (companyId, formData, params = {}) => {
+    const q = new URLSearchParams({ company_id: companyId, ...params }).toString();
+    return apiClient.post(`/import-export/odoo-invoices/import?${q}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  getOdooInvoicesTemplate: () => apiClient.get('/import-export/odoo-invoices/template', { responseType: 'blob' }),
+};
+
 // Seed API - Generate test data
 export const seedAPI = {
   generateTestData: (companyId) => apiClient.post(`/seed/test-data?company_id=${companyId}`),
@@ -155,6 +174,12 @@ export const paymentsAPI = {
   list: (companyId, type = null) => {
     const params = type ? `?company_id=${companyId}&type=${type}` : `?company_id=${companyId}`;
     return apiClient.get(`/payments/${params}`);
+  },
+  getPendingInvoices: (companyId, customerId = null) => {
+    const params = customerId
+      ? `?company_id=${companyId}&customer_id=${customerId}`
+      : `?company_id=${companyId}`;
+    return apiClient.get(`/payments/pending-invoices${params}`);
   },
   get: (companyId, id) => apiClient.get(`/payments/${id}?company_id=${companyId}`),
   delete: (companyId, id) => apiClient.delete(`/payments/${id}?company_id=${companyId}`),
@@ -272,9 +297,11 @@ export const pdfAPI = {
 
 // A - Cash Accounts API
 export const cashAPI = {
-  listAccounts: (companyId) => apiClient.get(`/cash/accounts?company_id=${companyId}`),
+  listAccounts: (companyId, accountType) => apiClient.get(`/cash/accounts?company_id=${companyId}${accountType ? `&account_type=${accountType}` : ''}`),
+  getAccount: (companyId, id) => apiClient.get(`/cash/accounts/${id}?company_id=${companyId}`),
   createAccount: (companyId, data) => apiClient.post(`/cash/accounts?company_id=${companyId}`, data),
   updateAccount: (companyId, id, data) => apiClient.put(`/cash/accounts/${id}?company_id=${companyId}`, data),
+  deleteAccount: (companyId, id) => apiClient.delete(`/cash/accounts/${id}?company_id=${companyId}`),
   recordTransaction: (companyId, data) => apiClient.post(`/cash/transactions?company_id=${companyId}`, data),
   recordExpense: (companyId, data) => apiClient.post(`/cash/expenses?company_id=${companyId}`, data),
   listTransactions: (companyId, params = {}) => {
@@ -335,6 +362,24 @@ export const reminderEngineAPI = {
   },
 };
 
+// Collaborators API
+export const collaboratorsAPI = {
+  list: (companyId, params = {}) => {
+    const q = new URLSearchParams({ company_id: companyId, ...params }).toString();
+    return apiClient.get(`/collaborators/?${q}`);
+  },
+  get: (companyId, id) => apiClient.get(`/collaborators/${id}?company_id=${companyId}`),
+  getRoles: () => apiClient.get('/collaborators/roles'),
+  invite: (companyId, data) => apiClient.post(`/collaborators/invite?company_id=${companyId}`, data),
+  update: (companyId, id, data) => apiClient.put(`/collaborators/${id}?company_id=${companyId}`, data),
+  suspend: (companyId, id) => apiClient.post(`/collaborators/${id}/suspend?company_id=${companyId}`),
+  reactivate: (companyId, id) => apiClient.post(`/collaborators/${id}/reactivate?company_id=${companyId}`),
+  revoke: (companyId, id) => apiClient.post(`/collaborators/${id}/revoke?company_id=${companyId}`),
+  resendInvitation: (companyId, id) => apiClient.post(`/collaborators/${id}/resend-invitation?company_id=${companyId}`),
+  delete: (companyId, id) => apiClient.delete(`/collaborators/${id}?company_id=${companyId}`),
+  getMyPermissions: (companyId) => apiClient.get(`/collaborators/me/permissions?company_id=${companyId}`),
+};
+
 // E - AI Assistant API
 export const aiAPI = {
   status: () => apiClient.get('/ai/status'),
@@ -343,6 +388,39 @@ export const aiAPI = {
   customerFollowup: (companyId, customerId) =>
     apiClient.post(`/ai/customer-followup?company_id=${companyId}`, { customer_id: customerId }),
   categorizeExpense: (companyId, data) => apiClient.post(`/ai/categorize-expense?company_id=${companyId}`, data),
+};
+
+export const bankStatementImportAPI = {
+  listImports: (companyId) => apiClient.get(`/bank-statement-import/imports?company_id=${companyId}`),
+  getImport: (companyId, importId) => apiClient.get(`/bank-statement-import/imports/${importId}?company_id=${companyId}`),
+  listTransactions: (companyId, params = {}) => {
+    const q = new URLSearchParams({ company_id: companyId, ...params }).toString();
+    return apiClient.get(`/bank-statement-import/transactions?${q}`);
+  },
+  listSuggestions: (companyId, params = {}) => {
+    const q = new URLSearchParams({ company_id: companyId, ...params }).toString();
+    return apiClient.get(`/bank-statement-import/reconciliation-suggestions?${q}`);
+  },
+  approveSuggestion: (companyId, data) => apiClient.post(`/bank-statement-import/reconciliation/approve?company_id=${companyId}`, data),
+  rejectSuggestion: (companyId, suggestionId) => apiClient.post(`/bank-statement-import/reconciliation/reject?suggestion_id=${suggestionId}&company_id=${companyId}`),
+  ignoreTransaction: (companyId, transactionId) => apiClient.post(`/bank-statement-import/reconciliation/ignore?transaction_id=${transactionId}&company_id=${companyId}`),
+  createManualEntry: (companyId, data) => apiClient.post(`/bank-statement-import/reconciliation/manual-entry?company_id=${companyId}`, data),
+  retryImport: (companyId, importId) => apiClient.post(`/bank-statement-import/retry/${importId}?company_id=${companyId}`),
+};
+
+export const accountingMappingsAPI = {
+  listSupplierMappings: (companyId, params = {}) => {
+    const q = new URLSearchParams({ company_id: companyId, ...params }).toString();
+    return apiClient.get(`/accounting/supplier-mappings?${q}`);
+  },
+  createSupplierMapping: (companyId, data) => apiClient.post(`/accounting/supplier-mappings?company_id=${companyId}`, data),
+  updateSupplierMapping: (companyId, mappingId, data) => apiClient.put(`/accounting/supplier-mappings/${mappingId}?company_id=${companyId}`, data),
+  listLearningPatterns: (companyId, params = {}) => {
+    const q = new URLSearchParams({ company_id: companyId, ...params }).toString();
+    return apiClient.get(`/accounting/learning-patterns?${q}`);
+  },
+  getChartMetadata: (companyId) => apiClient.get(`/accounting/chart?company_id=${companyId}`),
+  initializeChart: (companyId, force = false) => apiClient.post(`/accounting/chart/initialize?company_id=${companyId}&force=${force}`),
 };
 
 export default apiClient;

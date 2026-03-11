@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -7,16 +7,63 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card } from '../components/ui/card';
 import { toast } from '../hooks/use-toast';
-import { Mail, Lock, Facebook, Chrome } from 'lucide-react';
-import { useGoogleLogin } from '@react-oauth/google';
+import { Mail, Lock, Facebook } from 'lucide-react';
+
+const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
+const GOOGLE_REDIRECT_URI = process.env.REACT_APP_GOOGLE_REDIRECT_URI || 'http://localhost:3000/login';
+
+// Parser le token Google depuis l'URL après redirect (flux implicit)
+function parseGoogleTokenFromHash() {
+  const hash = window.location.hash;
+  if (!hash) return null;
+  const params = new URLSearchParams(hash.substring(1));
+  return params.get('access_token');
+}
+
+// Redirection directe vers Google OAuth (évite COOP/popup qui bloque)
+function redirectToGoogle() {
+  if (!GOOGLE_CLIENT_ID) {
+    toast({ title: 'Configuration manquante', description: 'REACT_APP_GOOGLE_CLIENT_ID non défini', variant: 'destructive' });
+    return;
+  }
+  const scope = encodeURIComponent('openid email profile');
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}&response_type=token&scope=${scope}&prompt=consent`;
+  window.location.href = url;
+}
 
 const Login = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, loginWithGoogle, loginWithFacebook } = useAuth();
   const { t } = useLanguage();
-  const navigate = useNavigate();
+
+  const handleGoogleCallback = useCallback(() => {
+    const accessToken = parseGoogleTokenFromHash();
+    if (!accessToken) return;
+    window.history.replaceState(null, '', window.location.pathname);
+    setLoading(true);
+    loginWithGoogle({ access_token: accessToken })
+      .then((result) => {
+        if (result.success) {
+          toast({ title: 'Connexion réussie', description: 'Bienvenue sur EasyBill!' });
+          navigate('/dashboard', { replace: true });
+        }
+      })
+      .catch((error) => {
+        toast({
+          title: 'Erreur Google',
+          description: error.response?.data?.detail || 'Erreur lors de la connexion avec Google',
+          variant: 'destructive',
+        });
+      })
+      .finally(() => setLoading(false));
+  }, [loginWithGoogle, navigate]);
+
+  useEffect(() => {
+    handleGoogleCallback();
+  }, [handleGoogleCallback]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -29,7 +76,7 @@ const Login = () => {
           title: 'Connexion réussie',
           description: 'Bienvenue sur EasyBill!',
         });
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
       }
     } catch (error) {
       toast({
@@ -42,37 +89,6 @@ const Login = () => {
     }
   };
 
-  const googleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      setLoading(true);
-      try {
-        // tokenResponse.access_token → le backend appelle /userinfo pour récupérer email/name
-        const result = await loginWithGoogle({ access_token: tokenResponse.access_token });
-        if (result.success) {
-          toast({ title: 'Connexion réussie', description: 'Bienvenue sur EasyBill!' });
-          navigate('/dashboard');
-        }
-      } catch (error) {
-        toast({
-          title: 'Erreur Google',
-          description: error.response?.data?.detail || 'Erreur lors de la connexion avec Google',
-          variant: 'destructive',
-        });
-      } finally {
-        setLoading(false);
-      }
-    },
-    onError: (error) => {
-      console.error('Google OAuth error:', error);
-      toast({
-        title: 'Connexion Google annulée',
-        description: 'La connexion Google a été annulée ou a échoué.',
-        variant: 'destructive',
-      });
-    },
-    flow: 'implicit',
-  });
-
   const handleFacebookLogin = async () => {
     setLoading(true);
     try {
@@ -82,7 +98,7 @@ const Login = () => {
           title: 'Connexion réussie',
           description: 'Bienvenue sur EasyBill!',
         });
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
       }
     } catch (error) {
       toast({
@@ -180,7 +196,7 @@ const Login = () => {
             type="button"
             variant="outline"
             className="w-full py-6 border-2 hover:bg-red-50 border-gray-300"
-            onClick={() => googleLogin()}
+            onClick={redirectToGoogle}
             data-testid="login-google-button"
           >
             <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">

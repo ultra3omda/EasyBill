@@ -12,6 +12,8 @@ import os
 import logging
 
 logger = logging.getLogger(__name__)
+from services.account_resolution_service import AccountResolutionService
+from services.journal_posting_service import JournalPostingService
 
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
@@ -33,6 +35,8 @@ class AccountingSyncService:
     
     def __init__(self):
         self.db = db
+        self.account_resolution = AccountResolutionService(self.db)
+        self.journal_posting = JournalPostingService(self.db)
     
     async def _get_next_entry_number(self, company_id: str, journal_type: str, year: int) -> str:
         """Génère le prochain numéro d'écriture comptable"""
@@ -94,29 +98,19 @@ class AccountingSyncService:
             
             logger.info(f"[SYNC] Référence générée: {reference}")
             
-            # Créer l'écriture
-            entry = {
-                "company_id": ObjectId(company_id),
-                "entry_number": reference,
-                "date": date,
-                "reference": reference,
-                "description": description,
-                "journal_type": journal_type,
-                "lines": lines,
-                "total_debit": round(total_debit, 3),
-                "total_credit": round(total_credit, 3),
-                "document_type": document_type,
-                "document_id": ObjectId(document_id),
-                "status": "posted",  # Automatiquement validée
-                "created_at": datetime.now(timezone.utc),
-                "auto_generated": True
-            }
-            
-            result = await self.db.journal_entries.insert_one(entry)
-            
+            entry_id, _ = await self.journal_posting.create_posted_entry(
+                company_id=company_id,
+                date=date,
+                reference=reference,
+                description=description,
+                journal_type=journal_type,
+                lines=lines,
+                document_type=document_type,
+                document_id=document_id,
+                extra_fields={"auto_generated": True},
+            )
             logger.info(f"[SYNC] ✅ Écriture comptable créée: {reference} pour {document_type} {document_id}")
-            
-            return str(result.inserted_id)
+            return str(entry_id)
             
         except Exception as e:
             logger.error(f"[SYNC] ❌ Erreur création écriture comptable: {str(e)}")
@@ -137,8 +131,8 @@ class AccountingSyncService:
                 logger.error(f"Facture {invoice_id} non trouvée")
                 return None
             
-            # Ne synchroniser que les factures envoyées ou payées
-            if invoice.get("status") not in ["sent", "paid"]:
+            # Ne synchroniser que les factures envoyées, partiellement payées ou payées
+            if invoice.get("status") not in ["sent", "paid", "partial"]:
                 logger.info(f"Facture {invoice_id} en statut {invoice.get('status')}, pas de synchronisation")
                 return None
             
@@ -155,9 +149,12 @@ class AccountingSyncService:
             total = invoice.get("total", 0)
             discount = invoice.get("discount", 0)
             
-            # Déterminer le compte de vente selon le type de produits
-            # Par défaut 707 (Ventes de marchandises)
-            sales_account = "707"
+            receivable = await self.account_resolution.resolve_account(company_id, "customer_receivable", "Clients")
+            revenue_goods = await self.account_resolution.resolve_account(company_id, "revenue_goods", "Ventes de marchandises")
+            revenue_services = await self.account_resolution.resolve_account(company_id, "revenue_services", "Prestations de services")
+            vat_collectible = await self.account_resolution.resolve_account(company_id, "vat_collectible", "TVA collectee")
+            sales_account = revenue_goods["code"] or "707"
+            sales_label = revenue_goods["name"] or "Ventes de marchandises"
             
             # Analyser les items pour déterminer le type
             items = invoice.get("items", [])
@@ -165,13 +162,14 @@ class AccountingSyncService:
                 first_item = items[0]
                 # Si c'est un service, utiliser 706
                 if "service" in first_item.get("product_name", "").lower():
-                    sales_account = "706"
+                    sales_account = revenue_services["code"] or "706"
+                    sales_label = revenue_services["name"] or "Prestations de services"
             
             # Construire les lignes d'écriture
             lines = [
                 {
-                    "account_code": "411",
-                    "account_name": "Clients",
+                    "account_code": receivable["code"] or "411",
+                    "account_name": receivable["name"] or "Clients",
                     "debit": round(total, 3),
                     "credit": 0,
                     "description": f"Facture {invoice.get('number', '')}"
@@ -182,7 +180,7 @@ class AccountingSyncService:
             if subtotal > 0:
                 lines.append({
                     "account_code": sales_account,
-                    "account_name": "Ventes de marchandises" if sales_account == "707" else "Prestations de services",
+                    "account_name": sales_label,
                     "debit": 0,
                     "credit": round(subtotal, 3),
                     "description": f"Vente facture {invoice.get('number', '')}"
@@ -201,8 +199,8 @@ class AccountingSyncService:
             # Ligne TVA
             if tax_amount > 0:
                 lines.append({
-                    "account_code": "4351",
-                    "account_name": "État - TVA à payer",
+                    "account_code": vat_collectible["code"] or "4351",
+                    "account_name": vat_collectible["name"] or "État - TVA à payer",
                     "debit": 0,
                     "credit": round(tax_amount, 3),
                     "description": f"TVA facture {invoice.get('number', '')}"
@@ -267,11 +265,18 @@ class AccountingSyncService:
             amount = payment.get("amount", 0)
             payment_method = payment.get("payment_method", "transfer")
             ref = payment.get("reference") or payment.get("number", "")
+            customer_receivable = await self.account_resolution.resolve_account(company_id, "customer_receivable", "Clients")
+            cash = await self.account_resolution.resolve_account(company_id, "cash", "Caisse")
+            bank = await self.account_resolution.resolve_account(company_id, "bank", "Banques")
 
             # Résoudre le compte de trésorerie
             treasury_account, treasury_name, journal_type = self.PAYMENT_METHOD_MAP.get(
-                payment_method, ("521", "Banques", "bank")
+                payment_method,
+                (bank["code"] or "521", bank["name"] or "Banques", "bank"),
             )
+            if payment_method in ("cash", "e_dinar"):
+                treasury_account = cash["code"] or treasury_account
+                treasury_name = cash["name"] or treasury_name
 
             # Construire les lignes d'écriture
             lines = [
@@ -283,8 +288,8 @@ class AccountingSyncService:
                     "description": f"Encaissement {ref}"
                 },
                 {
-                    "account_code": "411",
-                    "account_name": "Clients",
+                    "account_code": customer_receivable["code"] or "411",
+                    "account_name": customer_receivable["name"] or "Clients",
                     "debit": 0,
                     "credit": round(amount, 3),
                     "description": f"Règlement client {ref}"
@@ -348,10 +353,13 @@ class AccountingSyncService:
             total = invoice.get("total", 0)
             
             logger.info(f"[SYNC] Montants - Subtotal: {subtotal}, Tax: {tax_amount}, Total: {total}")
+            supplier_payable = await self.account_resolution.resolve_account(company_id, "supplier_payable", "Fournisseurs")
+            vat_deductible = await self.account_resolution.resolve_account(company_id, "vat_deductible", "TVA deductibile")
+            purchases = await self.account_resolution.resolve_account(company_id, "purchases", "Achats")
             
             # Déterminer le compte d'achat
-            # Par défaut 607 (Achats de marchandises)
-            purchase_account = "607"
+            purchase_account = purchases["code"] or "607"
+            purchase_label = purchases["name"] or "Achats"
             
             # Analyser les items pour déterminer le type
             items = invoice.get("items", [])
@@ -359,10 +367,11 @@ class AccountingSyncService:
                 first_item = items[0]
                 # Si c'est un service, utiliser 604
                 if "service" in first_item.get("description", "").lower():
-                    purchase_account = "604"
+                    purchase_account = purchases["code"] or "604"
+                    purchase_label = purchases["name"] or "Achats de services"
                 # Si c'est une matière première, utiliser 601
                 elif "matière" in first_item.get("description", "").lower():
-                    purchase_account = "601"
+                    purchase_account = purchases["code"] or "601"
             
             logger.info(f"[SYNC] Compte d'achat déterminé: {purchase_account}")
             
@@ -373,7 +382,7 @@ class AccountingSyncService:
             if subtotal > 0:
                 lines.append({
                     "account_code": purchase_account,
-                    "account_name": "Achats de marchandises" if purchase_account == "607" else "Achats de services",
+                    "account_name": purchase_label,
                     "debit": round(subtotal, 3),
                     "credit": 0,
                     "description": f"Achat facture {invoice.get('number', '')}"
@@ -382,8 +391,8 @@ class AccountingSyncService:
             # Ligne TVA déductible
             if tax_amount > 0:
                 lines.append({
-                    "account_code": "4362",
-                    "account_name": "TVA récupérable sur achats et charges",
+                    "account_code": vat_deductible["code"] or "4362",
+                    "account_name": vat_deductible["name"] or "TVA récupérable sur achats et charges",
                     "debit": round(tax_amount, 3),
                     "credit": 0,
                     "description": f"TVA déductible facture {invoice.get('number', '')}"
@@ -391,8 +400,8 @@ class AccountingSyncService:
             
             # Ligne fournisseur (TTC)
             lines.append({
-                "account_code": "401",
-                "account_name": "Fournisseurs d'exploitation",
+                "account_code": supplier_payable["code"] or "401",
+                "account_name": supplier_payable["name"] or "Fournisseurs d'exploitation",
                 "debit": 0,
                 "credit": round(total, 3),
                 "description": f"Facture fournisseur {invoice.get('number', '')}"
@@ -454,17 +463,23 @@ class AccountingSyncService:
             amount = payment.get("amount", 0)
             payment_method = payment.get("payment_method", "transfer")
             ref = payment.get("reference") or payment.get("number", "")
+            supplier_payable = await self.account_resolution.resolve_account(company_id, "supplier_payable", "Fournisseurs")
+            cash = await self.account_resolution.resolve_account(company_id, "cash", "Caisse")
+            bank = await self.account_resolution.resolve_account(company_id, "bank", "Banques")
 
             # Résoudre le compte de trésorerie (même mapping que pour les clients)
             treasury_account, treasury_name, journal_type = self.PAYMENT_METHOD_MAP.get(
-                payment_method, ("521", "Banques", "bank")
+                payment_method, (bank["code"] or "521", bank["name"] or "Banques", "bank")
             )
+            if payment_method in ("cash", "e_dinar"):
+                treasury_account = cash["code"] or treasury_account
+                treasury_name = cash["name"] or treasury_name
 
             # Construire les lignes d'écriture
             lines = [
                 {
-                    "account_code": "401",
-                    "account_name": "Fournisseurs d'exploitation",
+                    "account_code": supplier_payable["code"] or "401",
+                    "account_name": supplier_payable["name"] or "Fournisseurs d'exploitation",
                     "debit": round(amount, 3),
                     "credit": 0,
                     "description": f"Règlement fournisseur {ref}"

@@ -34,6 +34,42 @@ const TYPE_COLORS = {
   autre: 'bg-gray-100 text-gray-500',
 };
 
+const OPERATION_TYPES = {
+  paiement_fournisseur: { label: 'Paiement fournisseur', color: 'bg-red-100 text-red-700' },
+  paiement_client: { label: 'Paiement client', color: 'bg-green-100 text-green-700' },
+  frais_bancaires: { label: 'Frais bancaires', color: 'bg-gray-100 text-gray-600' },
+  salaire: { label: 'Salaire', color: 'bg-blue-100 text-blue-700' },
+  charge_sociale: { label: 'Charge sociale', color: 'bg-purple-100 text-purple-700' },
+  impot: { label: 'Impot', color: 'bg-yellow-100 text-yellow-700' },
+  tva: { label: 'TVA', color: 'bg-yellow-100 text-yellow-700' },
+  loyer: { label: 'Loyer', color: 'bg-orange-100 text-orange-700' },
+  telecom: { label: 'Telecom', color: 'bg-cyan-100 text-cyan-700' },
+  marketing: { label: 'Marketing / Pub', color: 'bg-pink-100 text-pink-700' },
+  assurance: { label: 'Assurance', color: 'bg-indigo-100 text-indigo-700' },
+  transport: { label: 'Transport', color: 'bg-amber-100 text-amber-700' },
+  entretien_vehicule: { label: 'Entretien vehicule', color: 'bg-amber-100 text-amber-700' },
+  retrait_especes: { label: 'Retrait especes', color: 'bg-yellow-100 text-yellow-700' },
+  versement_especes: { label: 'Versement especes', color: 'bg-green-100 text-green-700' },
+  virement_interne: { label: 'Virement interne', color: 'bg-blue-100 text-blue-700' },
+  remboursement: { label: 'Remboursement', color: 'bg-green-100 text-green-700' },
+  charge_exploitation: { label: 'Charge exploitation', color: 'bg-orange-100 text-orange-700' },
+  produit_financier: { label: 'Produit financier', color: 'bg-emerald-100 text-emerald-700' },
+  honoraire: { label: 'Honoraires', color: 'bg-violet-100 text-violet-700' },
+  abonnement: { label: 'Abonnement / Licence', color: 'bg-sky-100 text-sky-700' },
+  fourniture_bureau: { label: 'Fournitures bureau', color: 'bg-slate-100 text-slate-700' },
+  retenue_source: { label: 'Retenue a la source', color: 'bg-yellow-100 text-yellow-700' },
+  taxe: { label: 'Taxe', color: 'bg-yellow-100 text-yellow-700' },
+  achat_carte: { label: 'Achat par carte', color: 'bg-orange-100 text-orange-700' },
+  remboursement_tva: { label: 'Remboursement TVA', color: 'bg-green-100 text-green-700' },
+  autre: { label: 'Autre', color: 'bg-gray-100 text-gray-500' },
+};
+
+const CONFIDENCE_COLORS = {
+  fort: 'bg-green-100 text-green-700 border-green-300',
+  moyen: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+  faible: 'bg-red-100 text-red-700 border-red-300',
+};
+
 export default function BankReconciliation() {
   const navigate = useNavigate();
   const { currentCompany } = useCompany();
@@ -59,6 +95,44 @@ export default function BankReconciliation() {
   const [paymentRef, setPaymentRef] = useState('');
   // Validation globale
   const [validating, setValidating] = useState(false);
+  // Masquer les lettrés par défaut
+  const [hideLettered, setHideLettered] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [reanalyzing, setReanalyzing] = useState(false);
+  const [parseElapsed, setParseElapsed] = useState(0);
+  const [parseStep, setParseStep] = useState('');
+  const parseTimerRef = useRef(null);
+  const saveTimeoutRef = useRef(null);
+  const statementRef = useRef(statement);
+  useEffect(() => { statementRef.current = statement; }, [statement]);
+
+  const saveStatement = useCallback(async (transactionsOverride) => {
+    const st = statementRef.current;
+    if (!st || !currentCompany) return;
+    const sid = st.statement_id || st.id;
+    if (!sid) return;
+    const txs = transactionsOverride ?? (st.transactions || []);
+    setSaving(true);
+    try {
+      const res = await fetch(`${API}/api/bank-reconciliation/statements/${sid}?company_id=${currentCompany.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({ transactions: txs })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Erreur sauvegarde');
+      toast.success('Modifications enregistrées');
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }, [currentCompany]);
+
+  const saveStatementDebounced = useCallback(() => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => saveStatement(), 800);
+  }, [saveStatement]);
 
   const loadHistory = useCallback(async () => {
     if (!currentCompany) return;
@@ -72,6 +146,10 @@ export default function BankReconciliation() {
   }, [currentCompany]);
 
   useEffect(() => { if (tab === 'history') loadHistory(); }, [tab, loadHistory]);
+  useEffect(() => () => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    if (parseTimerRef.current) clearInterval(parseTimerRef.current);
+  }, []);
 
   const handleFileSelect = useCallback((f) => {
     if (!f) return;
@@ -84,10 +162,40 @@ export default function BankReconciliation() {
     setStatement(null);
   }, []);
 
+  const getEstimatedTime = (f) => {
+    if (!f) return 180;
+    const sizeMb = f.size / (1024 * 1024);
+    if (sizeMb > 5) return 480;
+    if (sizeMb > 2) return 360;
+    if (sizeMb > 1) return 300;
+    if (sizeMb > 0.5) return 240;
+    return 180;
+  };
+
+  const PARSE_STEPS = [
+    { at: 0, label: 'Envoi du fichier au serveur...' },
+    { at: 3, label: 'Analyse du document en cours...' },
+    { at: 10, label: 'Extraction des transactions (Document AI / Gemini)...' },
+    { at: 30, label: 'Traitement des pages du relevé...' },
+    { at: 60, label: 'Découpage et analyse des pages volumineuses...' },
+    { at: 120, label: 'Classification IA des transactions (par batch)...' },
+    { at: 180, label: 'Finalisation de l\'analyse...' },
+  ];
+
   const handleParse = async () => {
     if (!file || !currentCompany) return;
     setParsing(true);
     setStatement(null);
+    setParseElapsed(0);
+    setParseStep(PARSE_STEPS[0].label);
+    parseTimerRef.current = setInterval(() => {
+      setParseElapsed(prev => {
+        const next = prev + 1;
+        const step = [...PARSE_STEPS].reverse().find(s => next >= s.at);
+        if (step) setParseStep(step.label);
+        return next;
+      });
+    }, 1000);
     try {
       const fd = new FormData();
       fd.append('file', file);
@@ -136,7 +244,11 @@ export default function BankReconciliation() {
         toast.error(e.message || 'Erreur lors de l\'analyse');
       }
     } finally {
+      if (parseTimerRef.current) clearInterval(parseTimerRef.current);
+      parseTimerRef.current = null;
       setParsing(false);
+      setParseElapsed(0);
+      setParseStep('');
     }
   };
 
@@ -181,6 +293,7 @@ export default function BankReconciliation() {
     const txs = [...statement.transactions];
     txs[idx] = { ...txs[idx], validated: !txs[idx].validated };
     setStatement({ ...statement, transactions: txs });
+    saveStatementDebounced();
   };
 
   const updateAccountField = (idx, field, value) => {
@@ -188,6 +301,7 @@ export default function BankReconciliation() {
     const txs = [...statement.transactions];
     txs[idx] = { ...txs[idx], [field]: value };
     setStatement({ ...statement, transactions: txs });
+    saveStatementDebounced();
   };
 
   const handleValidateSelected = async () => {
@@ -214,6 +328,13 @@ export default function BankReconciliation() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail);
       toast.success(data.message);
+      const sid = statement.statement_id || statement.id;
+      if (sid) {
+        const res2 = await fetch(`${API}/api/bank-reconciliation/statements/${sid}?company_id=${currentCompany.id}`,
+          { headers: { Authorization: `Bearer ${token()}` } });
+        const data2 = await res2.json();
+        setStatement({ ...data2, statement_id: data2.id });
+      }
     } catch (e) {
       toast.error(e.message);
     } finally {
@@ -265,6 +386,7 @@ export default function BankReconciliation() {
   );
 
   const selectedCount = (statement?.transactions || []).filter(t => t.validated && !t.lettered).length;
+  const displayRows = (statement?.transactions || []).map((t, idx) => ({ t, origIdx: idx })).filter(({ t }) => !hideLettered || !t.lettered);
 
   return (
     <AppLayout>
@@ -302,10 +424,9 @@ export default function BankReconciliation() {
         {tab === 'upload' && (
           <>
             {/* Upload zone */}
-            {!statement && (
+            {!statement && !parsing && (
               <Card>
                 <CardContent className="p-6">
-                  {/* Sélecteur API visible dès le chargement */}
                   <div className="mb-4 flex items-center gap-2">
                     <Label className="text-sm text-gray-600">API d'extraction :</Label>
                     <select
@@ -352,13 +473,86 @@ export default function BankReconciliation() {
                     <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
                       <Button variant="outline" onClick={() => { setFile(null); setStatement(null); }}>Annuler</Button>
                       <Button onClick={handleParse} disabled={parsing} className="bg-violet-600 hover:bg-violet-700 min-w-36">
-                        {parsing ? <><Loader2 className="w-4 h-4 animate-spin mr-1" /> Analyse…</> : provider === 'benchmark' ? 'Lancer le benchmark' : 'Analyser l\'extrait'}
+                        {provider === 'benchmark' ? 'Lancer le benchmark' : 'Analyser l\'extrait'}
                       </Button>
                     </div>
                   )}
                 </CardContent>
               </Card>
             )}
+
+            {/* Loading overlay during parsing */}
+            {parsing && !statement && (() => {
+              const estimated = getEstimatedTime(file);
+              const progress = Math.min((parseElapsed / estimated) * 100, 95);
+              const remaining = Math.max(estimated - parseElapsed, 0);
+              const fmtTime = s => {
+                const m = Math.floor(s / 60);
+                const sec = s % 60;
+                return m > 0 ? `${m} min ${sec.toString().padStart(2, '0')} s` : `${sec} s`;
+              };
+              return (
+                <Card className="border-violet-200 bg-gradient-to-br from-violet-50 via-white to-indigo-50">
+                  <CardContent className="py-12 px-8">
+                    <div className="flex flex-col items-center text-center space-y-6 max-w-md mx-auto">
+                      {/* Animated spinner */}
+                      <div className="relative">
+                        <div className="w-20 h-20 rounded-full border-4 border-violet-100 flex items-center justify-center">
+                          <Loader2 className="w-10 h-10 text-violet-600 animate-spin" />
+                        </div>
+                        <div
+                          className="absolute -inset-1 rounded-full border-4 border-transparent border-t-violet-500 animate-spin"
+                          style={{ animationDuration: '1.5s' }}
+                        />
+                      </div>
+
+                      {/* File info */}
+                      <div>
+                        <p className="text-lg font-bold text-violet-800">Analyse en cours</p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {file?.name} — {file ? (file.size / 1024).toFixed(1) : 0} Ko
+                        </p>
+                      </div>
+
+                      {/* Current step */}
+                      <div className="bg-white border border-violet-200 rounded-lg px-4 py-3 w-full shadow-sm">
+                        <p className="text-sm text-violet-700 font-medium">{parseStep}</p>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="w-full">
+                        <div className="flex justify-between text-xs text-gray-500 mb-1.5">
+                          <span>Progression</span>
+                          <span>{Math.round(progress)}%</span>
+                        </div>
+                        <div className="w-full h-2.5 bg-violet-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-violet-500 to-indigo-500 rounded-full transition-all duration-1000 ease-out"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Time info */}
+                      <div className="flex gap-6 text-sm">
+                        <div className="text-center">
+                          <p className="text-gray-400 text-xs">Temps écoulé</p>
+                          <p className="font-mono font-bold text-violet-700 text-lg">{fmtTime(parseElapsed)}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-gray-400 text-xs">Estimé restant</p>
+                          <p className="font-mono font-bold text-gray-600 text-lg">~{fmtTime(remaining)}</p>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-gray-400">
+                        Les relevés volumineux (&gt;15 pages) sont découpés et analysés par morceaux pour plus de fiabilité
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
             {/* Statement summary */}
             {statement && (
@@ -453,6 +647,31 @@ export default function BankReconciliation() {
                             Valider {selectedCount} écriture{selectedCount > 1 ? 's' : ''}
                           </Button>
                         )}
+                        <Button
+                          variant="outline"
+                          disabled={reanalyzing}
+                          onClick={async () => {
+                            setReanalyzing(true);
+                            try {
+                              const sid = statement.statement_id || statement.id;
+                              const res = await fetch(
+                                `${API}/api/bank-reconciliation/ai-analyze/${sid}?company_id=${currentCompany.id}`,
+                                { method: 'POST', headers: { Authorization: `Bearer ${token()}` } }
+                              );
+                              const data = await res.json();
+                              if (!res.ok) throw new Error(data.detail);
+                              setStatement(prev => ({ ...prev, transactions: data.transactions }));
+                              toast.success(`Analyse IA terminee — ${data.ai_stats?.fort || 0} fort, ${data.ai_stats?.moyen || 0} moyen, ${data.ai_stats?.faible || 0} faible`);
+                            } catch (e) {
+                              toast.error(e.message);
+                            } finally {
+                              setReanalyzing(false);
+                            }
+                          }}
+                          className="gap-1.5 border-violet-300 text-violet-700 hover:bg-violet-50"
+                        >
+                          {reanalyzing ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyse IA en cours...</> : 'Re-analyser avec IA'}
+                        </Button>
                         <Button variant="outline" onClick={() => { setStatement(null); setFile(null); }}>
                           <RefreshCw className="w-4 h-4 mr-1" /> Nouvel extrait
                         </Button>
@@ -464,12 +683,26 @@ export default function BankReconciliation() {
                 {/* Transactions table */}
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">
-                      Lignes de l'extrait — Écritures proposées
-                    </CardTitle>
-                    <p className="text-xs text-gray-500">
-                      Cochez les lignes à valider · Cliquez "Lettrer" pour rapprocher avec une facture fournisseur
-                    </p>
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div>
+                        <CardTitle className="text-base">
+                          Lignes de l'extrait — Écritures proposées
+                        </CardTitle>
+                        <p className="text-xs text-gray-500">
+                          Cochez les lignes à valider · Cliquez "Lettrer" pour rapprocher avec une facture fournisseur
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+                          <input type="checkbox" checked={hideLettered} onChange={e => setHideLettered(e.target.checked)} className="rounded" />
+                          Masquer les lettrés
+                        </label>
+                        <Button variant="outline" size="sm" onClick={saveStatement} disabled={saving || !statement?.transactions?.length}>
+                          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                          Sauvegarder
+                        </Button>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
@@ -479,21 +712,21 @@ export default function BankReconciliation() {
                             <th className="px-3 py-2 text-left w-10">✓</th>
                             <th className="px-3 py-2 text-left">Date</th>
                             <th className="px-3 py-2 text-left">Description / Libellé</th>
-                            <th className="px-3 py-2 text-right">Débit</th>
-                            <th className="px-3 py-2 text-right">Crédit</th>
+                            <th className="px-3 py-2 text-right bg-red-50/50"><span className="flex items-center justify-end gap-1"><ArrowDownLeft className="w-3.5 h-3.5 text-red-600" /> Débit (sortie)</span></th>
+                            <th className="px-3 py-2 text-right bg-green-50/50"><span className="flex items-center justify-end gap-1"><ArrowUpRight className="w-3.5 h-3.5 text-green-600" /> Crédit (entrée)</span></th>
                             <th className="px-3 py-2 text-left">Compte débit</th>
                             <th className="px-3 py-2 text-left">Compte crédit</th>
                             <th className="px-3 py-2 text-center">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                          {(statement.transactions || []).map((t, idx) => (
-                            <tr key={idx} className={`hover:bg-gray-50 ${t.validated ? 'bg-green-50/50' : ''} ${t.lettered ? 'bg-blue-50/50' : ''}`}>
+                          {displayRows.map(({ t, origIdx }) => (
+                            <tr key={origIdx} className={`hover:bg-gray-50 ${t.validated ? 'bg-green-50/50' : ''} ${t.lettered ? 'bg-blue-50/50' : ''}`}>
                               {/* Checkbox */}
                               <td className="px-3 py-2">
                                 {!t.lettered ? (
                                   <button
-                                    onClick={() => toggleValidated(idx)}
+                                    onClick={() => toggleValidated(origIdx)}
                                     className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
                                       t.validated ? 'border-green-500 bg-green-500' : 'border-gray-300'
                                     }`}
@@ -508,54 +741,79 @@ export default function BankReconciliation() {
                               {/* Date */}
                               <td className="px-3 py-2 text-gray-500 whitespace-nowrap">{t.date || '-'}</td>
 
-                              {/* Description */}
+                              {/* Description + Analyse IA */}
                               <td className="px-3 py-2">
                                 <div className="max-w-xs">
                                   <p className="truncate font-medium">{t.description}</p>
-                                  <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${TYPE_COLORS[t.transaction_type] || TYPE_COLORS.autre}`}>
-                                      {t.transaction_type}
-                                    </span>
+                                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                    {t.operation_type && t.operation_type !== 'autre' && (
+                                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${(OPERATION_TYPES[t.operation_type] || OPERATION_TYPES.autre).color}`}>
+                                        {(OPERATION_TYPES[t.operation_type] || OPERATION_TYPES.autre).label}
+                                      </span>
+                                    )}
+                                    {!t.operation_type || t.operation_type === 'autre' ? (
+                                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${TYPE_COLORS[t.transaction_type] || TYPE_COLORS.autre}`}>
+                                        {t.transaction_type}
+                                      </span>
+                                    ) : null}
+                                    {t.piece_metier && t.piece_metier !== 'ecriture_manuelle' && (
+                                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-violet-50 text-violet-600">
+                                        {t.piece_metier.replace(/_/g, ' ')}
+                                      </span>
+                                    )}
+                                    {t.confidence && (
+                                      <span className={`text-xs px-1.5 py-0.5 rounded-full border ${CONFIDENCE_COLORS[t.confidence] || CONFIDENCE_COLORS.faible}`}>
+                                        {t.confidence === 'fort' ? '\u2705' : t.confidence === 'moyen' ? '\u26A0\uFE0F' : '\u2753'} {t.confidence}
+                                      </span>
+                                    )}
+                                    {t.needs_lettrage && (
+                                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200">
+                                        Lettrage requis
+                                      </span>
+                                    )}
                                     {t.reference && <span className="text-xs text-gray-400">{t.reference}</span>}
                                     {t.matched_invoice_number && (
-                                      <span className="text-xs text-blue-600 font-medium">→ {t.matched_invoice_number}</span>
+                                      <span className="text-xs text-blue-600 font-medium">{'\u2192'} {t.matched_invoice_number}</span>
                                     )}
                                   </div>
+                                  {t.ai_explanation && (
+                                    <p className="text-xs text-gray-400 mt-0.5 italic truncate">{t.ai_explanation}</p>
+                                  )}
                                 </div>
                               </td>
 
-                              {/* Debit */}
-                              <td className="px-3 py-2 text-right">
-                                {t.debit > 0 && (
-                                  <span className="text-red-600 font-medium flex items-center justify-end gap-0.5">
-                                    <ArrowUpRight className="w-3 h-3" />{fmt(t.debit)}
+                              {/* Debit (sortie) */}
+                              <td className="px-3 py-2 text-right bg-red-50/30">
+                                {t.debit > 0 ? (
+                                  <span className="text-red-700 font-medium flex items-center justify-end gap-0.5">
+                                    <ArrowDownLeft className="w-3 h-3" />{fmt(t.debit)}
                                   </span>
-                                )}
+                                ) : <span className="text-gray-300">—</span>}
                               </td>
 
-                              {/* Credit */}
-                              <td className="px-3 py-2 text-right">
-                                {t.credit > 0 && (
-                                  <span className="text-green-600 font-medium flex items-center justify-end gap-0.5">
-                                    <ArrowDownLeft className="w-3 h-3" />{fmt(t.credit)}
+                              {/* Credit (entrée) */}
+                              <td className="px-3 py-2 text-right bg-green-50/30">
+                                {t.credit > 0 ? (
+                                  <span className="text-green-700 font-medium flex items-center justify-end gap-0.5">
+                                    <ArrowUpRight className="w-3 h-3" />{fmt(t.credit)}
                                   </span>
-                                )}
+                                ) : <span className="text-gray-300">—</span>}
                               </td>
 
                               {/* Account Debit */}
                               <td className="px-3 py-2">
-                                {editingLine === `${idx}-d` ? (
+                                {editingLine === `${origIdx}-d` ? (
                                   <div className="flex gap-1">
                                     <Input
                                       value={t.account_debit || ''}
-                                      onChange={e => updateAccountField(idx, 'account_debit', e.target.value)}
+                                      onChange={e => updateAccountField(origIdx, 'account_debit', e.target.value)}
                                       className="h-6 w-16 text-xs p-1"
                                       autoFocus
                                       onBlur={() => setEditingLine(null)}
                                     />
                                     <Input
                                       value={t.account_debit_name || ''}
-                                      onChange={e => updateAccountField(idx, 'account_debit_name', e.target.value)}
+                                      onChange={e => updateAccountField(origIdx, 'account_debit_name', e.target.value)}
                                       className="h-6 text-xs p-1"
                                       onBlur={() => setEditingLine(null)}
                                     />
@@ -563,7 +821,7 @@ export default function BankReconciliation() {
                                 ) : (
                                   <button
                                     className="text-left hover:bg-violet-50 px-1.5 py-0.5 rounded text-xs"
-                                    onClick={() => setEditingLine(`${idx}-d`)}
+                                    onClick={() => setEditingLine(`${origIdx}-d`)}
                                   >
                                     <span className="font-mono text-violet-700">{t.account_debit}</span>
                                     <span className="text-gray-500 ml-1 truncate max-w-20 inline-block">{t.account_debit_name}</span>
@@ -573,18 +831,18 @@ export default function BankReconciliation() {
 
                               {/* Account Credit */}
                               <td className="px-3 py-2">
-                                {editingLine === `${idx}-c` ? (
+                                {editingLine === `${origIdx}-c` ? (
                                   <div className="flex gap-1">
                                     <Input
                                       value={t.account_credit || ''}
-                                      onChange={e => updateAccountField(idx, 'account_credit', e.target.value)}
+                                      onChange={e => updateAccountField(origIdx, 'account_credit', e.target.value)}
                                       className="h-6 w-16 text-xs p-1"
                                       autoFocus
                                       onBlur={() => setEditingLine(null)}
                                     />
                                     <Input
                                       value={t.account_credit_name || ''}
-                                      onChange={e => updateAccountField(idx, 'account_credit_name', e.target.value)}
+                                      onChange={e => updateAccountField(origIdx, 'account_credit_name', e.target.value)}
                                       className="h-6 text-xs p-1"
                                       onBlur={() => setEditingLine(null)}
                                     />
@@ -592,7 +850,7 @@ export default function BankReconciliation() {
                                 ) : (
                                   <button
                                     className="text-left hover:bg-violet-50 px-1.5 py-0.5 rounded text-xs"
-                                    onClick={() => setEditingLine(`${idx}-c`)}
+                                    onClick={() => setEditingLine(`${origIdx}-c`)}
                                   >
                                     <span className="font-mono text-violet-700">{t.account_credit}</span>
                                     <span className="text-gray-500 ml-1 truncate max-w-20 inline-block">{t.account_credit_name}</span>
@@ -608,7 +866,7 @@ export default function BankReconciliation() {
                                     size="sm"
                                     variant="outline"
                                     className="h-6 text-xs px-2 border-violet-300 text-violet-700 hover:bg-violet-50 w-full"
-                                    onClick={() => setEditModal({ open: true, idx, tx: { ...t } })}
+                                    onClick={() => setEditModal({ open: true, idx: origIdx, tx: { ...t } })}
                                   >
                                     <Edit2 className="w-3 h-3 mr-0.5" /> Éditer
                                   </Button>
@@ -623,7 +881,7 @@ export default function BankReconciliation() {
                                     size="sm"
                                     variant="outline"
                                     className="h-6 text-xs px-2 border-blue-300 text-blue-700 hover:bg-blue-50"
-                                    onClick={() => openLettrageModal(idx, t, 'supplier')}
+                                    onClick={() => openLettrageModal(origIdx, t, 'supplier')}
                                     title="Lettrer avec une facture fournisseur"
                                   >
                                     <Link2 className="w-3 h-3 mr-0.5" /> Fournisseur
@@ -634,7 +892,7 @@ export default function BankReconciliation() {
                                     size="sm"
                                     variant="outline"
                                     className="h-6 text-xs px-2 border-green-300 text-green-700 hover:bg-green-50"
-                                    onClick={() => openLettrageModal(idx, t, 'client')}
+                                    onClick={() => openLettrageModal(origIdx, t, 'client')}
                                     title="Lettrer avec une facture client"
                                   >
                                     <Link2 className="w-3 h-3 mr-0.5" /> Client
@@ -788,11 +1046,51 @@ export default function BankReconciliation() {
                 </div>
               </div>
 
+              {/* Type d'opération + Lettrage */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs font-medium text-gray-600">Type d'operation</Label>
+                  <select
+                    value={editModal.tx.operation_type || 'autre'}
+                    onChange={e => setEditModal(p => ({ ...p, tx: { ...p.tx, operation_type: e.target.value } }))}
+                    className="mt-1 w-full h-8 text-sm rounded-md border border-gray-200 px-2"
+                  >
+                    {Object.entries(OPERATION_TYPES).map(([k, v]) => (
+                      <option key={k} value={k}>{v.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-end gap-2">
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editModal.tx.needs_lettrage || false}
+                      onChange={e => setEditModal(p => ({ ...p, tx: { ...p.tx, needs_lettrage: e.target.checked } }))}
+                      className="rounded"
+                    />
+                    Lettrage requis
+                  </label>
+                </div>
+              </div>
+
+              {/* Confiance IA */}
+              {editModal.tx.confidence && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">Confiance IA :</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full border ${CONFIDENCE_COLORS[editModal.tx.confidence] || ''}`}>
+                    {editModal.tx.confidence}
+                  </span>
+                  {editModal.tx.ai_explanation && (
+                    <span className="text-xs text-gray-400 italic">{editModal.tx.ai_explanation}</span>
+                  )}
+                </div>
+              )}
+
               {/* Aperçu écriture */}
               <div className="bg-violet-50 border border-violet-200 rounded-lg p-3 text-xs font-mono">
                 <p className="text-violet-700 font-semibold mb-1">Aperçu de l'écriture :</p>
-                <p>Débit <strong>{editModal.tx.account_debit}</strong> {editModal.tx.account_debit_name} · {fmt(editModal.tx.debit > 0 ? editModal.tx.debit : editModal.tx.credit)} TND</p>
-                <p>Crédit <strong>{editModal.tx.account_credit}</strong> {editModal.tx.account_credit_name}</p>
+                <p>Debit <strong>{editModal.tx.account_debit}</strong> {editModal.tx.account_debit_name} · {fmt(editModal.tx.debit > 0 ? editModal.tx.debit : editModal.tx.credit)} TND</p>
+                <p>Credit <strong>{editModal.tx.account_credit}</strong> {editModal.tx.account_credit_name}</p>
               </div>
             </div>
           )}
@@ -800,13 +1098,14 @@ export default function BankReconciliation() {
             <Button variant="outline" onClick={() => setEditModal({ open: false, idx: null, tx: null })}>Annuler</Button>
             <Button
               className="bg-violet-600 hover:bg-violet-700"
-              onClick={() => {
+              onClick={async () => {
                 if (!statement || editModal.idx === null) return;
                 const txs = [...statement.transactions];
                 txs[editModal.idx] = { ...txs[editModal.idx], ...editModal.tx };
                 setStatement({ ...statement, transactions: txs });
                 setEditModal({ open: false, idx: null, tx: null });
                 toast.success('Écriture mise à jour');
+                await saveStatement(txs);
               }}
             >
               <Check className="w-4 h-4 mr-1" /> Appliquer

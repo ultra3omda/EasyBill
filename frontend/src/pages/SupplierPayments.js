@@ -138,9 +138,9 @@ const SupplierPayments = () => {
         <Card className="p-4"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><Input placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" /></div></Card>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-red-100 rounded-lg"><CreditCard className="w-5 h-5 text-red-600" /></div><div><p className="text-sm text-gray-600">Total payé</p><p className="text-2xl font-bold text-red-600">{stats.total.toFixed(2)} TND</p></div></div></Card>
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-blue-100 rounded-lg"><Building2 className="w-5 h-5 text-blue-600" /></div><div><p className="text-sm text-gray-600">Virements</p><p className="text-2xl font-bold text-blue-600">{stats.transfer.toFixed(2)} TND</p></div></div></Card>
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-orange-100 rounded-lg"><Banknote className="w-5 h-5 text-orange-600" /></div><div><p className="text-sm text-gray-600">Chèques</p><p className="text-2xl font-bold text-orange-600">{stats.check.toFixed(2)} TND</p></div></div></Card>
+          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-red-100 rounded-lg"><CreditCard className="w-5 h-5 text-red-600" /></div><div><p className="text-sm text-gray-600">Total payé</p><p className="text-2xl font-bold text-red-600">{stats.total.toFixed(3)} TND</p></div></div></Card>
+          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-blue-100 rounded-lg"><Building2 className="w-5 h-5 text-blue-600" /></div><div><p className="text-sm text-gray-600">Virements</p><p className="text-2xl font-bold text-blue-600">{stats.transfer.toFixed(3)} TND</p></div></div></Card>
+          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-orange-100 rounded-lg"><Banknote className="w-5 h-5 text-orange-600" /></div><div><p className="text-sm text-gray-600">Chèques</p><p className="text-2xl font-bold text-orange-600">{stats.check.toFixed(3)} TND</p></div></div></Card>
         </div>
 
         <Card>
@@ -157,7 +157,7 @@ const SupplierPayments = () => {
                     <TableCell>{payment.date ? new Date(payment.date).toLocaleDateString('fr-FR') : '-'}</TableCell>
                     <TableCell><Badge className="bg-gray-100 text-gray-800">{getMethodLabel(payment.payment_method)}</Badge></TableCell>
                     <TableCell>{payment.reference || '-'}</TableCell>
-                    <TableCell className="font-semibold text-red-600">-{(payment.amount || 0).toFixed(2)} TND</TableCell>
+                    <TableCell className="font-semibold text-red-600">-{(payment.amount || 0).toFixed(3)} TND</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="sm"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
@@ -195,7 +195,7 @@ const SupplierPayments = () => {
                       <div key={inv.id} className="p-3 flex items-center gap-4 hover:bg-gray-50">
                         <Checkbox checked={formData.allocations[index]?.selected} onCheckedChange={() => toggleInvoice(index)} />
                         <div className="flex-1"><p className="font-medium">{inv.number}</p><p className="text-sm text-gray-500">{new Date(inv.date).toLocaleDateString('fr-FR')}</p></div>
-                        <div className="text-right"><p className="text-sm text-gray-500">Total: {inv.total.toFixed(2)} TND</p><p className="font-medium text-red-600">Reste: {inv.balance_due.toFixed(2)} TND</p></div>
+                        <div className="text-right"><p className="text-sm text-gray-500">Total: {inv.total.toFixed(3)} TND</p><p className="font-medium text-red-600">Reste: {inv.balance_due.toFixed(3)} TND</p></div>
                         <div className="w-32"><Input type="number" step="0.01" value={formData.allocations[index]?.amount || 0} onChange={(e) => handleAllocationChange(index, parseFloat(e.target.value) || 0)} disabled={!formData.allocations[index]?.selected} /></div>
                       </div>
                     ))}
@@ -206,7 +206,7 @@ const SupplierPayments = () => {
 
             <div className="flex justify-between items-center bg-red-50 p-4 rounded-lg">
               <div><p className="text-sm text-gray-600">Montant total du paiement</p></div>
-              <p className="text-3xl font-bold text-red-600">{formData.amount.toFixed(2)} TND</p>
+              <p className="text-3xl font-bold text-red-600">{formData.amount.toFixed(3)} TND</p>
             </div>
 
             <div><Label>Remarques</Label><Textarea value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} rows={2} /></div>

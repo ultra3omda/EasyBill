@@ -62,19 +62,19 @@ const Expenses = () => {
           <Card className="p-6">
             <p className="text-sm text-gray-600 mb-2">Total Dépenses</p>
             <p className="text-2xl font-bold text-gray-900">
-              {expenses.reduce((acc, e) => acc + e.amount, 0).toFixed(2)} TND
+              {expenses.reduce((acc, e) => acc + e.amount, 0).toFixed(3)} TND
             </p>
           </Card>
           <Card className="p-6">
             <p className="text-sm text-gray-600 mb-2">Dépenses Récurrentes</p>
             <p className="text-2xl font-bold text-blue-600">
-              {expenses.filter(e => e.recurring).reduce((acc, e) => acc + e.amount, 0).toFixed(2)} TND
+              {expenses.filter(e => e.recurring).reduce((acc, e) => acc + e.amount, 0).toFixed(3)} TND
             </p>
           </Card>
           <Card className="p-6">
             <p className="text-sm text-gray-600 mb-2">Ce mois</p>
             <p className="text-2xl font-bold text-orange-600">
-              {expenses.reduce((acc, e) => acc + e.amount, 0).toFixed(2)} TND
+              {expenses.reduce((acc, e) => acc + e.amount, 0).toFixed(3)} TND
             </p>
           </Card>
         </div>
@@ -99,7 +99,7 @@ const Expenses = () => {
                     <TableCell>{expense.category}</TableCell>
                     <TableCell>{expense.supplier}</TableCell>
                     <TableCell>{new Date(expense.date).toLocaleDateString('fr-FR')}</TableCell>
-                    <TableCell className="font-semibold">{expense.amount.toFixed(2)} TND</TableCell>
+                    <TableCell className="font-semibold">{expense.amount.toFixed(3)} TND</TableCell>
                     <TableCell>
                       {expense.recurring ? (
                         <Badge className="bg-blue-100 text-blue-800">

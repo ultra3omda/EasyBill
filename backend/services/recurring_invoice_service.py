@@ -97,7 +97,7 @@ class RecurringInvoiceService:
         # Generate new invoice number
         invoice_prefix = company.get("numbering", {}).get("invoice_prefix", "INV")
         invoice_next = company.get("numbering", {}).get("invoice_next", 1)
-        new_number = f"{invoice_prefix}-{invoice_next:04d}"
+        new_number = f"{invoice_prefix}-{invoice_next:05d}"
         
         # Calculate dates
         now = datetime.utcnow()

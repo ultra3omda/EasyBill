@@ -82,7 +82,7 @@ const Warehouses = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-violet-100 rounded-lg"><Warehouse className="w-5 h-5 text-violet-600" /></div><div><p className="text-sm text-gray-600">Entrepôts</p><p className="text-2xl font-bold text-violet-600">{stats.total}</p></div></div></Card>
           <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-blue-100 rounded-lg"><Package className="w-5 h-5 text-blue-600" /></div><div><p className="text-sm text-gray-600">Produits stockés</p><p className="text-2xl font-bold text-blue-600">{stats.products}</p></div></div></Card>
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-green-100 rounded-lg"><Warehouse className="w-5 h-5 text-green-600" /></div><div><p className="text-sm text-gray-600">Valeur totale</p><p className="text-2xl font-bold text-green-600">{stats.value.toFixed(2)} TND</p></div></div></Card>
+          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-green-100 rounded-lg"><Warehouse className="w-5 h-5 text-green-600" /></div><div><p className="text-sm text-gray-600">Valeur totale</p><p className="text-2xl font-bold text-green-600">{stats.value.toFixed(3)} TND</p></div></div></Card>
         </div>
 
         <Card>
@@ -99,7 +99,7 @@ const Warehouses = () => {
                     <TableCell><div className="flex items-center gap-1"><MapPin className="w-4 h-4 text-gray-400" />{w.city || '-'}</div></TableCell>
                     <TableCell>{w.manager || '-'}</TableCell>
                     <TableCell>{w.product_count || 0}</TableCell>
-                    <TableCell className="font-semibold">{(w.total_value || 0).toFixed(2)} TND</TableCell>
+                    <TableCell className="font-semibold">{(w.total_value || 0).toFixed(3)} TND</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="sm"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>

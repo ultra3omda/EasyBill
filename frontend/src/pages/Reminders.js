@@ -196,7 +196,7 @@ const Reminders = () => {
               <div>
                 <p className="text-sm text-gray-500">Montant total en retard</p>
                 <h3 className="text-2xl font-bold text-orange-600 mt-1">
-                  {overdueInvoices.reduce((sum, inv) => sum + inv.balance_due, 0).toFixed(2)} TND
+                  {overdueInvoices.reduce((sum, inv) => sum + inv.balance_due, 0).toFixed(3)} TND
                 </h3>
               </div>
               <Clock className="w-8 h-8 text-orange-600" />
@@ -220,7 +220,7 @@ const Reminders = () => {
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <p className="font-semibold">{invoice.balance_due.toFixed(2)} TND</p>
+                      <p className="font-semibold">{invoice.balance_due.toFixed(3)} TND</p>
                       <p className="text-sm text-red-600">{invoice.days_overdue} jours de retard</p>
                     </div>
                     <Button size="sm" onClick={() => sendAutomaticReminder(invoice.id)}>
@@ -277,7 +277,7 @@ const Reminders = () => {
                     <TableCell>{reminder.customer_name}</TableCell>
                     <TableCell>{getLevelBadge(reminder.level)}</TableCell>
                     <TableCell>{new Date(reminder.date).toLocaleDateString('fr-FR')}</TableCell>
-                    <TableCell>{reminder.total_due?.toFixed(2)} TND</TableCell>
+                    <TableCell>{reminder.total_due?.toFixed(3)} TND</TableCell>
                     <TableCell>{getStatusBadge(reminder.status)}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>

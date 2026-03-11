@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useCompany } from '../hooks/useCompany';
 import AppLayout from '../components/layout/AppLayout';
 import { Card } from '../components/ui/card';
@@ -14,7 +15,7 @@ import {
 } from '../components/ui/table';
 import {
   Banknote, TrendingUp, TrendingDown, Plus, RefreshCw, Wallet,
-  Users, AlertCircle, Calendar, ArrowUpRight, ArrowDownRight, Wrench
+  Users, AlertCircle, Calendar, ArrowUpRight, ArrowDownRight, Wrench, Settings
 } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
 import { cashAPI } from '../services/api';
@@ -80,7 +81,7 @@ export default function CashDashboard() {
     setLoading(true);
     try {
       const [accRes, reportRes, balRes, unpaidRes] = await Promise.all([
-        cashAPI.listAccounts(currentCompany.id),
+        cashAPI.listAccounts(currentCompany.id, 'cash'),
         cashAPI.getDailyReport(currentCompany.id),
         cashAPI.getCustomerBalances(currentCompany.id),
         cashAPI.getUnpaidInvoices(currentCompany.id),
@@ -102,7 +103,8 @@ export default function CashDashboard() {
     try {
       await cashAPI.createAccount(currentCompany.id, {
         ...accountForm,
-        initial_balance: parseFloat(accountForm.initial_balance) || 0
+        initial_balance: parseFloat(accountForm.initial_balance) || 0,
+        account_type: 'cash'
       });
       toast({ title: 'Compte créé', description: accountForm.name });
       setShowAccountModal(false);
@@ -149,6 +151,11 @@ export default function CashDashboard() {
             <p className="text-gray-500 text-sm mt-1">Suivi des espèces, soldes clients, rapport journalier</p>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/cash-accounts">
+                <Settings className="h-4 w-4 mr-1" /> Configurer caisse
+              </Link>
+            </Button>
             <Button variant="outline" size="sm" onClick={load}>
               <RefreshCw className="h-4 w-4 mr-1" /> Actualiser
             </Button>

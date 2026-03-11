@@ -7,6 +7,7 @@ Gestion des comptes caisse, paiements en espèces, soldes clients, rapport journ
 from fastapi import APIRouter, HTTPException, status, Depends, Query, Request
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
+from bson.errors import InvalidId
 from datetime import datetime, timezone, date, timedelta
 from typing import Optional, List
 from pydantic import BaseModel, Field
@@ -45,6 +46,10 @@ class CashAccountCreate(BaseModel):
     initial_balance: float = 0.0
     is_default: bool = False
     description: Optional[str] = None
+    account_type: Optional[str] = None  # "bank" | "cash", auto si bank_name/rib
+    bank_name: Optional[str] = None
+    rib: Optional[str] = None
+    show_in_footer: bool = False
 
 
 class CashAccountUpdate(BaseModel):
@@ -52,6 +57,10 @@ class CashAccountUpdate(BaseModel):
     currency: Optional[str] = None
     is_default: Optional[bool] = None
     description: Optional[str] = None
+    account_type: Optional[str] = None
+    bank_name: Optional[str] = None
+    rib: Optional[str] = None
+    show_in_footer: Optional[bool] = None
 
 
 class CashPaymentCreate(BaseModel):
@@ -86,6 +95,9 @@ class CashExpenseCreate(BaseModel):
 # ─────────────────────────────────────────────
 
 def _ser_account(a: dict) -> dict:
+    bank_name = a.get("bank_name")
+    rib = a.get("rib")
+    account_type = a.get("account_type") or ("bank" if (bank_name or rib) else "cash")
     return {
         "id": str(a["_id"]),
         "company_id": str(a.get("company_id", "")),
@@ -95,6 +107,10 @@ def _ser_account(a: dict) -> dict:
         "initial_balance": a.get("initial_balance", 0.0),
         "is_default": a.get("is_default", False),
         "description": a.get("description"),
+        "account_type": account_type,
+        "bank_name": bank_name if bank_name is not None else "",
+        "rib": rib if rib is not None else "",
+        "show_in_footer": a.get("show_in_footer", False),
         "created_at": a["created_at"].isoformat() if isinstance(a.get("created_at"), datetime) else a.get("created_at"),
     }
 
@@ -122,10 +138,12 @@ def _ser_transaction(t: dict) -> dict:
 
 
 async def _get_cash_account(account_id: str, company_id: str) -> dict:
-    acc = await db.cash_accounts.find_one({
-        "_id": ObjectId(account_id),
-        "company_id": ObjectId(company_id)
-    })
+    try:
+        oid = ObjectId(account_id)
+        cid = ObjectId(company_id)
+    except InvalidId:
+        raise HTTPException(status_code=400, detail="Identifiant de compte invalide")
+    acc = await db.cash_accounts.find_one({"_id": oid, "company_id": cid})
     if not acc:
         raise HTTPException(status_code=404, detail="Compte caisse introuvable")
     return acc
@@ -346,6 +364,7 @@ async def create_cash_account(
             {"$set": {"is_default": False}}
         )
 
+    account_type = data.account_type or ("bank" if (data.bank_name or data.rib) else "cash")
     doc = {
         "company_id": ObjectId(company_id),
         "name": data.name,
@@ -354,6 +373,10 @@ async def create_cash_account(
         "balance": data.initial_balance,
         "is_default": data.is_default,
         "description": data.description,
+        "account_type": account_type,
+        "bank_name": data.bank_name,
+        "rib": data.rib,
+        "show_in_footer": data.show_in_footer,
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc),
         "created_by": current_user["_id"]
@@ -365,13 +388,15 @@ async def create_cash_account(
 @router.get("/accounts")
 async def list_cash_accounts(
     company_id: str = Query(...),
+    account_type: Optional[str] = Query(None, description="bank | cash pour filtrer"),
     current_user: dict = Depends(get_current_user)
 ):
-    """Liste les comptes caisse de l'entreprise."""
+    """Liste les comptes caisse/bancaires de l'entreprise."""
     await get_current_company(current_user, company_id)
-    accounts = await db.cash_accounts.find(
-        {"company_id": ObjectId(company_id)}
-    ).sort("name", 1).to_list(100)
+    query = {"company_id": ObjectId(company_id)}
+    if account_type in ("bank", "cash"):
+        query["account_type"] = account_type
+    accounts = await db.cash_accounts.find(query).sort("name", 1).to_list(100)
     return [_ser_account(a) for a in accounts]
 
 
@@ -396,7 +421,13 @@ async def update_cash_account(
     await get_current_company(current_user, company_id)
     acc = await _get_cash_account(account_id, company_id)
 
-    update = {k: v for k, v in data.dict(exclude_unset=True).items() if v is not None}
+    update = data.dict(exclude_unset=True)
+    for k in ("bank_name", "rib"):
+        if k in update and (update[k] is None or update[k] == ""):
+            update[k] = None
+    if "account_type" not in update and ("bank_name" in update or "rib" in update):
+        update["account_type"] = "bank" if (update.get("bank_name") or update.get("rib")) else "cash"
+    update = {k: v for k, v in update.items() if v is not None or k in ("bank_name", "rib", "account_type")}
     if "is_default" in update and update["is_default"]:
         await db.cash_accounts.update_many(
             {"company_id": ObjectId(company_id)},
@@ -405,6 +436,21 @@ async def update_cash_account(
     update["updated_at"] = datetime.now(timezone.utc)
     await db.cash_accounts.update_one({"_id": ObjectId(account_id)}, {"$set": update})
     return {"message": "Compte mis à jour"}
+
+
+@router.delete("/accounts/{account_id}")
+async def delete_cash_account(
+    account_id: str,
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Supprime un compte (bancaire uniquement ; la caisse par défaut ne peut pas être supprimée)."""
+    await get_current_company(current_user, company_id)
+    acc = await _get_cash_account(account_id, company_id)
+    if acc.get("account_type") == "cash":
+        raise HTTPException(status_code=400, detail="Impossible de supprimer un compte caisse (créé automatiquement)")
+    await db.cash_accounts.delete_one({"_id": ObjectId(account_id), "company_id": ObjectId(company_id)})
+    return {"message": "Compte supprimé"}
 
 
 # ─────────────────────────────────────────────
@@ -675,13 +721,23 @@ async def get_daily_cash_report(
     total_out = sum(t["amount"] for t in txns if t.get("type") == "out")
 
     # Solde d'ouverture = solde actuel du compte - mouvements du jour
+    # Ne considérer que les comptes caisse (pas les comptes bancaires)
     opening_balance = 0.0
     if cash_account_id:
         acc = await _get_cash_account(cash_account_id, company_id)
+        if acc.get("account_type") != "cash":
+            raise HTTPException(status_code=400, detail="Le rapport journalier ne concerne que les comptes caisse")
         opening_balance = acc["balance"] - total_in + total_out
     else:
-        accounts = await db.cash_accounts.find({"company_id": ObjectId(company_id)}).to_list(50)
-        total_now = sum(a.get("balance", 0) for a in accounts)
+        cash_accounts = await db.cash_accounts.find({
+            "company_id": ObjectId(company_id),
+            "account_type": "cash"
+        }).to_list(50)
+        cash_ids = [a["_id"] for a in cash_accounts]
+        total_now = sum(a.get("balance", 0) for a in cash_accounts)
+        txns = [t for t in txns if t.get("cash_account_id") in cash_ids]
+        total_in = sum(t["amount"] for t in txns if t.get("type") == "in")
+        total_out = sum(t["amount"] for t in txns if t.get("type") == "out")
         opening_balance = total_now - total_in + total_out
 
     return {

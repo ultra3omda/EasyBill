@@ -7,7 +7,7 @@ Module de lettrage bancaire :
   4. Validation des écritures par l'utilisateur
   5. Lettrage (rapprochement) des paiements fournisseurs par virement
 """
-from fastapi import APIRouter, HTTPException, status, Depends, Query, UploadFile, File
+from fastapi import APIRouter, HTTPException, status, Depends, Query, UploadFile, File, Body
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
 from datetime import datetime, timezone
@@ -22,6 +22,8 @@ import re
 
 from utils.dependencies import get_current_user, get_current_company
 from services.invoice_extractor_service import extract_with_gemini
+from services.bank_statement_extraction_service import BankStatementExtractionService
+from services.bank_ai_engine import analyze_bank_transactions
 
 logger = logging.getLogger(__name__)
 
@@ -215,7 +217,7 @@ async def parse_bank_statement(
     company_id: str = Query(...),
     provider: str = Query(
         "auto",
-        description="Provider d'extraction: auto (défaut), pdfplumber, gemini, openai, benchmark (teste tous)"
+        description="Provider d'extraction: auto (Document AI puis pdfplumber/gemini), document_ai, pdfplumber, gemini, openai, benchmark"
     ),
     current_user: dict = Depends(get_current_user)
 ):
@@ -770,20 +772,48 @@ async def parse_bank_statement(
         res = _run_pdfplumber_extract()
         return res if res else {"error": "Extraction impossible", "transactions": []}
 
-    force_provider = None if provider == "auto" else provider
-    try:
-        extracted = await asyncio.wait_for(
-            asyncio.to_thread(_sync_extract_bank, False, force_provider),
-            timeout=420.0
-        )
-    except asyncio.TimeoutError:
-        logger.warning("Timeout global extraction — passage au fallback pdfplumber direct")
-        extracted = None
+    # ══════════════════════════════════════════════════════════════════════════
+    # DOCUMENT AI : première tentative si provider=auto et Document AI configuré
+    # (OCR adapté aux relevés tunisiens scannés)
+    # ══════════════════════════════════════════════════════════════════════════
+    extracted = None
+    doc_ai_service = BankStatementExtractionService()
+    if provider in ("auto", "document_ai") and doc_ai_service.use_document_ai:
+        try:
+            suf = ".pdf" if content_type == "application/pdf" else (".png" if content_type == "image/png" else ".jpg")
+            with tempfile.NamedTemporaryFile(suffix=suf, delete=False) as tmp:
+                tmp.write(file_bytes)
+                tmp_path = tmp.name
+            try:
+                extracted = await doc_ai_service.extract_from_file(tmp_path, company_id)
+                if extracted and extracted.get("transactions") is not None:
+                    extracted["extraction_method"] = "document_ai"
+                    logger.info(f"Document AI: {len(extracted.get('transactions') or [])} transactions extraites")
+            finally:
+                try:
+                    os.unlink(tmp_path)
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.warning(f"Document AI extraction ignorée: {e}")
+
+    # Si Document AI n'a pas été utilisé, extraction classique (pdfplumber, Gemini, OpenAI)
+    if extracted is None:
+        force_provider = None if provider == "auto" else (None if provider == "document_ai" else provider)
+        try:
+            extracted = await asyncio.wait_for(
+                asyncio.to_thread(_sync_extract_bank, False, force_provider),
+                timeout=420.0
+            )
+        except asyncio.TimeoutError:
+            logger.warning("Timeout global extraction — passage au fallback pdfplumber direct")
+            extracted = None
 
     # Si aucun résultat ou moins de 10 transactions, forcer pdfplumber SANS réappeler l'IA
-    # (sauf en mode benchmark : on garde le résultat tel quel)
+    # (sauf mode benchmark ou Document AI : on garde le résultat tel quel)
     tx_count = len((extracted or {}).get("transactions") or [])
-    if not (extracted or {}).get("benchmark") and (not extracted or tx_count < 10):
+    used_document_ai = (extracted or {}).get("extraction_method") == "document_ai"
+    if not (extracted or {}).get("benchmark") and not used_document_ai and (not extracted or tx_count < 10):
         logger.info(f"Résultat IA insuffisant ({tx_count} tx) — extraction pdfplumber directe (sans IA)...")
         try:
             if content_type != "application/pdf":
@@ -797,11 +827,32 @@ async def parse_bank_statement(
         except Exception as e:
             raise HTTPException(status_code=422, detail=f"Extraction échouée: {e}")
 
-    # Enrich transactions with suggested accounts
+    # ══════════════════════════════════════════════════════════════════════════
+    # ANALYSE IA — Classification intelligente des transactions
+    # ══════════════════════════════════════════════════════════════════════════
     transactions = extracted.get("transactions") or []
+    logger.info("Starting AI analysis for %d transactions", len(transactions))
+
+    try:
+        ai_analyses = await asyncio.wait_for(
+            analyze_bank_transactions(transactions, use_ai=True),
+            timeout=300.0,
+        )
+        logger.info("AI analysis completed: %d results", len(ai_analyses))
+    except asyncio.TimeoutError:
+        logger.warning("AI analysis global timeout (300s), using static rules only")
+        ai_analyses = await analyze_bank_transactions(transactions, use_ai=False)
+    except Exception as e:
+        logger.warning(f"AI analysis error: {e}")
+        ai_analyses = await analyze_bank_transactions(transactions, use_ai=False)
+
+    ai_by_index = {a["index"]: a for a in ai_analyses}
+
     enriched = []
     for i, t in enumerate(transactions):
+        ai = ai_by_index.get(i, {})
         sugg = _suggest_accounts(t)
+
         enriched.append({
             "id": str(i),
             "date": t.get("date"),
@@ -812,15 +863,23 @@ async def parse_bank_statement(
             "credit": float(t.get("credit") or 0),
             "balance": t.get("balance"),
             "transaction_type": t.get("type") or "autre",
-            "account_debit": sugg["account_debit"],
-            "account_debit_name": sugg["account_debit_name"],
-            "account_credit": sugg["account_credit"],
-            "account_credit_name": sugg["account_credit_name"],
-            "is_cash_operation": sugg.get("is_cash_operation", False),
-            "is_card_operation": sugg.get("is_card_operation", False),
+            "account_debit": ai.get("account_debit", sugg["account_debit"]),
+            "account_debit_name": ai.get("account_debit_name", sugg["account_debit_name"]),
+            "account_credit": ai.get("account_credit", sugg["account_credit"]),
+            "account_credit_name": ai.get("account_credit_name", sugg["account_credit_name"]),
+            "operation_type": ai.get("operation_type", "autre"),
+            "piece_metier": ai.get("piece_metier", "ecriture_manuelle"),
+            "needs_lettrage": ai.get("needs_lettrage", False),
+            "lettrage_reason": ai.get("lettrage_reason", ""),
+            "confidence": ai.get("confidence", "faible"),
+            "ai_explanation": ai.get("explanation", ""),
+            "ai_source": ai.get("source", "default"),
+            "is_cash_operation": ai.get("operation_type") in ("retrait_especes", "versement_especes") or sugg.get("is_cash_operation", False),
+            "is_card_operation": ai.get("operation_type") == "achat_carte" or sugg.get("is_card_operation", False),
             "matched_invoice_id": None,
             "matched_invoice_number": None,
             "validated": False,
+            "lettered": False,
         })
 
     # Save statement to DB
@@ -862,6 +921,27 @@ async def parse_bank_statement(
         resp["benchmark_summary"] = extracted.get("benchmark_summary", {})
         resp["extraction_method"] = extracted.get("extraction_method")
     return resp
+
+
+@router.patch("/statements/{statement_id}")
+async def update_bank_statement_transactions(
+    statement_id: str,
+    data: dict = Body(...),
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Sauvegarde les modifications des transactions (éditions comptes, etc.) pour reprendre plus tard."""
+    await get_current_company(current_user, company_id)
+    transactions = data.get("transactions")
+    if transactions is None:
+        raise HTTPException(status_code=400, detail="transactions requis")
+    result = await db.bank_statements.update_one(
+        {"_id": ObjectId(statement_id), "company_id": ObjectId(company_id)},
+        {"$set": {"transactions": transactions, "updated_at": datetime.now(timezone.utc)}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Extrait non trouvé")
+    return {"message": "Modifications enregistrées"}
 
 
 @router.get("/statements")
@@ -1343,6 +1423,58 @@ async def lettrage_bank_credit_with_customer_invoice(
         "customer_name": cust_name,
         "amount": inv_amount,
         "entry_number": entry_number
+    }
+
+
+@router.post("/ai-analyze/{statement_id}")
+async def ai_analyze_statement(
+    statement_id: str,
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Re-lance l'analyse IA sur un relevé bancaire existant."""
+    await get_current_company(current_user, company_id)
+
+    stmt = await db.bank_statements.find_one(
+        {"_id": ObjectId(statement_id), "company_id": ObjectId(company_id)}
+    )
+    if not stmt:
+        raise HTTPException(status_code=404, detail="Extrait non trouvé")
+
+    transactions = stmt.get("transactions") or []
+
+    ai_analyses = await analyze_bank_transactions(transactions, use_ai=True)
+    ai_by_index = {a["index"]: a for a in ai_analyses}
+
+    for i, t in enumerate(transactions):
+        ai = ai_by_index.get(i, {})
+        if ai:
+            t["operation_type"] = ai.get("operation_type", t.get("operation_type", "autre"))
+            t["piece_metier"] = ai.get("piece_metier", t.get("piece_metier", "ecriture_manuelle"))
+            t["account_debit"] = ai.get("account_debit", t.get("account_debit", "521"))
+            t["account_debit_name"] = ai.get("account_debit_name", t.get("account_debit_name", "Banques"))
+            t["account_credit"] = ai.get("account_credit", t.get("account_credit", "521"))
+            t["account_credit_name"] = ai.get("account_credit_name", t.get("account_credit_name", "Banques"))
+            t["needs_lettrage"] = ai.get("needs_lettrage", False)
+            t["lettrage_reason"] = ai.get("lettrage_reason", "")
+            t["confidence"] = ai.get("confidence", "faible")
+            t["ai_explanation"] = ai.get("explanation", "")
+            t["ai_source"] = ai.get("source", "default")
+
+    await db.bank_statements.update_one(
+        {"_id": ObjectId(statement_id)},
+        {"$set": {"transactions": transactions, "ai_analyzed": True}}
+    )
+
+    return {
+        "message": f"Analyse IA terminée — {len(transactions)} transactions analysées",
+        "transactions": transactions,
+        "ai_stats": {
+            "total": len(transactions),
+            "fort": sum(1 for t in transactions if t.get("confidence") == "fort"),
+            "moyen": sum(1 for t in transactions if t.get("confidence") == "moyen"),
+            "faible": sum(1 for t in transactions if t.get("confidence") == "faible"),
+        }
     }
 
 

@@ -264,12 +264,39 @@ const CustomerFormModal = ({ open, onClose, onSuccess, customer = null }) => {
     setLoading(true);
     try {
       const displayName = formData.display_name || generateDisplayName();
+      let first_name = formData.first_name?.trim();
+      if (!first_name && clientType === 'entreprise' && formData.company_name?.trim()) {
+        first_name = formData.company_name.trim();
+      }
+      if (!first_name) {
+        first_name = 'Client';
+      }
+      const billingAddr = { ...formData.billing_address };
+      if (billingAddr.governorate && !billingAddr.city) {
+        billingAddr.city = billingAddr.governorate;
+      }
+      const billing = { street: billingAddr.street || null, city: billingAddr.city || billingAddr.governorate || null, postal_code: billingAddr.postal_code || null, country: billingAddr.country || 'Tunisie' };
+      const shipping = sameAddress ? billing : { street: formData.shipping_address.street || null, city: formData.shipping_address.city || formData.shipping_address.governorate || null, postal_code: formData.shipping_address.postal_code || null, country: formData.shipping_address.country || 'Tunisie' };
       const dataToSend = { 
         ...formData, 
+        first_name,
         client_type: clientType,
         display_name: displayName,
-        shipping_address: sameAddress ? formData.billing_address : formData.shipping_address
+        billing_address: billing,
+        shipping_address: shipping,
+        email: formData.email?.trim() || undefined,
+        phone: formData.phone?.trim() || undefined,
+        website: formData.website?.trim() || undefined,
+        notes: formData.notes?.trim() || undefined,
+        reference: formData.reference?.trim() || undefined,
+        fiscal_id: formData.fiscal_id?.trim() || undefined,
+        identity_number: formData.identity_number?.trim() || undefined,
+        activity: formData.activity?.trim() || undefined,
+        birthday: formData.birthday?.trim() || undefined
       };
+      Object.keys(dataToSend).forEach(k => {
+        if (dataToSend[k] === '' || dataToSend[k] === null) delete dataToSend[k];
+      });
       
       if (customer) {
         await customersAPI.update(currentCompany.id, customer.id, dataToSend);
@@ -283,7 +310,9 @@ const CustomerFormModal = ({ open, onClose, onSuccess, customer = null }) => {
       onClose();
     } catch (error) {
       console.error('Error saving customer:', error);
-      toast({ title: 'Erreur', description: error.response?.data?.detail || 'Erreur lors de l\'enregistrement', variant: 'destructive' });
+      const detail = error.response?.data?.detail;
+      const msg = Array.isArray(detail) ? detail.map(e => e.msg || `${e.loc?.join('.')}: ${e.msg}`).join('; ') : (typeof detail === 'string' ? detail : JSON.stringify(detail) || 'Erreur lors de l\'enregistrement');
+      toast({ title: 'Erreur', description: msg || 'Erreur lors de l\'enregistrement', variant: 'destructive' });
     } finally {
       setLoading(false);
     }

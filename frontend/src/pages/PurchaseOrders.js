@@ -142,7 +142,7 @@ const PurchaseOrders = () => {
         <Card className="p-4"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><Input placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" /></div></Card>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-violet-100 rounded-lg"><ShoppingCart className="w-5 h-5 text-violet-600" /></div><div><p className="text-sm text-gray-600">Total commandé</p><p className="text-2xl font-bold text-violet-600">{stats.total.toFixed(2)} TND</p></div></div></Card>
+          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-violet-100 rounded-lg"><ShoppingCart className="w-5 h-5 text-violet-600" /></div><div><p className="text-sm text-gray-600">Total commandé</p><p className="text-2xl font-bold text-violet-600">{stats.total.toFixed(3)} TND</p></div></div></Card>
           <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-orange-100 rounded-lg"><Send className="w-5 h-5 text-orange-600" /></div><div><p className="text-sm text-gray-600">En attente</p><p className="text-2xl font-bold text-orange-600">{stats.pending}</p></div></div></Card>
           <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-green-100 rounded-lg"><Package className="w-5 h-5 text-green-600" /></div><div><p className="text-sm text-gray-600">Reçus</p><p className="text-2xl font-bold text-green-600">{stats.received}</p></div></div></Card>
         </div>
@@ -162,7 +162,7 @@ const PurchaseOrders = () => {
                       <TableCell>{doc.supplier_name}</TableCell>
                       <TableCell>{doc.date ? new Date(doc.date).toLocaleDateString('fr-FR') : '-'}</TableCell>
                       <TableCell>{doc.expected_date ? new Date(doc.expected_date).toLocaleDateString('fr-FR') : '-'}</TableCell>
-                      <TableCell className="font-semibold">{(doc.total || 0).toFixed(2)} TND</TableCell>
+                      <TableCell className="font-semibold">{(doc.total || 0).toFixed(3)} TND</TableCell>
                       <TableCell><Badge className={statusConfig.className}>{statusConfig.label}</Badge></TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -208,12 +208,12 @@ const PurchaseOrders = () => {
                     <div><Label className="text-xs">Prix HT</Label><Input type="number" value={item.unit_price} onChange={(e) => handleItemChange(index, 'unit_price', parseFloat(e.target.value) || 0)} /></div>
                     <div><Label className="text-xs">TVA %</Label><Input type="number" value={item.tax_rate} onChange={(e) => handleItemChange(index, 'tax_rate', parseFloat(e.target.value) || 0)} /></div>
                     <div><Label className="text-xs">Remise %</Label><Input type="number" value={item.discount} onChange={(e) => handleItemChange(index, 'discount', parseFloat(e.target.value) || 0)} /></div>
-                    <div><Label className="text-xs">Total</Label><Input type="number" value={item.total.toFixed(2)} disabled className="bg-gray-100" /></div>
+                    <div><Label className="text-xs">Total</Label><Input type="number" value={item.total.toFixed(3)} disabled className="bg-gray-100" /></div>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="flex justify-end"><div className="bg-gray-50 p-4 rounded-lg text-right"><p className="text-sm text-gray-600">Total TTC</p><p className="text-2xl font-bold text-violet-600">{calculateTotal().toFixed(2)} TND</p></div></div>
+            <div className="flex justify-end"><div className="bg-gray-50 p-4 rounded-lg text-right"><p className="text-sm text-gray-600">Total TTC</p><p className="text-2xl font-bold text-violet-600">{calculateTotal().toFixed(3)} TND</p></div></div>
             <div><Label>Notes</Label><Textarea value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} rows={2} /></div>
             <DialogFooter><Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Annuler</Button><Button type="submit" className="bg-violet-600 hover:bg-violet-700">{selectedDoc ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
