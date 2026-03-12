@@ -66,15 +66,15 @@ const HRDashboard = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Ressources Humaines</h1>
-            <p className="text-gray-500 mt-1">Tableau de bord RH &bull; {currentCompany?.name}</p>
+            <h1 className="page-header-title">Ressources Humaines</h1>
+            <p className="page-header-subtitle">Tableau de bord RH &bull; {currentCompany?.name}</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => navigate('/hr/employees')}>
               <Users className="w-4 h-4 mr-2" />
               Voir les employés
             </Button>
-            <Button className="bg-violet-600 hover:bg-violet-700 text-white" onClick={() => navigate('/hr/employees?action=new')}>
+            <Button onClick={() => navigate('/hr/employees?action=new')}>
               <UserPlus className="w-4 h-4 mr-2" />
               Nouvel employé
             </Button>
@@ -89,58 +89,58 @@ const HRDashboard = () => {
           <>
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card className="p-5 bg-gradient-to-br from-violet-50 to-violet-100 border-0 shadow-sm">
+              <Card className="stat-surface p-5">
                 <div className="flex items-start gap-3">
-                  <div className="p-3 bg-violet-500 rounded-lg">
-                    <Users className="w-6 h-6 text-white" />
+                  <div className="rounded-2xl bg-violet-100 p-3">
+                    <Users className="w-6 h-6 text-violet-700" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm text-gray-600 font-medium">Employés actifs</p>
-                    <span className="text-2xl font-bold text-gray-900">{stats.active_employees ?? 0}</span>
+                    <p className="text-sm font-medium text-slate-600">Employés actifs</p>
+                    <span className="text-2xl font-bold text-slate-900">{stats.active_employees ?? 0}</span>
                     <p className="text-xs text-violet-600 mt-1">Total en activité</p>
                   </div>
                 </div>
               </Card>
 
-              <Card className="p-5 bg-gradient-to-br from-amber-50 to-amber-100 border-0 shadow-sm">
+              <Card className="stat-surface p-5">
                 <div className="flex items-start gap-3">
-                  <div className="p-3 bg-amber-500 rounded-lg">
-                    <Banknote className="w-6 h-6 text-white" />
+                  <div className="rounded-2xl bg-amber-100 p-3">
+                    <Banknote className="w-6 h-6 text-amber-700" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm text-gray-600 font-medium">Masse salariale</p>
+                    <p className="text-sm font-medium text-slate-600">Masse salariale</p>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-bold text-gray-900">
+                      <span className="text-2xl font-bold text-slate-900">
                         {(stats.monthly_payroll ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 3 })}
                       </span>
-                      <span className="text-sm font-medium text-gray-600">TND</span>
+                      <span className="text-sm font-medium text-slate-600">TND</span>
                     </div>
                     <p className="text-xs text-amber-600 mt-1">Mensuelle</p>
                   </div>
                 </div>
               </Card>
 
-              <Card className="p-5 bg-gradient-to-br from-blue-50 to-blue-100 border-0 shadow-sm">
+              <Card className="stat-surface p-5">
                 <div className="flex items-start gap-3">
-                  <div className="p-3 bg-blue-500 rounded-lg">
-                    <CalendarDays className="w-6 h-6 text-white" />
+                  <div className="rounded-2xl bg-blue-100 p-3">
+                    <CalendarDays className="w-6 h-6 text-blue-700" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm text-gray-600 font-medium">Congés en cours</p>
-                    <span className="text-2xl font-bold text-gray-900">{stats.active_leaves ?? 0}</span>
+                    <p className="text-sm font-medium text-slate-600">Congés en cours</p>
+                    <span className="text-2xl font-bold text-slate-900">{stats.active_leaves ?? 0}</span>
                     <p className="text-xs text-blue-600 mt-1">Employés en congé</p>
                   </div>
                 </div>
               </Card>
 
-              <Card className="p-5 bg-gradient-to-br from-orange-50 to-orange-100 border-0 shadow-sm">
+              <Card className="stat-surface p-5">
                 <div className="flex items-start gap-3">
-                  <div className="p-3 bg-orange-500 rounded-lg">
-                    <FileWarning className="w-6 h-6 text-white" />
+                  <div className="rounded-2xl bg-orange-100 p-3">
+                    <FileWarning className="w-6 h-6 text-orange-700" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm text-gray-600 font-medium">Contrats à renouveler</p>
-                    <span className="text-2xl font-bold text-gray-900">{stats.contracts_to_renew ?? 0}</span>
+                    <p className="text-sm font-medium text-slate-600">Contrats à renouveler</p>
+                    <span className="text-2xl font-bold text-slate-900">{stats.contracts_to_renew ?? 0}</span>
                     <p className="text-xs text-orange-600 mt-1">Dans les 30 jours</p>
                   </div>
                 </div>
@@ -153,16 +153,16 @@ const HRDashboard = () => {
               <Card className="p-6">
                 <div className="flex items-center gap-2 mb-5">
                   <Building2 className="w-5 h-5 text-violet-600" />
-                  <h2 className="text-lg font-semibold text-gray-900">Répartition par département</h2>
+                  <h2 className="text-lg font-semibold text-slate-900">Répartition par département</h2>
                 </div>
                 {departmentBreakdown.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-8">Aucune donnée disponible</p>
+                  <p className="text-sm text-slate-400 text-center py-8">Aucune donnée disponible</p>
                 ) : (
                   <div className="space-y-3">
                     {departmentBreakdown.map((dept, index) => (
                       <div key={index} className="flex items-center gap-3">
-                        <span className="text-sm text-gray-600 w-32 truncate">{dept.name}</span>
-                        <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
+                        <span className="text-sm text-slate-600 w-32 truncate">{dept.name}</span>
+                        <div className="flex-1 bg-slate-100 rounded-full h-6 overflow-hidden">
                           <div
                             className="h-full bg-gradient-to-r from-violet-500 to-violet-400 rounded-full flex items-center justify-end pr-2 transition-all duration-500"
                             style={{ width: `${Math.max((dept.count / maxDeptCount) * 100, 8)}%` }}
@@ -180,10 +180,10 @@ const HRDashboard = () => {
               <Card className="p-6">
                 <div className="flex items-center gap-2 mb-5">
                   <Briefcase className="w-5 h-5 text-amber-600" />
-                  <h2 className="text-lg font-semibold text-gray-900">Répartition par type de contrat</h2>
+                  <h2 className="text-lg font-semibold text-slate-900">Répartition par type de contrat</h2>
                 </div>
                 {contractBreakdown.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-8">Aucune donnée disponible</p>
+                  <p className="text-sm text-slate-400 text-center py-8">Aucune donnée disponible</p>
                 ) : (
                   <div className="flex flex-wrap gap-3">
                     {contractBreakdown.map((ct, index) => {
@@ -215,23 +215,23 @@ const HRDashboard = () => {
               {/* Recent Approved Leaves */}
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Derniers congés approuvés</h2>
+                  <h2 className="text-lg font-semibold text-slate-900">Derniers congés approuvés</h2>
                   <Button variant="ghost" size="sm" className="text-violet-600" onClick={() => navigate('/hr/employees')}>
                     Tout voir <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
                 </div>
                 {recentLeaves.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-6">Aucun congé récent</p>
+                  <p className="text-sm text-slate-400 text-center py-6">Aucun congé récent</p>
                 ) : (
                   <div className="space-y-3">
                     {recentLeaves.map((leave, index) => (
-                      <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <div key={index} className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
                         <div className="w-9 h-9 bg-green-100 rounded-full flex items-center justify-center">
                           <CheckCircle className="w-4 h-4 text-green-600" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{leave.employee_name}</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-sm font-medium text-slate-900 truncate">{leave.employee_name}</p>
+                          <p className="text-xs text-slate-500">
                             {leave.start_date && new Date(leave.start_date).toLocaleDateString('fr-FR')} — {leave.end_date && new Date(leave.end_date).toLocaleDateString('fr-FR')}
                           </p>
                         </div>
@@ -245,25 +245,25 @@ const HRDashboard = () => {
               {/* Recent Hires */}
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Dernières embauches</h2>
+                  <h2 className="text-lg font-semibold text-slate-900">Dernières embauches</h2>
                   <Button variant="ghost" size="sm" className="text-violet-600" onClick={() => navigate('/hr/employees')}>
                     Tout voir <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
                 </div>
                 {recentHires.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-6">Aucune embauche récente</p>
+                  <p className="text-sm text-slate-400 text-center py-6">Aucune embauche récente</p>
                 ) : (
                   <div className="space-y-3">
                     {recentHires.map((hire, index) => (
-                      <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <div key={index} className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
                         <div className="w-9 h-9 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 font-semibold text-sm">
                           {hire.first_name?.charAt(0)}{hire.last_name?.charAt(0)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{hire.first_name} {hire.last_name}</p>
-                          <p className="text-xs text-gray-500">{hire.position} &bull; {hire.department}</p>
+                          <p className="text-sm font-medium text-slate-900 truncate">{hire.first_name} {hire.last_name}</p>
+                          <p className="text-xs text-slate-500">{hire.position} &bull; {hire.department}</p>
                         </div>
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-slate-400">
                           {hire.hire_date && new Date(hire.hire_date).toLocaleDateString('fr-FR')}
                         </span>
                       </div>
@@ -279,26 +279,26 @@ const HRDashboard = () => {
               <Card className="p-6 border-orange-200">
                 <div className="flex items-center gap-2 mb-4">
                   <AlertTriangle className="w-5 h-5 text-orange-500" />
-                  <h2 className="text-lg font-semibold text-gray-900">Contrats expirant dans 30 jours</h2>
+                  <h2 className="text-lg font-semibold text-slate-900">Contrats expirant dans 30 jours</h2>
                 </div>
                 {expiringContracts.length === 0 ? (
                   <div className="text-center py-6">
                     <CheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-400">Aucun contrat à renouveler</p>
+                    <p className="text-sm text-slate-400">Aucun contrat à renouveler</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {expiringContracts.map((c, index) => (
                       <div key={index} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-100">
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{c.employee_name}</p>
-                          <p className="text-xs text-gray-500">{c.contract_type}</p>
+                          <p className="text-sm font-medium text-slate-900">{c.employee_name}</p>
+                          <p className="text-xs text-slate-500">{c.contract_type}</p>
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-semibold text-orange-600">
                             {c.end_date && new Date(c.end_date).toLocaleDateString('fr-FR')}
                           </p>
-                          <p className="text-xs text-gray-400">
+                          <p className="text-xs text-slate-400">
                             <Clock className="w-3 h-3 inline mr-1" />
                             {c.days_remaining}j restants
                           </p>
@@ -313,20 +313,20 @@ const HRDashboard = () => {
               <Card className="p-6 border-red-200">
                 <div className="flex items-center gap-2 mb-4">
                   <FileWarning className="w-5 h-5 text-red-500" />
-                  <h2 className="text-lg font-semibold text-gray-900">Déclarations à faire</h2>
+                  <h2 className="text-lg font-semibold text-slate-900">Déclarations à faire</h2>
                 </div>
                 {pendingDeclarations.length === 0 ? (
                   <div className="text-center py-6">
                     <CheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-400">Aucune déclaration en attente</p>
+                    <p className="text-sm text-slate-400">Aucune déclaration en attente</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {pendingDeclarations.map((d, index) => (
                       <div key={index} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100">
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{d.title}</p>
-                          <p className="text-xs text-gray-500">{d.description}</p>
+                          <p className="text-sm font-medium text-slate-900">{d.title}</p>
+                          <p className="text-xs text-slate-500">{d.description}</p>
                         </div>
                         <Badge className="bg-red-100 text-red-700">{d.status || 'En attente'}</Badge>
                       </div>

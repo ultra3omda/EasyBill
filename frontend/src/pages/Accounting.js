@@ -9,51 +9,51 @@ const Accounting = () => {
     <AppLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Comptabilité</h1>
-          <p className="text-gray-500 mt-1">Gestion comptable automatisée et synchronisée</p>
+          <h1 className="page-header-title">Comptabilité</h1>
+          <p className="page-header-subtitle">Gestion comptable automatisée et synchronisée</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-6">
+          <Card className="stat-surface p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <Calculator className="w-6 h-6 text-purple-600" />
+              <div className="rounded-2xl bg-violet-100 p-3">
+                <Calculator className="w-6 h-6 text-violet-700" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Écritures comptables</p>
-                <p className="text-2xl font-bold text-gray-900">1,247</p>
+                <p className="text-sm text-slate-600">Écritures comptables</p>
+                <p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">1,247</p>
               </div>
             </div>
           </Card>
-          <Card className="p-6">
+          <Card className="stat-surface p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-lg">
+              <div className="rounded-2xl bg-blue-100 p-3">
                 <FileText className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Documents</p>
+                <p className="text-sm text-slate-600">Documents</p>
                 <p className="text-2xl font-bold text-blue-600">98</p>
               </div>
             </div>
           </Card>
-          <Card className="p-6">
+          <Card className="stat-surface p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-teal-100 rounded-lg">
-                <BookOpen className="w-6 h-6 text-teal-600" />
+              <div className="rounded-2xl bg-amber-100 p-3">
+                <BookOpen className="w-6 h-6 text-amber-700" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Grand livre</p>
-                <p className="text-2xl font-bold text-teal-600">Jour</p>
+                <p className="text-sm text-slate-600">Grand livre</p>
+                <p className="text-2xl font-bold text-amber-700">Jour</p>
               </div>
             </div>
           </Card>
         </div>
 
         <Card className="p-8 text-center">
-          <Calculator className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Module Comptabilité</h3>
-          <p className="text-gray-600 mb-4">Comptabilité automatisée avec synchronisation en temps réel</p>
-          <Button className="bg-teal-600 hover:bg-teal-700 text-white">En savoir plus</Button>
+          <Calculator className="mx-auto mb-4 h-16 w-16 text-slate-400" />
+          <h3 className="mb-2 text-lg font-semibold text-slate-900">Module Comptabilité</h3>
+          <p className="mb-4 text-slate-600">Comptabilité automatisée avec synchronisation en temps réel</p>
+          <Button>En savoir plus</Button>
         </Card>
       </div>
     </AppLayout>

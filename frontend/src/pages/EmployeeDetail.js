@@ -172,8 +172,8 @@ const EmployeeDetail = () => {
     return (
       <AppLayout>
         <div className="text-center py-20">
-          <User className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">Employé introuvable</p>
+          <User className="mx-auto mb-4 h-12 w-12 text-slate-300" />
+          <p className="text-slate-500">Employé introuvable</p>
           <Button variant="outline" className="mt-4" onClick={() => navigate('/hr/employees')}>
             Retour à la liste
           </Button>
@@ -198,8 +198,8 @@ const EmployeeDetail = () => {
                 {employee.first_name?.charAt(0)}{employee.last_name?.charAt(0)}
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{employee.first_name} {employee.last_name}</h1>
-                <p className="text-gray-500 text-sm">{employee.position || 'Poste non défini'} &bull; {employee.department || 'Département non défini'}</p>
+                <h1 className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{employee.first_name} {employee.last_name}</h1>
+                <p className="text-sm text-slate-500">{employee.position || 'Poste non défini'} &bull; {employee.department || 'Département non défini'}</p>
               </div>
             </div>
           </div>
@@ -208,7 +208,7 @@ const EmployeeDetail = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="informations">
-          <TabsList className="bg-gray-100 p-1">
+          <TabsList className="bg-slate-100 p-1">
             <TabsTrigger value="informations" className="data-[state=active]:bg-white">
               <User className="w-4 h-4 mr-1.5" /> Informations
             </TabsTrigger>
@@ -230,7 +230,7 @@ const EmployeeDetail = () => {
           <TabsContent value="informations">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="p-6">
-                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Informations personnelles</h3>
+                <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-700">Informations personnelles</h3>
                 <div className="space-y-3">
                   <InfoRow icon={<User className="w-4 h-4" />} label="Nom complet" value={`${employee.first_name} ${employee.last_name}`} />
                   <InfoRow icon={<CreditCard className="w-4 h-4" />} label="CIN" value={employee.cin} />
@@ -244,7 +244,7 @@ const EmployeeDetail = () => {
               </Card>
 
               <Card className="p-6">
-                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Informations bancaires</h3>
+                <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-700">Informations bancaires</h3>
                 <div className="space-y-3">
                   <InfoRow icon={<Building2 className="w-4 h-4" />} label="Banque" value={employee.bank_name} />
                   <InfoRow icon={<CreditCard className="w-4 h-4" />} label="RIB" value={employee.rib} />
@@ -252,7 +252,7 @@ const EmployeeDetail = () => {
                   <InfoRow icon={<Banknote className="w-4 h-4" />} label="Mode de paiement" value={employee.payment_method} />
                 </div>
 
-                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4 mt-6">Informations professionnelles</h3>
+                <h3 className="mt-6 mb-4 text-sm font-semibold uppercase tracking-wide text-slate-700">Informations professionnelles</h3>
                 <div className="space-y-3">
                   <InfoRow icon={<Briefcase className="w-4 h-4" />} label="Poste" value={employee.position} />
                   <InfoRow icon={<Building2 className="w-4 h-4" />} label="Département" value={employee.department} />
@@ -269,30 +269,30 @@ const EmployeeDetail = () => {
           <TabsContent value="contrats">
             <Card className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Contrats</h3>
-                <Button className="bg-violet-600 hover:bg-violet-700 text-white" onClick={() => setContractModal(true)}>
+                <h3 className="text-lg font-semibold text-slate-900">Contrats</h3>
+                <Button onClick={() => setContractModal(true)}>
                   <Plus className="w-4 h-4 mr-2" /> Ajouter un contrat
                 </Button>
               </div>
 
               {contracts.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-8">Aucun contrat enregistré</p>
+                <p className="text-center text-sm text-slate-400 py-8">Aucun contrat enregistré</p>
               ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="text-xs font-semibold text-gray-600 uppercase">Type</TableHead>
-                      <TableHead className="text-xs font-semibold text-gray-600 uppercase">Date début</TableHead>
-                      <TableHead className="text-xs font-semibold text-gray-600 uppercase">Date fin</TableHead>
-                      <TableHead className="text-xs font-semibold text-gray-600 uppercase">Salaire</TableHead>
-                      <TableHead className="text-xs font-semibold text-gray-600 uppercase">Statut</TableHead>
+                    <TableRow className="bg-slate-50">
+                      <TableHead className="text-xs font-semibold uppercase text-slate-500">Type</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase text-slate-500">Date début</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase text-slate-500">Date fin</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase text-slate-500">Salaire</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase text-slate-500">Statut</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {contracts.map((c, index) => {
                       const isActive = !c.end_date || new Date(c.end_date) >= new Date();
                       return (
-                        <TableRow key={c.id || index} className="hover:bg-gray-50">
+                        <TableRow key={c.id || index} className="hover:bg-slate-50/80">
                           <TableCell className="font-medium">{c.contract_type || c.type || '-'}</TableCell>
                           <TableCell>{formatDate(c.start_date)}</TableCell>
                           <TableCell>{formatDate(c.end_date)}</TableCell>
@@ -302,7 +302,7 @@ const EmployeeDetail = () => {
                               : '-'}
                           </TableCell>
                           <TableCell>
-                            <Badge className={isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}>
+                            <Badge className={isActive ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-600'}>
                               {isActive ? 'Actif' : 'Expiré'}
                             </Badge>
                           </TableCell>
@@ -319,7 +319,7 @@ const EmployeeDetail = () => {
           <TabsContent value="remuneration">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Salaire de base</h3>
+                <h3 className="mb-4 text-lg font-semibold text-slate-900">Salaire de base</h3>
                 <div className="bg-violet-50 rounded-xl p-6 text-center">
                   <p className="text-sm text-violet-600 mb-1">Salaire mensuel brut</p>
                   <p className="text-3xl font-bold text-violet-700">
@@ -338,18 +338,18 @@ const EmployeeDetail = () => {
               </Card>
 
               <Card className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Primes mensuelles</h3>
+                <h3 className="mb-4 text-lg font-semibold text-slate-900">Primes mensuelles</h3>
                 {(!employee.primes || employee.primes.length === 0) ? (
-                  <p className="text-sm text-gray-400 text-center py-8">Aucune prime définie</p>
+                  <p className="py-8 text-center text-sm text-slate-400">Aucune prime définie</p>
                 ) : (
                   <div className="space-y-2">
                     {employee.primes.map((prime, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div key={index} className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{prime.name}</p>
-                          <p className="text-xs text-gray-500 font-mono">{prime.code}</p>
+                          <p className="text-sm font-medium text-slate-900">{prime.name}</p>
+                          <p className="font-mono text-xs text-slate-500">{prime.code}</p>
                         </div>
-                        <span className="text-sm font-semibold text-gray-900">
+                        <span className="text-sm font-semibold text-slate-900">
                           {parseFloat(prime.amount || 0).toLocaleString('fr-FR', { minimumFractionDigits: 3 })} TND
                         </span>
                       </div>
@@ -371,7 +371,7 @@ const EmployeeDetail = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Leave Balance */}
               <Card className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Solde de congés</h3>
+                <h3 className="mb-4 text-lg font-semibold text-slate-900">Solde de congés</h3>
                 {leaveBalance ? (
                   <div className="space-y-4">
                     <div className="bg-blue-50 rounded-xl p-4 text-center">
@@ -390,29 +390,29 @@ const EmployeeDetail = () => {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-400 text-center py-8">Données non disponibles</p>
+                  <p className="py-8 text-center text-sm text-slate-400">Données non disponibles</p>
                 )}
               </Card>
 
               {/* Recent Leaves */}
               <Card className="p-6 lg:col-span-2">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Demandes de congés récentes</h3>
+                <h3 className="mb-4 text-lg font-semibold text-slate-900">Demandes de congés récentes</h3>
                 {recentLeaves.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-8">Aucune demande de congé</p>
+                  <p className="py-8 text-center text-sm text-slate-400">Aucune demande de congé</p>
                 ) : (
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-gray-50">
-                        <TableHead className="text-xs font-semibold text-gray-600 uppercase">Type</TableHead>
-                        <TableHead className="text-xs font-semibold text-gray-600 uppercase">Du</TableHead>
-                        <TableHead className="text-xs font-semibold text-gray-600 uppercase">Au</TableHead>
-                        <TableHead className="text-xs font-semibold text-gray-600 uppercase">Jours</TableHead>
-                        <TableHead className="text-xs font-semibold text-gray-600 uppercase">Statut</TableHead>
+                      <TableRow className="bg-slate-50">
+                        <TableHead className="text-xs font-semibold uppercase text-slate-500">Type</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase text-slate-500">Du</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase text-slate-500">Au</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase text-slate-500">Jours</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase text-slate-500">Statut</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {recentLeaves.map((leave, index) => (
-                        <TableRow key={leave.id || index} className="hover:bg-gray-50">
+                        <TableRow key={leave.id || index} className="hover:bg-slate-50/80">
                           <TableCell className="text-sm">{leave.type || leave.leave_type || '-'}</TableCell>
                           <TableCell className="text-sm">{formatDate(leave.start_date)}</TableCell>
                           <TableCell className="text-sm">{formatDate(leave.end_date)}</TableCell>
@@ -422,7 +422,7 @@ const EmployeeDetail = () => {
                               leave.status === 'approved' ? 'bg-green-100 text-green-800'
                                 : leave.status === 'pending' ? 'bg-yellow-100 text-yellow-800'
                                 : leave.status === 'rejected' ? 'bg-red-100 text-red-800'
-                                : 'bg-gray-100 text-gray-600'
+                                : 'bg-slate-100 text-slate-600'
                             }>
                               {leave.status === 'approved' ? 'Approuvé'
                                 : leave.status === 'pending' ? 'En attente'
@@ -442,27 +442,27 @@ const EmployeeDetail = () => {
           {/* Tab 5: Bulletins */}
           <TabsContent value="bulletins">
             <Card className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Bulletins de paie</h3>
+              <h3 className="mb-4 text-lg font-semibold text-slate-900">Bulletins de paie</h3>
               {payslips.length === 0 ? (
                 <div className="text-center py-12">
-                  <Receipt className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">Aucun bulletin de paie généré</p>
+                  <Receipt className="mx-auto mb-4 h-12 w-12 text-slate-300" />
+                  <p className="text-slate-500">Aucun bulletin de paie généré</p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="text-xs font-semibold text-gray-600 uppercase">Période</TableHead>
-                      <TableHead className="text-xs font-semibold text-gray-600 uppercase">Salaire brut</TableHead>
-                      <TableHead className="text-xs font-semibold text-gray-600 uppercase">Retenues</TableHead>
-                      <TableHead className="text-xs font-semibold text-gray-600 uppercase">Net à payer</TableHead>
-                      <TableHead className="text-xs font-semibold text-gray-600 uppercase">Statut</TableHead>
-                      <TableHead className="text-xs font-semibold text-gray-600 uppercase text-right">Actions</TableHead>
+                    <TableRow className="bg-slate-50">
+                      <TableHead className="text-xs font-semibold uppercase text-slate-500">Période</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase text-slate-500">Salaire brut</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase text-slate-500">Retenues</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase text-slate-500">Net à payer</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase text-slate-500">Statut</TableHead>
+                      <TableHead className="text-right text-xs font-semibold uppercase text-slate-500">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {payslips.map((slip, index) => (
-                      <TableRow key={slip.id || index} className="hover:bg-gray-50">
+                      <TableRow key={slip.id || index} className="hover:bg-slate-50/80">
                         <TableCell className="text-sm font-medium">{slip.period || `${slip.month}/${slip.year}` || '-'}</TableCell>
                         <TableCell className="text-sm">
                           {slip.gross_salary != null
@@ -482,7 +482,7 @@ const EmployeeDetail = () => {
                         <TableCell>
                           <Badge className={
                             slip.status === 'paid' ? 'bg-green-100 text-green-800'
-                              : slip.status === 'draft' ? 'bg-gray-100 text-gray-600'
+                              : slip.status === 'draft' ? 'bg-slate-100 text-slate-600'
                               : 'bg-yellow-100 text-yellow-800'
                           }>
                             {slip.status === 'paid' ? 'Payé' : slip.status === 'draft' ? 'Brouillon' : slip.status || '-'}
@@ -577,7 +577,7 @@ const EmployeeDetail = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setContractModal(false)}>Annuler</Button>
-            <Button className="bg-violet-600 hover:bg-violet-700 text-white" onClick={handleAddContract} disabled={savingContract}>
+            <Button onClick={handleAddContract} disabled={savingContract}>
               {savingContract ? 'Enregistrement...' : 'Ajouter'}
             </Button>
           </DialogFooter>
@@ -588,10 +588,10 @@ const EmployeeDetail = () => {
 };
 
 const InfoRow = ({ icon, label, value }) => (
-  <div className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-    <span className="text-gray-400">{icon}</span>
-    <span className="text-sm text-gray-500 w-36">{label}</span>
-    <span className="text-sm font-medium text-gray-900">{value || '-'}</span>
+  <div className="flex items-center gap-3 border-b border-slate-50 py-2 last:border-0">
+    <span className="text-slate-400">{icon}</span>
+    <span className="w-36 text-sm text-slate-500">{label}</span>
+    <span className="text-sm font-medium text-slate-900">{value || '-'}</span>
   </div>
 );
 

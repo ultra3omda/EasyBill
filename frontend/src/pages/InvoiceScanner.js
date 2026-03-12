@@ -148,7 +148,8 @@ export default function InvoiceScanner() {
         invoice: editedInvoice,
         journal_entries: editedJournalEntries,
         workflow: editedWorkflow,
-        company_id: currentCompany.id
+        company_id: currentCompany.id,
+        source_file_path: parseResult?.source_file_path || null
       };
       const res = await fetch(`${API}/api/invoice-scanner/confirm`, {
         method: 'POST',

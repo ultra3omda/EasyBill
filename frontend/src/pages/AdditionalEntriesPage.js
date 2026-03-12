@@ -174,14 +174,14 @@ const AdditionalEntriesPage = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Entrées supplémentaires</h1>
-            <p className="text-gray-500 mt-1">Configurez les frais additionnels comme le timbre fiscal</p>
+            <h1 className="page-header-title">Entrées supplémentaires</h1>
+            <p className="page-header-subtitle">Configurez les frais additionnels comme le timbre fiscal</p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button 
                 onClick={openNewDialog}
-                className="bg-violet-600 hover:bg-violet-700 text-white flex items-center gap-2"
+                className="flex items-center gap-2"
                 data-testid="add-entry-button"
               >
                 <Plus className="w-4 h-4" />
@@ -277,7 +277,7 @@ const AdditionalEntriesPage = () => {
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Annuler
                   </Button>
-                  <Button type="submit" className="bg-violet-600 hover:bg-violet-700" data-testid="entry-submit-button">
+                  <Button type="submit" data-testid="entry-submit-button">
                     {editingEntry ? 'Mettre à jour' : 'Créer'}
                   </Button>
                 </div>
@@ -290,12 +290,12 @@ const AdditionalEntriesPage = () => {
         <Card>
           {loading ? (
             <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600 mx-auto"></div>
+              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
             </div>
           ) : entries.length === 0 ? (
             <div className="p-8 text-center">
-              <PlusCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">Aucune entrée supplémentaire configurée</p>
+              <PlusCircle className="mx-auto mb-4 h-12 w-12 text-slate-300" />
+              <p className="text-slate-500">Aucune entrée supplémentaire configurée</p>
             </div>
           ) : (
             <Table>
@@ -313,16 +313,16 @@ const AdditionalEntriesPage = () => {
               <TableBody>
                 {entries.map((entry) => (
                   <TableRow key={entry.id} data-testid={`entry-row-${entry.id}`}>
-                    <TableCell className="font-medium">{entry.title}</TableCell>
+                    <TableCell className="font-medium text-slate-900">{entry.title}</TableCell>
                     <TableCell>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                      <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
                         {entry.value} {entry.type === 'percentage' ? '%' : 'TND'}
                       </span>
                     </TableCell>
                     <TableCell>{getTypeLabel(entry.type)}</TableCell>
                     <TableCell>{getCalculationLabel(entry.calculation)}</TableCell>
                     <TableCell>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                         entry.sign === 'positive' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                       }`}>
                         {getSignLabel(entry.sign)}

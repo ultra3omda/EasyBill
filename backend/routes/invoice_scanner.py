@@ -13,6 +13,8 @@ from pydantic import BaseModel
 import os
 import re
 import logging
+from pathlib import Path
+from uuid import uuid4
 
 from utils.dependencies import get_current_user, get_current_company
 from utils.helpers import generate_document_number, calculate_document_totals
@@ -32,6 +34,8 @@ ALLOWED_MIME = {
     "image/webp", "image/tiff", "image/bmp",
 }
 MAX_FILE_SIZE = 10 * 1024 * 1024   # 10 MB
+SUPPLIER_IMPORT_UPLOAD_DIR = Path(__file__).resolve().parent.parent / "uploads" / "supplier_invoice_imports"
+SUPPLIER_IMPORT_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ─── Pydantic models ──────────────────────────────────────────────────────────
@@ -97,9 +101,32 @@ class ConfirmScanRequest(BaseModel):
     journal_entries: List[JournalEntryData]
     workflow: Optional[Dict[str, Any]] = None
     company_id: str
+    source_file_path: Optional[str] = None
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
+
+def _infer_extension(filename: str, content_type: str) -> str:
+    lower_name = (filename or "").lower()
+    if lower_name.endswith(".pdf") or content_type == "application/pdf":
+        return ".pdf"
+    if lower_name.endswith((".jpg", ".jpeg")) or content_type in {"image/jpeg", "image/jpg"}:
+        return ".jpg"
+    if lower_name.endswith(".png") or content_type == "image/png":
+        return ".png"
+    if lower_name.endswith(".webp") or content_type == "image/webp":
+        return ".webp"
+    return Path(filename or "document").suffix or ".bin"
+
+
+def _store_source_file(company_id: str, filename: str, content_type: str, file_bytes: bytes) -> str:
+    company_dir = SUPPLIER_IMPORT_UPLOAD_DIR / company_id
+    company_dir.mkdir(parents=True, exist_ok=True)
+    ext = _infer_extension(filename, content_type)
+    stored_name = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid4().hex}{ext}"
+    target_path = company_dir / stored_name
+    target_path.write_bytes(file_bytes)
+    return f"{company_id}/{stored_name}"
 
 def _build_journal_entries(
     supplier_name: str,
@@ -493,6 +520,7 @@ async def _ensure_stock_product(company_id: str, current_user: dict, item: Dict[
         "product_id": str(result.inserted_id),
         "product_name": product_name,
         "product_type": "product",
+        "auto_created_product": True,
         "review_required": False,
         "stock_reason": f"{item.get('stock_reason')}. Article créé automatiquement à la confirmation.",
     }
@@ -643,6 +671,8 @@ async def parse_invoice_document(
     file_bytes = await file.read()
     if len(file_bytes) > MAX_FILE_SIZE:
         raise HTTPException(status_code=413, detail="Fichier trop volumineux (max 10 Mo)")
+
+    source_file_path = _store_source_file(company_id, file.filename or "document", content_type, file_bytes)
 
     # Extract data
     try:
@@ -820,6 +850,7 @@ async def parse_invoice_document(
         "error": extracted.get("error"),
         "raw_text_preview": extracted.get("raw_text_preview", "")[:300],
         "filename": file.filename,
+        "source_file_path": source_file_path,
         "duplicate_invoice": {
             "id": str(duplicate_invoice["_id"]),
             "number": duplicate_invoice.get("number"),
@@ -864,7 +895,9 @@ async def confirm_invoice_import(
             "total_paid": 0.0,
             "created_at": now,
             "updated_at": now,
-            "created_by": current_user["_id"]
+            "created_by": current_user["_id"],
+            "source": "invoice_scanner",
+            "auto_created": True,
         }
         r = await db.suppliers.insert_one(supplier_doc)
         supplier_id = str(r.inserted_id)
@@ -936,6 +969,11 @@ async def confirm_invoice_import(
         results["purchase_order"] = {"created": False, "id": purchase_order_id, "number": purchase_order_number}
 
     items = [await _ensure_stock_product(company_id, current_user, item) for item in items]
+    auto_created_product_ids = [
+        ObjectId(item["product_id"])
+        for item in items
+        if item.get("auto_created_product") and item.get("product_id")
+    ]
 
     existing_receipt_doc = None
     if receipt_id and not workflow.get("receipt", {}).get("create", True):
@@ -1070,7 +1108,10 @@ async def confirm_invoice_import(
         "created_at": now,
         "updated_at": now,
         "created_by": current_user["_id"],
+        "attachments": [data.source_file_path] if data.source_file_path else [],
         "source": "scanner",
+        "auto_created_supplier_id": ObjectId(supplier_id) if results.get("supplier", {}).get("created") and supplier_id else None,
+        "auto_created_product_ids": auto_created_product_ids,
         "regulated_purchase_chain": {
             "purchase_order_id": ObjectId(purchase_order_id) if purchase_order_id else None,
             "receipt_id": ObjectId(receipt_id) if receipt_id else None,

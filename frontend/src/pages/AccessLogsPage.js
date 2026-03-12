@@ -64,7 +64,7 @@ const AccessLogsPage = () => {
       'Devis': 'bg-cyan-100 text-cyan-800',
       'Article': 'bg-pink-100 text-pink-800',
     };
-    return colors[category] || 'bg-gray-100 text-gray-800';
+    return colors[category] || 'bg-slate-100 text-slate-800';
   };
 
   const getActionColor = (action) => {
@@ -73,7 +73,7 @@ const AccessLogsPage = () => {
       'Mise à jour': 'text-blue-600',
       'Supprimer': 'text-red-600',
     };
-    return colors[action] || 'text-gray-600';
+    return colors[action] || 'text-slate-600';
   };
 
   return (
@@ -82,8 +82,8 @@ const AccessLogsPage = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Journal d'accès</h1>
-            <p className="text-gray-500 mt-1">Historique des actions effectuées sur votre entreprise</p>
+            <h1 className="page-header-title">Journal d'accès</h1>
+            <p className="page-header-subtitle">Historique des actions effectuées sur votre entreprise</p>
           </div>
           <Button 
             onClick={fetchLogs}
@@ -98,51 +98,51 @@ const AccessLogsPage = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-4">
+          <Card className="stat-surface p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-violet-100 rounded-lg">
+              <div className="rounded-2xl bg-violet-100 p-2">
                 <Activity className="w-5 h-5 text-violet-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Total actions</p>
-                <p className="text-2xl font-bold text-gray-900">{logs.length}</p>
+                <p className="text-sm text-slate-500">Total actions</p>
+                <p className="text-2xl font-bold text-slate-900">{logs.length}</p>
               </div>
             </div>
           </Card>
-          <Card className="p-4">
+          <Card className="stat-surface p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
+              <div className="rounded-2xl bg-green-100 p-2">
                 <Activity className="w-5 h-5 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Créations</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-slate-500">Créations</p>
+                <p className="text-2xl font-bold text-slate-900">
                   {logs.filter(l => l.action === 'Créer').length}
                 </p>
               </div>
             </div>
           </Card>
-          <Card className="p-4">
+          <Card className="stat-surface p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
+              <div className="rounded-2xl bg-blue-100 p-2">
                 <Activity className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Mises à jour</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-slate-500">Mises à jour</p>
+                <p className="text-2xl font-bold text-slate-900">
                   {logs.filter(l => l.action === 'Mise à jour').length}
                 </p>
               </div>
             </div>
           </Card>
-          <Card className="p-4">
+          <Card className="stat-surface p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
+              <div className="rounded-2xl bg-red-100 p-2">
                 <Activity className="w-5 h-5 text-red-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Suppressions</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-slate-500">Suppressions</p>
+                <p className="text-2xl font-bold text-slate-900">
                   {logs.filter(l => l.action === 'Supprimer').length}
                 </p>
               </div>
@@ -158,30 +158,30 @@ const AccessLogsPage = () => {
             </div>
           ) : logs.length === 0 ? (
             <div className="p-8 text-center">
-              <FileKey className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">Aucune activité enregistrée</p>
+              <FileKey className="mx-auto mb-4 h-12 w-12 text-slate-300" />
+              <p className="text-slate-500">Aucune activité enregistrée</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Utilisateur</TableHead>
-                  <TableHead>Catégorie</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Élément</TableHead>
-                  <TableHead>IP</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead className="text-slate-500">Utilisateur</TableHead>
+                  <TableHead className="text-slate-500">Catégorie</TableHead>
+                  <TableHead className="text-slate-500">Action</TableHead>
+                  <TableHead className="text-slate-500">Élément</TableHead>
+                  <TableHead className="text-slate-500">IP</TableHead>
+                  <TableHead className="text-slate-500">Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {logs.map((log) => (
-                  <TableRow key={log.id} data-testid={`log-row-${log.id}`}>
+                  <TableRow key={log.id} data-testid={`log-row-${log.id}`} className="hover:bg-slate-50/80">
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100">
                           <User className="w-4 h-4 text-violet-600" />
                         </div>
-                        <span className="font-medium">{log.user_name || 'Utilisateur'}</span>
+                        <span className="font-medium text-slate-900">{log.user_name || 'Utilisateur'}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -194,12 +194,12 @@ const AccessLogsPage = () => {
                         {log.action}
                       </span>
                     </TableCell>
-                    <TableCell className="font-medium">{log.element}</TableCell>
-                    <TableCell className="text-gray-500 font-mono text-sm">
+                    <TableCell className="font-medium text-slate-900">{log.element}</TableCell>
+                    <TableCell className="font-mono text-sm text-slate-500">
                       {log.ip_address || '-'}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1 text-gray-500">
+                      <div className="flex items-center gap-1 text-slate-500">
                         <Calendar className="w-3 h-3" />
                         <span className="text-sm">{formatDate(log.created_at)}</span>
                       </div>

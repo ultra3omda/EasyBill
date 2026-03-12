@@ -122,13 +122,13 @@ const AccountingDashboard = () => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-white p-3 shadow-lg rounded-lg border">
+        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg">
           <p className="font-semibold">{data.fullName || data.name}</p>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-slate-600">
             Solde: {formatCurrency(data.balance || data.value)}
           </p>
           {data.count && (
-            <p className="text-sm text-gray-600">{data.count} comptes</p>
+            <p className="text-sm text-slate-600">{data.count} comptes</p>
           )}
         </div>
       );
@@ -139,8 +139,8 @@ const AccountingDashboard = () => {
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-64">
-          <RefreshCw className="w-8 h-8 animate-spin text-violet-600" />
+        <div className="flex h-64 items-center justify-center">
+          <RefreshCw className="h-8 w-8 animate-spin text-primary" />
         </div>
       </AppLayout>
     );
@@ -152,8 +152,8 @@ const AccountingDashboard = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Tableau de Bord Comptable</h1>
-            <p className="text-gray-500 mt-1">Vue d'ensemble de la santé financière</p>
+            <h1 className="page-header-title">Tableau de Bord Comptable</h1>
+            <p className="page-header-subtitle">Vue d'ensemble de la santé financière</p>
           </div>
           <div className="flex gap-2">
             <Button
@@ -163,10 +163,7 @@ const AccountingDashboard = () => {
               <FileText className="w-4 h-4 mr-2" />
               Écritures
             </Button>
-            <Button
-              className="bg-violet-600 hover:bg-violet-700"
-              onClick={() => navigate('/journal-entries?action=new')}
-            >
+            <Button onClick={() => navigate('/journal-entries?action=new')}>
               <PlusCircle className="w-4 h-4 mr-2" />
               Nouvelle écriture
             </Button>
@@ -175,56 +172,56 @@ const AccountingDashboard = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-5">
+          <Card className="stat-surface p-5">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-violet-100 rounded-xl">
-                <Calculator className="w-6 h-6 text-violet-600" />
+              <div className="rounded-2xl bg-violet-100 p-3">
+                <Calculator className="w-6 h-6 text-violet-700" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Écritures comptables</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-slate-500">Écritures comptables</p>
+                <p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">
                   {dashboard?.entries?.total || 0}
                 </p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-5">
+          <Card className="stat-surface p-5">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-xl">
-                <TrendingUp className="w-6 h-6 text-green-600" />
+              <div className="rounded-2xl bg-green-100 p-3">
+                <TrendingUp className="w-6 h-6 text-green-700" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Total Débits</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-slate-500">Total Débits</p>
+                <p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">
                   {formatCurrency(dashboard?.entries?.total_debit || 0)}
                 </p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-5">
+          <Card className="stat-surface p-5">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-red-100 rounded-xl">
-                <TrendingDown className="w-6 h-6 text-red-600" />
+              <div className="rounded-2xl bg-rose-100 p-3">
+                <TrendingDown className="w-6 h-6 text-rose-700" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Total Crédits</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-slate-500">Total Crédits</p>
+                <p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">
                   {formatCurrency(dashboard?.entries?.total_credit || 0)}
                 </p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-5">
+          <Card className="stat-surface p-5">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <Scale className="w-6 h-6 text-blue-600" />
+              <div className="rounded-2xl bg-amber-100 p-3">
+                <Scale className="w-6 h-6 text-amber-700" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Équilibre</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-sm text-slate-500">Équilibre</p>
+                <p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">
                   {Math.abs(
                     (dashboard?.entries?.total_debit || 0) -
                       (dashboard?.entries?.total_credit || 0)
@@ -241,7 +238,7 @@ const AccountingDashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Pie Chart - Balance by Type */}
           <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Répartition par Type de Compte</h3>
+            <h3 className="mb-4 text-lg font-semibold text-slate-900">Répartition par Type de Compte</h3>
             {pieData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
@@ -266,7 +263,7 @@ const AccountingDashboard = () => {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[300px] flex items-center justify-center text-gray-500">
+              <div className="flex h-[300px] items-center justify-center text-slate-500">
                 Aucune donnée disponible
               </div>
             )}
@@ -277,7 +274,7 @@ const AccountingDashboard = () => {
                     className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: entry.color }}
                   />
-                  <span className="text-sm text-gray-600">{entry.name}</span>
+                  <span className="text-sm text-slate-600">{entry.name}</span>
                 </div>
               ))}
             </div>
@@ -285,7 +282,7 @@ const AccountingDashboard = () => {
 
           {/* Bar Chart - Balance by Class */}
           <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Soldes par Classe de Compte</h3>
+            <h3 className="mb-4 text-lg font-semibold text-slate-900">Soldes par Classe de Compte</h3>
             {barData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={barData}>
@@ -309,7 +306,7 @@ const AccountingDashboard = () => {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[300px] flex items-center justify-center text-gray-500">
+              <div className="flex h-[300px] items-center justify-center text-slate-500">
                 Aucune donnée disponible
               </div>
             )}
@@ -321,7 +318,7 @@ const AccountingDashboard = () => {
           {Object.entries(dashboard?.by_type || {}).map(([type, data]) => (
             <Card
               key={type}
-              className="p-4 cursor-pointer hover:shadow-md transition-shadow"
+              className="stat-surface cursor-pointer p-4 transition-shadow hover:shadow-md"
               onClick={() => navigate(`/chart-of-accounts?type=${type}`)}
             >
               <div className="flex items-center justify-between mb-2">
@@ -333,7 +330,7 @@ const AccountingDashboard = () => {
                   {data.count} comptes
                 </Badge>
               </div>
-              <p className="text-sm font-medium text-gray-600">{TYPE_LABELS[type]}</p>
+              <p className="text-sm font-medium text-slate-600">{TYPE_LABELS[type]}</p>
               <p className="text-lg font-bold" style={{ color: COLORS[type] }}>
                 {formatCurrency(data.balance)}
               </p>
@@ -359,24 +356,24 @@ const AccountingDashboard = () => {
               {dashboard.recent_entries.map((entry) => (
                 <div
                   key={entry.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer"
+                  className="flex cursor-pointer items-center justify-between rounded-2xl bg-slate-50 p-3 hover:bg-slate-100"
                   onClick={() => navigate(`/journal-entries?id=${entry.id}`)}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-violet-100 rounded-lg">
-                      <FileText className="w-4 h-4 text-violet-600" />
+                    <div className="rounded-2xl bg-violet-100 p-2">
+                      <FileText className="w-4 h-4 text-violet-700" />
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium text-slate-900">
                         {entry.entry_number}
                       </p>
-                      <p className="text-sm text-gray-500 truncate max-w-[300px]">
+                      <p className="max-w-[300px] truncate text-sm text-slate-500">
                         {entry.description}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-slate-900">
                       {formatCurrency(entry.total_debit)}
                     </p>
                     <Badge
@@ -384,7 +381,7 @@ const AccountingDashboard = () => {
                         entry.status === 'posted'
                           ? 'bg-green-100 text-green-800'
                           : entry.status === 'draft'
-                          ? 'bg-yellow-100 text-yellow-800'
+                          ? 'bg-violet-100 text-violet-800'
                           : 'bg-red-100 text-red-800'
                       }
                     >
@@ -399,13 +396,10 @@ const AccountingDashboard = () => {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
-              <Calculator className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+            <div className="py-8 text-center text-slate-500">
+              <Calculator className="mx-auto mb-3 h-12 w-12 text-slate-300" />
               <p>Aucune écriture comptable</p>
-              <Button
-                className="mt-4 bg-violet-600 hover:bg-violet-700"
-                onClick={() => navigate('/journal-entries?action=new')}
-              >
+              <Button className="mt-4" onClick={() => navigate('/journal-entries?action=new')}>
                 <PlusCircle className="w-4 h-4 mr-2" />
                 Créer une écriture
               </Button>
@@ -416,36 +410,36 @@ const AccountingDashboard = () => {
         {/* Quick Links */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card
-            className="p-4 cursor-pointer hover:shadow-md transition-shadow border-l-4 border-l-violet-500"
+            className="stat-surface cursor-pointer border-l-4 border-l-violet-500 p-4 transition-shadow hover:shadow-md"
             onClick={() => navigate('/chart-of-accounts')}
           >
-            <BookOpen className="w-6 h-6 text-violet-600 mb-2" />
+            <BookOpen className="mb-2 h-6 w-6 text-violet-700" />
             <p className="font-medium">Plan Comptable</p>
-            <p className="text-sm text-gray-500">490 comptes</p>
+            <p className="text-sm text-slate-500">490 comptes</p>
           </Card>
           <Card
-            className="p-4 cursor-pointer hover:shadow-md transition-shadow border-l-4 border-l-blue-500"
+            className="stat-surface cursor-pointer border-l-4 border-l-blue-500 p-4 transition-shadow hover:shadow-md"
             onClick={() => navigate('/journal-entries')}
           >
-            <FileText className="w-6 h-6 text-blue-600 mb-2" />
+            <FileText className="mb-2 h-6 w-6 text-blue-600" />
             <p className="font-medium">Écritures</p>
-            <p className="text-sm text-gray-500">{dashboard?.entries?.total || 0} écritures</p>
+            <p className="text-sm text-slate-500">{dashboard?.entries?.total || 0} écritures</p>
           </Card>
           <Card
-            className="p-4 cursor-pointer hover:shadow-md transition-shadow border-l-4 border-l-green-500"
+            className="stat-surface cursor-pointer border-l-4 border-l-green-500 p-4 transition-shadow hover:shadow-md"
             onClick={() => navigate('/general-ledger')}
           >
-            <DollarSign className="w-6 h-6 text-green-600 mb-2" />
+            <DollarSign className="mb-2 h-6 w-6 text-green-600" />
             <p className="font-medium">Grand Livre</p>
-            <p className="text-sm text-gray-500">Par compte</p>
+            <p className="text-sm text-slate-500">Par compte</p>
           </Card>
           <Card
-            className="p-4 cursor-pointer hover:shadow-md transition-shadow border-l-4 border-l-orange-500"
+            className="stat-surface cursor-pointer border-l-4 border-l-amber-500 p-4 transition-shadow hover:shadow-md"
             onClick={() => navigate('/trial-balance')}
           >
-            <Scale className="w-6 h-6 text-orange-600 mb-2" />
+            <Scale className="mb-2 h-6 w-6 text-amber-600" />
             <p className="font-medium">Balance</p>
-            <p className="text-sm text-gray-500">Des comptes</p>
+            <p className="text-sm text-slate-500">Des comptes</p>
           </Card>
         </div>
       </div>

@@ -88,15 +88,15 @@ export default function Bilan() {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Scale className="w-6 h-6 text-violet-600" />
+            <h1 className="page-header-title flex items-center gap-2">
+              <Scale className="w-6 h-6 text-violet-700" />
               Bilan comptable
             </h1>
-            <p className="text-gray-500 text-sm mt-1">
+            <p className="page-header-subtitle">
               Situation patrimoniale — Actif / Passif selon le SCE tunisien
             </p>
           </div>
@@ -120,16 +120,16 @@ export default function Bilan() {
           <CardContent className="p-4">
             <div className="flex flex-wrap items-end gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">
+                <label className="mb-1 block text-sm font-medium text-slate-700">
                   <Calendar className="w-3.5 h-3.5 inline mr-1" />Du
                 </label>
                 <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-40" />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">Au</label>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Au</label>
                 <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-40" />
               </div>
-              <Button onClick={fetchBilan} className="bg-violet-600 hover:bg-violet-700">
+              <Button onClick={fetchBilan}>
                 Actualiser
               </Button>
             </div>
@@ -137,14 +137,14 @@ export default function Bilan() {
         </Card>
 
         {loading ? (
-          <div className="text-center py-16 text-gray-400">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-600 mx-auto mb-3" />
+          <div className="py-16 text-center text-slate-400">
+            <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-b-2 border-primary" />
             Calcul du bilan…
           </div>
         ) : !data ? null : (
           <>
             {/* Equilibre indicator */}
-            <div className={`flex items-center gap-3 p-4 rounded-xl border ${isBalanced ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+            <div className={`flex items-center gap-3 rounded-2xl border p-4 ${isBalanced ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
               {isBalanced
                 ? <TrendingUp className="w-5 h-5 text-green-600" />
                 : <TrendingDown className="w-5 h-5 text-red-600" />}
@@ -152,7 +152,7 @@ export default function Bilan() {
                 <p className={`font-semibold ${isBalanced ? 'text-green-700' : 'text-red-700'}`}>
                   {isBalanced ? 'Bilan équilibré' : `Écart : ${fmt(Math.abs(data.equilibre))} TND`}
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-slate-500">
                   Résultat net de l'exercice : <strong className={data.net_result >= 0 ? 'text-green-700' : 'text-red-600'}>
                     {data.net_result >= 0 ? '+' : ''}{fmt(data.net_result)} TND
                   </strong>
@@ -255,10 +255,10 @@ export default function Bilan() {
                 { label: 'Résultat net', value: data.net_result, color: data.net_result >= 0 ? 'text-green-600' : 'text-red-600' },
                 { label: 'Équilibre', value: data.equilibre, color: Math.abs(data.equilibre) < 0.01 ? 'text-green-600' : 'text-red-600' },
               ].map(kpi => (
-                <Card key={kpi.label}>
+                <Card key={kpi.label} className="stat-surface">
                   <CardContent className="p-4 text-center">
                     <p className={`text-xl font-bold ${kpi.color}`}>{fmt(kpi.value)}</p>
-                    <p className="text-xs text-gray-500 mt-1">{kpi.label}</p>
+                    <p className="mt-1 text-xs text-slate-500">{kpi.label}</p>
                   </CardContent>
                 </Card>
               ))}

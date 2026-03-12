@@ -19,7 +19,7 @@ const fmt = n => Number(n || 0).toLocaleString('fr-TN', { minimumFractionDigits:
 
 const STATUS_CONFIG = {
   open: { label: 'Ouvert', color: 'bg-green-100 text-green-700 border-green-200', Icon: CheckCircle },
-  closed: { label: 'Clôturé', color: 'bg-gray-100 text-gray-600 border-gray-200', Icon: Lock },
+  closed: { label: 'Clôturé', color: 'bg-slate-100 text-slate-600 border-slate-200', Icon: Lock },
   locked: { label: 'Verrouillé', color: 'bg-red-100 text-red-600 border-red-200', Icon: Lock },
 };
 
@@ -173,19 +173,19 @@ export default function FiscalYears() {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <h1 className="page-header-title flex items-center gap-2">
               <Calendar className="w-6 h-6 text-violet-600" />
               Exercices comptables
             </h1>
-            <p className="text-gray-500 text-sm mt-1">
+            <p className="page-header-subtitle">
               Gestion des périodes comptables — ouverture, clôture et statistiques
             </p>
           </div>
-          <Button onClick={() => setShowModal(true)} className="gap-2 bg-violet-600 hover:bg-violet-700">
+          <Button onClick={() => setShowModal(true)} className="gap-2">
             <Plus className="w-4 h-4" /> Nouvel exercice
           </Button>
         </div>
@@ -207,15 +207,15 @@ export default function FiscalYears() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Fiscal Year List */}
           <div className="lg:col-span-1 space-y-3">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Exercices</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Exercices</h2>
             {loading ? (
-              <div className="text-center py-8 text-gray-400">Chargement…</div>
+              <div className="py-8 text-center text-slate-400">Chargement…</div>
             ) : fiscalYears.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-gray-400">
+              <Card className="stat-surface">
+                <CardContent className="py-8 text-center text-slate-400">
                   <Calendar className="w-10 h-10 mx-auto mb-2 opacity-30" />
                   <p>Aucun exercice</p>
-                  <Button size="sm" className="mt-3 bg-violet-600" onClick={() => setShowModal(true)}>
+                  <Button size="sm" className="mt-3" onClick={() => setShowModal(true)}>
                     <Plus className="w-3.5 h-3.5 mr-1" /> Créer
                   </Button>
                 </CardContent>
@@ -231,11 +231,11 @@ export default function FiscalYears() {
                     className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                       isSelected
                         ? 'border-violet-500 bg-violet-50 shadow-md'
-                        : 'border-gray-200 bg-white hover:border-violet-300 hover:shadow-sm'
+                        : 'border-slate-200 bg-white hover:border-violet-300 hover:shadow-sm'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-semibold text-gray-900 text-sm">{fy.name}</span>
+                      <span className="text-sm font-semibold text-slate-900">{fy.name}</span>
                       <div className="flex items-center gap-1.5">
                         {fy.is_current && (
                           <Badge className="text-xs bg-violet-100 text-violet-700 border-violet-200">
@@ -247,11 +247,11 @@ export default function FiscalYears() {
                         </Badge>
                       </div>
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-slate-500">
                       {fy.start_date} → {fy.end_date}
                     </p>
                     {fy.entry_count > 0 && (
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="mt-1 text-xs text-slate-500">
                         {fy.entry_count} écriture{fy.entry_count > 1 ? 's' : ''} · {fmt(fy.total_debit)} TND
                       </p>
                     )}
@@ -264,8 +264,8 @@ export default function FiscalYears() {
           {/* Detail Panel */}
           <div className="lg:col-span-2">
             {!selectedFY ? (
-              <Card>
-                <CardContent className="py-16 text-center text-gray-400">
+              <Card className="stat-surface">
+                <CardContent className="py-16 text-center text-slate-400">
                   <Calendar className="w-12 h-12 mx-auto mb-3 opacity-30" />
                   <p className="text-lg font-medium">Sélectionnez un exercice</p>
                   <p className="text-sm">Cliquez sur un exercice pour voir les détails</p>
@@ -274,7 +274,7 @@ export default function FiscalYears() {
             ) : (
               <div className="space-y-4">
                 {/* FY Header */}
-                <Card>
+                <Card className="stat-surface">
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-xl">{selectedFY.name}</CardTitle>
@@ -309,7 +309,7 @@ export default function FiscalYears() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 text-sm text-gray-500 mt-1">
+                    <div className="mt-1 flex items-center gap-3 text-sm text-slate-500">
                       <span><Calendar className="w-3.5 h-3.5 inline mr-1" />{selectedFY.start_date} → {selectedFY.end_date}</span>
                       {selectedFY.closed_at && (
                         <span><Lock className="w-3.5 h-3.5 inline mr-1" />Clôturé le {selectedFY.closed_at.slice(0, 10)} par {selectedFY.closed_by}</span>
@@ -320,40 +320,40 @@ export default function FiscalYears() {
 
                 {/* Stats */}
                 {detailLoading ? (
-                  <div className="text-center py-8 text-gray-400">
+                  <div className="py-8 text-center text-slate-400">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600 mx-auto mb-2" />
                     Chargement des statistiques…
                   </div>
                 ) : detailFY && (
                   <>
                     <div className="grid grid-cols-3 gap-3">
-                      <Card>
+                      <Card className="stat-surface">
                         <CardContent className="p-4 text-center">
                           <FileText className="w-6 h-6 mx-auto mb-1 text-violet-600" />
-                          <p className="text-2xl font-bold text-gray-900">
+                          <p className="text-2xl font-bold text-slate-900">
                             {detailFY.by_status ? Object.values(detailFY.by_status).reduce((a, b) => a + b, 0) : 0}
                           </p>
-                          <p className="text-xs text-gray-500">Écritures total</p>
+                          <p className="text-xs text-slate-500">Écritures total</p>
                         </CardContent>
                       </Card>
-                      <Card>
+                      <Card className="stat-surface">
                         <CardContent className="p-4 text-center">
                           <CheckCircle className="w-6 h-6 mx-auto mb-1 text-green-600" />
-                          <p className="text-2xl font-bold text-gray-900">{detailFY.by_status?.posted || 0}</p>
-                          <p className="text-xs text-gray-500">Validées</p>
+                          <p className="text-2xl font-bold text-slate-900">{detailFY.by_status?.posted || 0}</p>
+                          <p className="text-xs text-slate-500">Validées</p>
                         </CardContent>
                       </Card>
-                      <Card>
+                      <Card className="stat-surface">
                         <CardContent className="p-4 text-center">
                           <Clock className="w-6 h-6 mx-auto mb-1 text-yellow-600" />
-                          <p className="text-2xl font-bold text-gray-900">{detailFY.by_status?.draft || 0}</p>
-                          <p className="text-xs text-gray-500">Brouillons</p>
+                          <p className="text-2xl font-bold text-slate-900">{detailFY.by_status?.draft || 0}</p>
+                          <p className="text-xs text-slate-500">Brouillons</p>
                         </CardContent>
                       </Card>
                     </div>
 
                     {/* By journal type */}
-                    <Card>
+                    <Card className="stat-surface">
                       <CardHeader>
                         <CardTitle className="text-base flex items-center gap-2">
                           <BarChart2 className="w-4 h-4 text-violet-600" />
@@ -362,17 +362,17 @@ export default function FiscalYears() {
                       </CardHeader>
                       <CardContent className="p-0">
                         <table className="w-full text-sm">
-                          <thead className="bg-gray-50 border-b">
+                          <thead className="border-b bg-slate-50">
                             <tr>
-                              <th className="px-4 py-2 text-left font-medium text-gray-600">Journal</th>
-                              <th className="px-4 py-2 text-right font-medium text-gray-600">Écritures</th>
-                              <th className="px-4 py-2 text-right font-medium text-gray-600">Total Débit</th>
-                              <th className="px-4 py-2 text-right font-medium text-gray-600">Total Crédit</th>
+                              <th className="px-4 py-2 text-left font-medium text-slate-600">Journal</th>
+                              <th className="px-4 py-2 text-right font-medium text-slate-600">Écritures</th>
+                              <th className="px-4 py-2 text-right font-medium text-slate-600">Total Débit</th>
+                              <th className="px-4 py-2 text-right font-medium text-slate-600">Total Crédit</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-gray-100">
+                          <tbody className="divide-y divide-slate-100">
                             {detailFY.by_journal_type?.map(row => (
-                              <tr key={row.journal_type} className="hover:bg-gray-50">
+                              <tr key={row.journal_type} className="hover:bg-slate-50/80">
                                 <td className="px-4 py-2 capitalize">{row.journal_type}</td>
                                 <td className="px-4 py-2 text-right">{row.count}</td>
                                 <td className="px-4 py-2 text-right font-medium">{fmt(row.total_debit)}</td>
@@ -442,7 +442,7 @@ export default function FiscalYears() {
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setShowModal(false)}>Annuler</Button>
-            <Button onClick={handleCreate} disabled={saving} className="bg-violet-600 hover:bg-violet-700">
+            <Button onClick={handleCreate} disabled={saving}>
               {saving ? <RefreshCw className="w-4 h-4 animate-spin mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
               Créer
             </Button>
@@ -460,7 +460,7 @@ export default function FiscalYears() {
             </DialogTitle>
           </DialogHeader>
           <div className="py-3">
-            <p className="text-gray-700">
+            <p className="text-slate-700">
               La clôture d'un exercice est une opération comptable importante.
               Les écritures brouillons ne seront <strong>pas</strong> automatiquement validées.
             </p>

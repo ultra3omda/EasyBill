@@ -44,19 +44,19 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 to-amber-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-8 shadow-xl">
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(123,92,255,0.14),_transparent_38%),linear-gradient(180deg,_#fcfbff_0%,_#f7f4ff_55%,_#fffaf0_100%)] p-4">
+      <Card className="w-full max-w-md p-8 shadow-2xl shadow-violet-100/60">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-violet-700 rounded-lg flex items-center justify-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-violet-700">
               <span className="text-white font-bold text-xl">E</span>
             </div>
             <span className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-amber-500 bg-clip-text text-transparent">
               EasyBill
             </span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Mot de passe oublié</h1>
-          <p className="text-gray-600">
+          <h1 className="mb-2 text-3xl font-bold tracking-[-0.03em] text-slate-900">Mot de passe oublié</h1>
+          <p className="text-slate-600">
             {emailSent 
               ? "Vérifiez votre boîte mail" 
               : "Entrez votre email pour réinitialiser votre mot de passe"}
@@ -68,7 +68,7 @@ const ForgotPassword = () => {
             <div>
               <Label htmlFor="email">Adresse email</Label>
               <div className="relative mt-2">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <Input
                   id="email"
                   type="email"
@@ -83,7 +83,7 @@ const ForgotPassword = () => {
 
             <Button 
               type="submit" 
-              className="w-full bg-violet-600 hover:bg-violet-700 text-white py-6"
+              className="w-full py-6"
               disabled={loading}
             >
               {loading ? 'Envoi en cours...' : 'Envoyer le lien de réinitialisation'}
@@ -92,15 +92,15 @@ const ForgotPassword = () => {
         ) : (
           <div className="text-center space-y-6">
             <div className="flex justify-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
                 <CheckCircle className="w-10 h-10 text-green-600" />
               </div>
             </div>
             <div className="space-y-2">
-              <p className="text-gray-700">
+              <p className="text-slate-700">
                 Un email a été envoyé à <strong>{email}</strong>
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-slate-600">
                 Cliquez sur le lien dans l'email pour réinitialiser votre mot de passe.
                 Le lien expire dans 30 minutes.
               </p>

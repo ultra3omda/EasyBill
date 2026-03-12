@@ -176,17 +176,17 @@ const LeaveManagement = () => {
   };
 
   if (!currentCompany) {
-    return <AppLayout><div className="text-center py-20 text-gray-500">Aucune entreprise sélectionnée</div></AppLayout>;
+    return <AppLayout><div className="py-20 text-center text-slate-500">Aucune entreprise sélectionnée</div></AppLayout>;
   }
 
   return (
     <AppLayout>
-      <div className="space-y-6 p-6">
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Gestion des Congés</h1>
-            <p className="text-sm text-gray-500 mt-1">Demandes, calendrier et soldes de congés</p>
+            <h1 className="page-header-title">Gestion des Congés</h1>
+            <p className="page-header-subtitle">Demandes, calendrier et soldes de congés</p>
           </div>
           <Button onClick={() => setModalOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
@@ -210,7 +210,7 @@ const LeaveManagement = () => {
 
           {/* Demandes Tab */}
           <TabsContent value="demandes">
-            <Card>
+            <Card className="stat-surface">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -227,11 +227,11 @@ const LeaveManagement = () => {
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-10 text-gray-400">Chargement...</TableCell>
+                        <TableCell colSpan={7} className="py-10 text-center text-slate-400">Chargement...</TableCell>
                       </TableRow>
                     ) : leaves.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-10 text-gray-400">
+                        <TableCell colSpan={7} className="py-10 text-center text-slate-400">
                           Aucune demande de congé
                         </TableCell>
                       </TableRow>
@@ -239,12 +239,12 @@ const LeaveManagement = () => {
                       leaves.map((leave) => {
                         const sc = STATUS_CONFIG[leave.status] || STATUS_CONFIG.en_attente;
                         return (
-                          <TableRow key={leave.id}>
-                            <TableCell className="font-medium">{leave.employee_name || '—'}</TableCell>
-                            <TableCell>{leave.leave_type_label || leave.leave_type || '—'}</TableCell>
-                            <TableCell>{leave.start_date ? new Date(leave.start_date).toLocaleDateString('fr-TN') : '—'}</TableCell>
-                            <TableCell>{leave.end_date ? new Date(leave.end_date).toLocaleDateString('fr-TN') : '—'}</TableCell>
-                            <TableCell className="text-right">{leave.days ?? '—'}</TableCell>
+                          <TableRow key={leave.id} className="hover:bg-slate-50/80">
+                            <TableCell className="font-medium text-slate-900">{leave.employee_name || '—'}</TableCell>
+                            <TableCell className="text-slate-600">{leave.leave_type_label || leave.leave_type || '—'}</TableCell>
+                            <TableCell className="text-slate-600">{leave.start_date ? new Date(leave.start_date).toLocaleDateString('fr-TN') : '—'}</TableCell>
+                            <TableCell className="text-slate-600">{leave.end_date ? new Date(leave.end_date).toLocaleDateString('fr-TN') : '—'}</TableCell>
+                            <TableCell className="text-right text-slate-600">{leave.days ?? '—'}</TableCell>
                             <TableCell>
                               <Badge className={sc.className}>{sc.label}</Badge>
                             </TableCell>
@@ -282,7 +282,7 @@ const LeaveManagement = () => {
 
           {/* Calendrier Tab */}
           <TabsContent value="calendrier">
-            <Card className="p-4">
+            <Card className="stat-surface p-4">
               <div className="flex items-center justify-between mb-4">
                 <Button variant="ghost" size="sm" onClick={prevMonth}>
                   <ChevronLeft className="w-4 h-4" />
@@ -294,9 +294,9 @@ const LeaveManagement = () => {
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
-              <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-lg overflow-hidden">
+              <div className="grid grid-cols-7 gap-px overflow-hidden rounded-2xl bg-slate-200">
                 {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((d) => (
-                  <div key={d} className="bg-gray-50 p-2 text-center text-xs font-medium text-gray-500">{d}</div>
+                  <div key={d} className="bg-slate-50 p-2 text-center text-xs font-medium text-slate-500">{d}</div>
                 ))}
                 {Array.from({ length: getFirstDayOfMonth(calMonth, calYear) }).map((_, i) => (
                   <div key={`empty-${i}`} className="bg-white p-2 min-h-[60px]" />
@@ -305,8 +305,8 @@ const LeaveManagement = () => {
                   const day = i + 1;
                   const dayLeaves = getLeavesForDate(day);
                   return (
-                    <div key={day} className="bg-white p-1.5 min-h-[60px]">
-                      <span className="text-xs font-medium text-gray-700">{day}</span>
+                    <div key={day} className="min-h-[60px] bg-white p-1.5">
+                      <span className="text-xs font-medium text-slate-700">{day}</span>
                       {dayLeaves.slice(0, 2).map((l, li) => (
                         <div
                           key={li}
@@ -317,7 +317,7 @@ const LeaveManagement = () => {
                         </div>
                       ))}
                       {dayLeaves.length > 2 && (
-                        <div className="text-[10px] text-gray-400 mt-0.5">+{dayLeaves.length - 2}</div>
+                        <div className="mt-0.5 text-[10px] text-slate-400">+{dayLeaves.length - 2}</div>
                       )}
                     </div>
                   );
@@ -328,7 +328,7 @@ const LeaveManagement = () => {
 
           {/* Soldes Tab */}
           <TabsContent value="soldes">
-            <Card>
+            <Card className="stat-surface">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -343,16 +343,16 @@ const LeaveManagement = () => {
                   <TableBody>
                     {balances.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-10 text-gray-400">
+                        <TableCell colSpan={5} className="py-10 text-center text-slate-400">
                           Aucun solde disponible
                         </TableCell>
                       </TableRow>
                     ) : (
                       balances.map((b, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell className="font-medium">{b.employee_name || '—'}</TableCell>
-                          <TableCell className="text-right font-mono">{b.acquired ?? '—'}</TableCell>
-                          <TableCell className="text-right font-mono">{b.taken ?? '—'}</TableCell>
+                        <TableRow key={idx} className="hover:bg-slate-50/80">
+                          <TableCell className="font-medium text-slate-900">{b.employee_name || '—'}</TableCell>
+                          <TableCell className="text-right font-mono text-slate-600">{b.acquired ?? '—'}</TableCell>
+                          <TableCell className="text-right font-mono text-slate-600">{b.taken ?? '—'}</TableCell>
                           <TableCell className="text-right font-mono font-bold">
                             <span className={(b.remaining || 0) <= 0 ? 'text-red-600' : 'text-green-700'}>
                               {b.remaining ?? '—'}

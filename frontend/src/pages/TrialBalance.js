@@ -148,8 +148,8 @@ const TrialBalance = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Balance des Comptes</h1>
-            <p className="text-gray-500 mt-1">
+            <h1 className="page-header-title">Balance des Comptes</h1>
+            <p className="page-header-subtitle">
               État récapitulatif des soldes de tous les comptes
             </p>
           </div>
@@ -174,7 +174,7 @@ const TrialBalance = () => {
         <Card className="p-4">
           <form onSubmit={handleFilter} className="flex flex-col md:flex-row gap-4 items-end">
             <div>
-              <Label className="text-xs text-gray-500">Date de clôture</Label>
+              <Label className="text-xs text-slate-500">Date de clôture</Label>
               <Input
                 type="date"
                 value={dateTo}
@@ -182,7 +182,7 @@ const TrialBalance = () => {
                 className="w-48"
               />
             </div>
-            <Button type="submit" className="bg-violet-600 hover:bg-violet-700">
+            <Button type="submit">
               <Filter className="w-4 h-4 mr-1" />
               Actualiser
             </Button>
@@ -213,20 +213,17 @@ const TrialBalance = () => {
         {/* Balance Content */}
         {loading ? (
           <Card className="p-12 text-center">
-            <RefreshCw className="w-8 h-8 animate-spin mx-auto text-violet-600" />
-            <p className="mt-2 text-gray-500">Chargement...</p>
+            <RefreshCw className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <p className="mt-2 text-slate-500">Chargement...</p>
           </Card>
         ) : !balance || balance.accounts?.length === 0 ? (
           <Card className="p-12 text-center">
-            <Scale className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-700">Aucun solde</h3>
-            <p className="text-gray-500 mt-1">
+            <Scale className="mx-auto mb-4 h-16 w-16 text-slate-300" />
+            <h3 className="text-lg font-semibold text-slate-700">Aucun solde</h3>
+            <p className="mt-1 text-slate-500">
               Aucun compte avec un solde non nul
             </p>
-            <Button
-              className="mt-4 bg-violet-600 hover:bg-violet-700"
-              onClick={() => navigate('/journal-entries?action=new')}
-            >
+            <Button className="mt-4" onClick={() => navigate('/journal-entries?action=new')}>
               Créer une écriture
             </Button>
           </Card>
@@ -234,52 +231,44 @@ const TrialBalance = () => {
           <>
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="p-5 bg-gradient-to-br from-green-50 to-green-100/50">
+              <Card className="stat-surface p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-green-600 font-medium">Total Débits</p>
-                    <p className="text-2xl font-bold text-green-700">
+                    <p className="text-sm font-medium text-slate-500">Total Débits</p>
+                    <p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">
                       {formatCurrency(balance.totals?.debit)}
                     </p>
                   </div>
-                  <div className="p-3 bg-green-200 rounded-full">
+                  <div className="rounded-2xl bg-green-100 p-3">
                     <FileText className="w-6 h-6 text-green-700" />
                   </div>
                 </div>
               </Card>
-              <Card className="p-5 bg-gradient-to-br from-red-50 to-red-100/50">
+              <Card className="stat-surface p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-red-600 font-medium">Total Crédits</p>
-                    <p className="text-2xl font-bold text-red-700">
+                    <p className="text-sm font-medium text-slate-500">Total Crédits</p>
+                    <p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">
                       {formatCurrency(balance.totals?.credit)}
                     </p>
                   </div>
-                  <div className="p-3 bg-red-200 rounded-full">
-                    <FileText className="w-6 h-6 text-red-700" />
+                  <div className="rounded-2xl bg-rose-100 p-3">
+                    <FileText className="w-6 h-6 text-rose-700" />
                   </div>
                 </div>
               </Card>
               <Card
-                className={`p-5 ${
-                  balance.totals?.balanced
-                    ? 'bg-gradient-to-br from-green-50 to-green-100/50'
-                    : 'bg-gradient-to-br from-orange-50 to-orange-100/50'
-                }`}
+                className="stat-surface p-5"
               >
                 <div className="flex items-center justify-between">
                   <div>
                     <p
-                      className={`text-sm font-medium ${
-                        balance.totals?.balanced ? 'text-green-600' : 'text-orange-600'
-                      }`}
+                      className="text-sm font-medium text-slate-500"
                     >
                       Différence
                     </p>
                     <p
-                      className={`text-2xl font-bold ${
-                        balance.totals?.balanced ? 'text-green-700' : 'text-orange-700'
-                      }`}
+                      className="text-2xl font-bold tracking-[-0.03em] text-slate-900"
                     >
                       {formatCurrency(
                         Math.abs(
@@ -289,18 +278,18 @@ const TrialBalance = () => {
                     </p>
                   </div>
                   <div
-                    className={`p-3 rounded-full ${
-                      balance.totals?.balanced ? 'bg-green-200' : 'bg-orange-200'
+                    className={`rounded-2xl p-3 ${
+                      balance.totals?.balanced ? 'bg-green-100' : 'bg-amber-100'
                     }`}
                   >
                     {balance.totals?.balanced ? (
                       <CheckCircle
                         className={`w-6 h-6 ${
-                          balance.totals?.balanced ? 'text-green-700' : 'text-orange-700'
+                          balance.totals?.balanced ? 'text-green-700' : 'text-amber-700'
                         }`}
                       />
                     ) : (
-                      <XCircle className="w-6 h-6 text-orange-700" />
+                      <XCircle className="w-6 h-6 text-amber-700" />
                     )}
                   </div>
                 </div>
@@ -310,26 +299,26 @@ const TrialBalance = () => {
             {/* Balance Table */}
             <Card className="overflow-hidden">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b">
+                <thead className="border-b bg-slate-50/80">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
                       Code
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
                       Intitulé
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
                       Type
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
                       Débit
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
                       Crédit
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody className="divide-y divide-slate-200/80">
                   {typeOrder.map((type) => {
                     const accounts = groupedAccounts[type] || [];
                     if (accounts.length === 0) return null;
@@ -340,12 +329,12 @@ const TrialBalance = () => {
                     return (
                       <React.Fragment key={type}>
                         {/* Type Header */}
-                        <tr className="bg-gray-50/50">
+                        <tr className="bg-slate-50/70">
                           <td colSpan={3} className="px-4 py-2 font-semibold">
                             <Badge className={getTypeColor(type)}>
                               {getTypeLabel(type)}
                             </Badge>
-                            <span className="ml-2 text-gray-600 text-sm">
+                            <span className="ml-2 text-sm text-slate-600">
                               ({accounts.length} comptes)
                             </span>
                           </td>
@@ -360,15 +349,15 @@ const TrialBalance = () => {
                         {accounts.map((account) => (
                           <tr
                             key={account.code}
-                            className="hover:bg-gray-50 cursor-pointer"
+                            className="cursor-pointer hover:bg-slate-50"
                             onClick={() =>
                               navigate(`/general-ledger?account_code=${account.code}`)
                             }
                           >
-                            <td className="px-4 py-2 pl-8 font-mono text-violet-600">
+                            <td className="px-4 py-2 pl-8 font-mono text-violet-700">
                               {account.code}
                             </td>
-                            <td className="px-4 py-2 text-sm">{account.name}</td>
+                            <td className="px-4 py-2 text-sm text-slate-700">{account.name}</td>
                             <td className="px-4 py-2 text-center">
                               <Badge variant="outline" className="text-xs">
                                 {getTypeLabel(account.type)}
@@ -386,7 +375,7 @@ const TrialBalance = () => {
                     );
                   })}
                 </tbody>
-                <tfoot className="bg-violet-50 border-t-2 border-violet-200">
+                <tfoot className="border-t-2 border-violet-200 bg-violet-50/70">
                   <tr className="font-bold">
                     <td colSpan={3} className="px-4 py-3 text-right text-violet-900">
                       TOTAUX

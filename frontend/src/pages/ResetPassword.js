@@ -71,20 +71,20 @@ const ResetPassword = () => {
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-violet-50 to-amber-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md p-8 shadow-xl">
+      <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(123,92,255,0.14),_transparent_38%),linear-gradient(180deg,_#fcfbff_0%,_#f7f4ff_55%,_#fffaf0_100%)] p-4">
+        <Card className="w-full max-w-md p-8 shadow-2xl shadow-violet-100/60">
           <div className="text-center space-y-4">
             <div className="flex justify-center">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
                 <AlertCircle className="w-10 h-10 text-red-600" />
               </div>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Lien invalide</h1>
-            <p className="text-gray-600">
+            <h1 className="text-2xl font-bold text-slate-900">Lien invalide</h1>
+            <p className="text-slate-600">
               Le lien de réinitialisation est invalide ou manquant.
             </p>
             <Link to="/forgot-password">
-              <Button className="w-full bg-violet-600 hover:bg-violet-700 text-white">
+              <Button className="w-full">
                 Demander un nouveau lien
               </Button>
             </Link>
@@ -95,21 +95,21 @@ const ResetPassword = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 to-amber-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-8 shadow-xl">
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(123,92,255,0.14),_transparent_38%),linear-gradient(180deg,_#fcfbff_0%,_#f7f4ff_55%,_#fffaf0_100%)] p-4">
+      <Card className="w-full max-w-md p-8 shadow-2xl shadow-violet-100/60">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-violet-700 rounded-lg flex items-center justify-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-violet-700">
               <span className="text-white font-bold text-xl">E</span>
             </div>
             <span className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-amber-500 bg-clip-text text-transparent">
               EasyBill
             </span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="mb-2 text-3xl font-bold tracking-[-0.03em] text-slate-900">
             {success ? 'Mot de passe réinitialisé' : 'Nouveau mot de passe'}
           </h1>
-          <p className="text-gray-600">
+          <p className="text-slate-600">
             {success 
               ? 'Vous allez être redirigé vers la page de connexion' 
               : 'Choisissez un nouveau mot de passe sécurisé'}
@@ -121,7 +121,7 @@ const ResetPassword = () => {
             <div>
               <Label htmlFor="newPassword">Nouveau mot de passe</Label>
               <div className="relative mt-2">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <Input
                   id="newPassword"
                   type="password"
@@ -133,13 +133,13 @@ const ResetPassword = () => {
                   minLength={6}
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">Au moins 6 caractères</p>
+              <p className="mt-1 text-xs text-slate-500">Au moins 6 caractères</p>
             </div>
 
             <div>
               <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
               <div className="relative mt-2">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <Input
                   id="confirmPassword"
                   type="password"
@@ -155,7 +155,7 @@ const ResetPassword = () => {
 
             <Button 
               type="submit" 
-              className="w-full bg-violet-600 hover:bg-violet-700 text-white py-6"
+              className="w-full py-6"
               disabled={loading}
             >
               {loading ? 'Réinitialisation...' : 'Réinitialiser le mot de passe'}
@@ -164,20 +164,20 @@ const ResetPassword = () => {
         ) : (
           <div className="text-center space-y-6">
             <div className="flex justify-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
                 <CheckCircle className="w-10 h-10 text-green-600" />
               </div>
             </div>
             <div className="space-y-2">
-              <p className="text-gray-700 font-medium">
+              <p className="font-medium text-slate-700">
                 Votre mot de passe a été réinitialisé avec succès !
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-slate-600">
                 Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.
               </p>
             </div>
             <Link to="/login">
-              <Button className="w-full bg-violet-600 hover:bg-violet-700 text-white">
+              <Button className="w-full">
                 Se connecter
               </Button>
             </Link>

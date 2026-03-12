@@ -218,15 +218,15 @@ const Invoices = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{t('invoices.title')}</h1>
-            <p className="text-gray-500 mt-1">{filteredInvoices.length} factures au total</p>
+            <h1 className="page-header-title">{t('invoices.title')}</h1>
+            <p className="page-header-subtitle">{filteredInvoices.length} factures au total</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setImportOdooOpen(true)}>
               <Upload className="w-4 h-4 mr-2" />
               Importer Odoo
             </Button>
-            <Button className="bg-violet-600 hover:bg-violet-700 text-white" onClick={openCreateModal} data-testid="create-invoice-btn">
+            <Button onClick={openCreateModal} data-testid="create-invoice-btn">
               <Plus className="w-4 h-4 mr-2" />
               {t('invoices.createInvoice')}
             </Button>
@@ -237,12 +237,12 @@ const Invoices = () => {
         <Card className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <Input
                 placeholder={t('common.search')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-11"
               />
             </div>
             <Button variant="outline" className="flex items-center gap-2">
@@ -337,51 +337,51 @@ const Invoices = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-6">
+          <Card className="stat-surface p-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-violet-100 rounded-lg">
-                <FileText className="w-5 h-5 text-violet-600" />
+              <div className="rounded-2xl bg-violet-100 p-3">
+                <FileText className="w-5 h-5 text-violet-700" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total Facturé</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalInvoiced.toFixed(3)} TND</p>
-                <p className="text-xs text-gray-500">{filteredInvoices.length} factures</p>
+                <p className="text-sm text-slate-600">Total Facturé</p>
+                <p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.totalInvoiced.toFixed(3)} TND</p>
+                <p className="text-xs text-slate-500">{filteredInvoices.length} factures</p>
               </div>
             </div>
           </Card>
-          <Card className="p-6">
+          <Card className="stat-surface p-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle className="w-5 h-5 text-green-600" />
+              <div className="rounded-2xl bg-green-100 p-3">
+                <CheckCircle className="w-5 h-5 text-green-700" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Payées</p>
-                <p className="text-2xl font-bold text-green-600">{stats.totalPaid.toFixed(3)} TND</p>
-                <p className="text-xs text-gray-500">{stats.paidCount} factures</p>
+                <p className="text-sm text-slate-600">Payées</p>
+                <p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.totalPaid.toFixed(3)} TND</p>
+                <p className="text-xs text-slate-500">{stats.paidCount} factures</p>
               </div>
             </div>
           </Card>
-          <Card className="p-6">
+          <Card className="stat-surface p-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <CreditCard className="w-5 h-5 text-orange-600" />
+              <div className="rounded-2xl bg-amber-100 p-3">
+                <CreditCard className="w-5 h-5 text-amber-700" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">En attente</p>
-                <p className="text-2xl font-bold text-orange-600">{stats.totalPending.toFixed(3)} TND</p>
-                <p className="text-xs text-gray-500">{stats.pendingCount} factures</p>
+                <p className="text-sm text-slate-600">En attente</p>
+                <p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.totalPending.toFixed(3)} TND</p>
+                <p className="text-xs text-slate-500">{stats.pendingCount} factures</p>
               </div>
             </div>
           </Card>
-          <Card className="p-6">
+          <Card className="stat-surface p-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <FileText className="w-5 h-5 text-red-600" />
+              <div className="rounded-2xl bg-rose-100 p-3">
+                <FileText className="w-5 h-5 text-rose-700" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">En retard</p>
-                <p className="text-2xl font-bold text-red-600">{stats.totalOverdue.toFixed(3)} TND</p>
-                <p className="text-xs text-gray-500">{stats.overdueCount} factures</p>
+                <p className="text-sm text-slate-600">En retard</p>
+                <p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.totalOverdue.toFixed(3)} TND</p>
+                <p className="text-xs text-slate-500">{stats.overdueCount} factures</p>
               </div>
             </div>
           </Card>
@@ -391,13 +391,13 @@ const Invoices = () => {
         <Card>
           {loading ? (
             <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600 mx-auto"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
             </div>
           ) : filteredInvoices.length === 0 ? (
             <div className="p-8 text-center">
-              <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">Aucune facture trouvée</p>
-              <Button onClick={openCreateModal} className="mt-4 bg-violet-600 hover:bg-violet-700">
+              <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+              <p className="text-slate-500">Aucune facture trouvée</p>
+              <Button onClick={openCreateModal} className="mt-4">
                 <Plus className="w-4 h-4 mr-2" />
                 Créer votre première facture
               </Button>
