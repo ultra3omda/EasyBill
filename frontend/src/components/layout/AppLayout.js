@@ -66,7 +66,7 @@ import {
   Wallet,
   Bot,
   Scan,
-  Phone
+  Phone,
   FileSpreadsheet
 } from 'lucide-react';
 import {
