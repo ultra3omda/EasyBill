@@ -54,6 +54,9 @@ class InvoiceItemData(BaseModel):
     discount: float = 0
     total: float = 0
 
+    class Config:
+        extra = "allow"
+
 
 class InvoiceData(BaseModel):
     supplier_number: Optional[str] = None
@@ -92,6 +95,7 @@ class ConfirmScanRequest(BaseModel):
     supplier: SupplierData
     invoice: InvoiceData
     journal_entries: List[JournalEntryData]
+    workflow: Optional[Dict[str, Any]] = None
     company_id: str
 
 
@@ -217,6 +221,392 @@ async def _find_existing_supplier(company_id: str, name: Optional[str], fiscal_i
             return supplier
 
     return None
+
+
+def _normalize_text(value: Optional[str]) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", (value or "").lower()).strip()
+
+
+def _words(value: Optional[str]) -> set:
+    return {part for part in _normalize_text(value).split() if len(part) >= 3}
+
+
+def _item_similarity(source_items: List[Dict[str, Any]], target_items: List[Dict[str, Any]]) -> float:
+    if not source_items or not target_items:
+        return 0.0
+    source_sets = [_words(item.get("description")) for item in source_items if item.get("description")]
+    target_sets = [_words(item.get("description")) for item in target_items if item.get("description")]
+    if not source_sets or not target_sets:
+        return 0.0
+
+    matched = 0
+    for source in source_sets:
+        best = 0.0
+        for target in target_sets:
+            union = source | target
+            if not union:
+                continue
+            score = len(source & target) / len(union)
+            best = max(best, score)
+        if best >= 0.4:
+            matched += 1
+    return round(matched / max(len(source_sets), 1), 3)
+
+
+async def _find_existing_supplier_invoice(company_id: str, supplier_id: Optional[str], supplier_number: Optional[str], total: float) -> Optional[dict]:
+    if not supplier_id and not supplier_number:
+        return None
+    query = {"company_id": ObjectId(company_id)}
+    if supplier_id:
+        query["supplier_id"] = ObjectId(supplier_id)
+    if supplier_number:
+        query["supplier_number"] = supplier_number
+    existing = await db.supplier_invoices.find_one(query)
+    if existing:
+        return existing
+    if supplier_id:
+        return await db.supplier_invoices.find_one({
+            "company_id": ObjectId(company_id),
+            "supplier_id": ObjectId(supplier_id),
+            "total": {"$gte": round(total - 0.01, 3), "$lte": round(total + 0.01, 3)},
+        })
+    return None
+
+
+async def _get_default_warehouse(company_id: str) -> Optional[dict]:
+    warehouse = await db.warehouses.find_one({"company_id": ObjectId(company_id), "is_default": True})
+    if warehouse:
+        return warehouse
+    return await db.warehouses.find_one({"company_id": ObjectId(company_id)})
+
+
+def _find_best_product_match_from_candidates(products: List[dict], description: str) -> Optional[dict]:
+    desc_words = _words(description)
+    if not desc_words:
+        return None
+    best_match = None
+    best_score = 0.0
+    for product in products:
+        candidate_text = " ".join([
+            product.get("name", ""),
+            product.get("sku", ""),
+            product.get("brand", ""),
+            product.get("category", ""),
+        ])
+        candidate_words = _words(candidate_text)
+        if not candidate_words:
+            continue
+        union = desc_words | candidate_words
+        score = len(desc_words & candidate_words) / len(union) if union else 0.0
+        if _normalize_text(product.get("name")) in _normalize_text(description):
+            score = max(score, 0.85)
+        if product.get("sku") and _normalize_text(product.get("sku")) in _normalize_text(description):
+            score = max(score, 0.95)
+        if score > best_score:
+            best_score = score
+            best_match = product
+    if best_match and best_score >= 0.35:
+        best_match = dict(best_match)
+        best_match["_match_score"] = round(best_score, 3)
+        return best_match
+    return None
+
+
+async def _find_best_product_match(company_id: str, description: str) -> Optional[dict]:
+    products = await db.products.find({"company_id": ObjectId(company_id)}).to_list(500)
+    return _find_best_product_match_from_candidates(products, description)
+
+
+def _guess_stock_decision(description: str, product: Optional[dict]) -> tuple[bool, str, float]:
+    service_keywords = {"service", "maintenance", "formation", "consult", "prestation", "abonnement", "facebook", "meta", "ads", "licence", "hébergement", "hebergement"}
+    stock_keywords = {"article", "produit", "marchandise", "cartouche", "clavier", "souris", "cable", "écran", "ecran", "pc", "imprimante", "matériel", "materiel", "pièce", "piece"}
+    normalized = _normalize_text(description)
+    if product:
+        if product.get("type") == "service":
+            return False, "Produit existant classé comme service", float(product.get("_match_score", 0.7))
+        return True, "Produit existant classé en stock", float(product.get("_match_score", 0.8))
+    if any(keyword in normalized for keyword in service_keywords):
+        return False, "Libellé assimilé à une prestation/service", 0.6
+    if any(keyword in normalized for keyword in stock_keywords):
+        return True, "Libellé assimilé à un article stockable", 0.45
+    return False, "Aucun produit fiable trouvé, revue manuelle recommandée", 0.2
+
+
+async def _build_intelligent_items(company_id: str, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    warehouse = await _get_default_warehouse(company_id)
+    products = await db.products.find({"company_id": ObjectId(company_id)}).to_list(500)
+    enriched = []
+    for item in items:
+        product = _find_best_product_match_from_candidates(products, item.get("description"))
+        should_stock, reason, confidence = _guess_stock_decision(item.get("description"), product)
+        enriched.append({
+            **item,
+            "product_id": str(product["_id"]) if product else None,
+            "product_name": product.get("name") if product else None,
+            "product_type": product.get("type") if product else None,
+            "product_match_confidence": round(confidence, 3),
+            "stock_decision": "stock" if should_stock else "non_stock",
+            "should_create_stock_movement": should_stock and bool(product) and bool(warehouse),
+            "stock_reason": reason if warehouse or not should_stock else f"{reason}. Aucun entrepôt par défaut disponible.",
+            "warehouse_id": str(warehouse["_id"]) if warehouse else None,
+            "warehouse_name": warehouse.get("name") if warehouse else None,
+            "review_required": should_stock and not product,
+        })
+    return enriched
+
+
+async def _find_matching_purchase_process(
+    company_id: str,
+    supplier_id: Optional[str],
+    items: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    workflow = {
+        "purchase_order": {"existing_id": None, "existing_number": None, "create": True, "similarity": 0.0},
+        "receipt": {"existing_id": None, "existing_number": None, "create": True, "similarity": 0.0},
+    }
+    if not supplier_id:
+        return workflow
+
+    po_candidates = await db.purchase_orders.find({
+        "company_id": ObjectId(company_id),
+        "supplier_id": ObjectId(supplier_id),
+        "status": {"$in": ["draft", "sent", "confirmed", "received"]},
+    }).sort("created_at", -1).to_list(10)
+    for po in po_candidates:
+        score = _item_similarity(items, po.get("items", []))
+        if score > workflow["purchase_order"]["similarity"]:
+            workflow["purchase_order"] = {
+                "existing_id": str(po["_id"]),
+                "existing_number": po.get("number"),
+                "create": score < 0.6,
+                "similarity": score,
+            }
+
+    receipt_candidates = await db.receipts.find({
+        "company_id": ObjectId(company_id),
+        "supplier_id": ObjectId(supplier_id),
+        "status": {"$in": ["draft", "validated"]},
+    }).sort("created_at", -1).to_list(10)
+    for receipt in receipt_candidates:
+        score = _item_similarity(items, receipt.get("items", []))
+        if score > workflow["receipt"]["similarity"]:
+            workflow["receipt"] = {
+                "existing_id": str(receipt["_id"]),
+                "existing_number": receipt.get("number"),
+                "create": score < 0.6,
+                "similarity": score,
+                "status": receipt.get("status"),
+            }
+    return workflow
+
+
+def _build_planned_actions(
+    supplier_data: Dict[str, Any],
+    invoice_total: float,
+    workflow: Dict[str, Any],
+    journal_entries: List[Dict[str, Any]],
+    items: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    planned_actions = []
+    if supplier_data["is_new"] and supplier_data.get("name"):
+        planned_actions.append({"type": "create_supplier", "label": f"Créer le fournisseur «{supplier_data['name']}»", "icon": "UserPlus", "severity": "info"})
+    elif not supplier_data["is_new"]:
+        planned_actions.append({"type": "use_existing_supplier", "label": f"Utiliser le fournisseur existant «{supplier_data['name']}»", "icon": "User", "severity": "success"})
+
+    po_flow = workflow.get("purchase_order", {})
+    if po_flow.get("create", True):
+        planned_actions.append({"type": "create_purchase_order", "label": "Créer automatiquement le bon de commande manquant", "icon": "Receipt", "severity": "warning"})
+    else:
+        planned_actions.append({"type": "use_existing_purchase_order", "label": f"Rattacher au bon de commande existant {po_flow.get('existing_number')}", "icon": "Receipt", "severity": "success"})
+
+    receipt_flow = workflow.get("receipt", {})
+    if receipt_flow.get("create", True):
+        planned_actions.append({"type": "create_receipt", "label": "Créer automatiquement le bon de réception manquant", "icon": "Receipt", "severity": "warning"})
+    else:
+        planned_actions.append({"type": "use_existing_receipt", "label": f"Rattacher au bon de réception existant {receipt_flow.get('existing_number')}", "icon": "Receipt", "severity": "success"})
+
+    stockable_count = sum(1 for item in items if item.get("should_create_stock_movement"))
+    review_count = sum(1 for item in items if item.get("review_required"))
+    if stockable_count:
+        planned_actions.append({"type": "create_stock_movement", "label": f"Créer {stockable_count} mouvement(s) de stock après revue utilisateur", "icon": "Receipt", "severity": "info"})
+    if review_count:
+        planned_actions.append({"type": "review_stock_decisions", "label": f"{review_count} ligne(s) nécessitent une revue stock manuelle", "icon": "AlertTriangle", "severity": "warning"})
+
+    planned_actions.append({"type": "create_supplier_invoice", "label": f"Créer la facture fournisseur ({invoice_total:.3f} TND)", "icon": "FileText", "severity": "info"})
+    for je in journal_entries:
+        planned_actions.append({"type": "create_draft_journal_entry", "label": f"Créer une écriture en brouillon — {je['description']}", "icon": "BookOpen", "severity": "info"})
+    return planned_actions
+
+
+async def _get_next_receipt_number(company_id: str) -> str:
+    year = datetime.now().year
+    prefix = f"BR-{year}-"
+    last_receipt = await db.receipts.find_one(
+        {"company_id": ObjectId(company_id), "number": {"$regex": f"^{prefix}"}},
+        sort=[("number", -1)]
+    )
+    if last_receipt:
+        try:
+            next_num = int(last_receipt["number"].split("-")[-1]) + 1
+        except Exception:
+            next_num = 1
+    else:
+        next_num = 1
+    return f"{prefix}{next_num:04d}"
+
+
+async def _ensure_stock_product(company_id: str, current_user: dict, item: Dict[str, Any]) -> Dict[str, Any]:
+    if item.get("product_id") or not item.get("should_create_stock_movement"):
+        return item
+
+    now = datetime.now(timezone.utc)
+    product_name = (item.get("description") or "Article scanné").strip() or "Article scanné"
+    sku_prefix = re.sub(r"[^A-Z0-9]+", "", product_name.upper())[:8] or "SCAN"
+    product_count = await db.products.count_documents({"company_id": ObjectId(company_id)})
+    sku = f"{sku_prefix}-{product_count + 1:04d}"
+
+    product_doc = {
+        "company_id": ObjectId(company_id),
+        "sku": sku,
+        "name": product_name,
+        "description": f"Article créé automatiquement depuis le scan de facture: {product_name}",
+        "category": "Articles scannés",
+        "brand": "",
+        "unit": item.get("unit") or "pièce",
+        "selling_price": 0,
+        "purchase_price": float(item.get("unit_price") or 0),
+        "tax_rate": float(item.get("tax_rate") or 19),
+        "quantity_in_stock": 0,
+        "min_stock_level": 0,
+        "type": "product",
+        "destination": "both",
+        "is_active": True,
+        "created_at": now,
+        "updated_at": now,
+        "source": "invoice_scanner",
+        "auto_created": True,
+        "created_by": current_user["_id"],
+    }
+    result = await db.products.insert_one(product_doc)
+    return {
+        **item,
+        "product_id": str(result.inserted_id),
+        "product_name": product_name,
+        "product_type": "product",
+        "review_required": False,
+        "stock_reason": f"{item.get('stock_reason')}. Article créé automatiquement à la confirmation.",
+    }
+
+
+async def _apply_stock_entry(company_id: str, current_user: dict, receipt_id: str, invoice_number: str, item: Dict[str, Any]) -> Optional[str]:
+    product_id = item.get("product_id")
+    warehouse_id = item.get("warehouse_id")
+    if not product_id or not warehouse_id:
+        return None
+    product = await db.products.find_one({"_id": ObjectId(product_id), "company_id": ObjectId(company_id)})
+    warehouse = await db.warehouses.find_one({"_id": ObjectId(warehouse_id), "company_id": ObjectId(company_id)})
+    if not product or not warehouse or product.get("type") == "service":
+        return None
+
+    stock_level = await db.stock_levels.find_one({"warehouse_id": ObjectId(warehouse_id), "product_id": ObjectId(product_id)})
+    stock_before = stock_level.get("quantity", 0) if stock_level else 0
+    quantity = float(item.get("quantity") or 0)
+    stock_after = stock_before + quantity
+    unit_cost = float(item.get("unit_price") or product.get("purchase_price", 0) or 0)
+    now = datetime.now(timezone.utc)
+
+    if stock_level:
+        await db.stock_levels.update_one(
+            {"_id": stock_level["_id"]},
+            {"$set": {"quantity": stock_after, "unit_cost": unit_cost, "updated_at": now}}
+        )
+    else:
+        await db.stock_levels.insert_one({
+            "warehouse_id": ObjectId(warehouse_id),
+            "product_id": ObjectId(product_id),
+            "quantity": stock_after,
+            "unit_cost": unit_cost,
+            "created_at": now,
+            "updated_at": now,
+        })
+
+    all_levels = await db.stock_levels.find({"product_id": ObjectId(product_id)}).to_list(100)
+    total_stock = sum(level.get("quantity", 0) for level in all_levels)
+    await db.products.update_one(
+        {"_id": ObjectId(product_id)},
+        {"$set": {"quantity_in_stock": total_stock, "stock_quantity": total_stock, "updated_at": now}}
+    )
+
+    result = await db.stock_movements.insert_one({
+        "company_id": ObjectId(company_id),
+        "product_id": ObjectId(product_id),
+        "product_name": product.get("name"),
+        "warehouse_id": ObjectId(warehouse_id),
+        "warehouse_name": warehouse.get("name"),
+        "type": "in",
+        "quantity": quantity,
+        "unit_cost": unit_cost,
+        "total_value": round(quantity * unit_cost, 3),
+        "reason": "Réception fournisseur via scanner",
+        "reference": invoice_number,
+        "reference_type": "receipt",
+        "reference_id": ObjectId(receipt_id),
+        "stock_before": stock_before,
+        "stock_after": stock_after,
+        "created_at": now,
+        "created_by": current_user["_id"],
+        "created_by_name": current_user.get("full_name", ""),
+        "source": "scanner",
+    })
+    return str(result.inserted_id)
+
+
+async def _create_draft_journal_entries(
+    company_id: str,
+    supplier_invoice_id: str,
+    reference: str,
+    date_value,
+    journal_entries: List[JournalEntryData],
+    current_user: dict,
+) -> List[Dict[str, Any]]:
+    existing = await db.journal_entries.find({
+        "company_id": ObjectId(company_id),
+        "document_type": "supplier_invoice",
+        "document_id": ObjectId(supplier_invoice_id),
+    }).to_list(20)
+    if existing:
+        return [{"id": str(entry["_id"]), "entry_number": entry.get("entry_number"), "existing": True} for entry in existing]
+
+    last = await db.journal_entries.find_one({"company_id": ObjectId(company_id)}, sort=[("created_at", -1)])
+    try:
+        last_num = int((last.get("entry_number") or "EC-00000").split("-")[-1])
+    except Exception:
+        last_num = 0
+
+    created = []
+    now = datetime.now(timezone.utc)
+    for idx, journal_entry in enumerate(journal_entries):
+        entry_number = f"EC-{(last_num + idx + 1):05d}"
+        result = await db.journal_entries.insert_one({
+            "company_id": ObjectId(company_id),
+            "entry_number": entry_number,
+            "date": date_value,
+            "reference": reference,
+            "description": journal_entry.description,
+            "journal_type": journal_entry.journal_type,
+            "lines": [line.dict() for line in journal_entry.lines],
+            "total_debit": journal_entry.total_debit,
+            "total_credit": journal_entry.total_credit,
+            "status": "draft",
+            "document_type": "supplier_invoice",
+            "document_id": ObjectId(supplier_invoice_id),
+            "created_by": current_user["_id"],
+            "created_at": now,
+            "auto_generated": True,
+            "source": "invoice_scanner",
+        })
+        created.append({"id": str(result.inserted_id), "entry_number": entry_number, "existing": False})
+    return created
 
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
@@ -346,6 +736,8 @@ async def parse_invoice_document(
         except Exception:
             due_date_str = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
 
+    items = await _build_intelligent_items(company_id, items)
+
     invoice_data = {
         "supplier_number": invoice_raw.get("supplier_number"),
         "date": date_str,
@@ -366,6 +758,25 @@ async def parse_invoice_document(
     # Mettre à jour invoice_data.total avec le total calculé (pas celui de Gemini)
     invoice_data["total"] = computed_total
 
+    workflow = await _find_matching_purchase_process(
+        company_id,
+        supplier_data.get("id"),
+        items,
+    )
+    default_warehouse = await _get_default_warehouse(company_id)
+    workflow.update({
+        "warehouse_id": str(default_warehouse["_id"]) if default_warehouse else None,
+        "warehouse_name": default_warehouse.get("name") if default_warehouse else None,
+        "draft_accounting_only": True,
+    })
+
+    duplicate_invoice = await _find_existing_supplier_invoice(
+        company_id,
+        supplier_data.get("id"),
+        invoice_data.get("supplier_number"),
+        computed_total,
+    )
+
     # Build journal entries preview
     inv_ref = invoice_raw.get("supplier_number") or "N/A"
     journal_entries = _build_journal_entries(
@@ -379,49 +790,40 @@ async def parse_invoice_document(
         tva_rate=tva_rate_main
     )
 
-    # Summary of planned actions
-    planned_actions = []
-    if supplier_data["is_new"] and supplier_data.get("name"):
-        planned_actions.append({
-            "type": "create_supplier",
-            "label": f"Créer le fournisseur «{supplier_data['name']}»",
-            "icon": "UserPlus",
-            "severity": "info"
-        })
-    elif not supplier_data["is_new"]:
-        planned_actions.append({
-            "type": "use_existing_supplier",
-            "label": f"Utiliser le fournisseur existant «{supplier_data['name']}»",
-            "icon": "User",
-            "severity": "success"
-        })
+    planned_actions = _build_planned_actions(
+        supplier_data,
+        computed_total,
+        workflow,
+        journal_entries,
+        items,
+    )
 
-    planned_actions.append({
-        "type": "create_supplier_invoice",
-        "label": f"Créer la facture fournisseur ({computed_total:.3f} TND)",
-        "icon": "FileText",
-        "severity": "info"
-    })
-
-    for je in journal_entries:
-        planned_actions.append({
-            "type": "create_journal_entry",
-            "label": f"Écriture comptable — {je['description']}",
-            "icon": "BookOpen",
-            "severity": "info"
-        })
+    warnings = []
+    if duplicate_invoice:
+        warnings.append(
+            f"Une facture fournisseur similaire existe déjà ({duplicate_invoice.get('number') or duplicate_invoice.get('supplier_number')})."
+        )
+    if not default_warehouse:
+        warnings.append("Aucun entrepôt par défaut trouvé : les mouvements de stock seront désactivés.")
+    if any(item.get("review_required") for item in items):
+        warnings.append("Certaines lignes semblent stockables mais ne sont pas reliées à un produit connu. Vérifie les décisions de stock avant confirmation.")
 
     return {
         "supplier": supplier_data,
         "invoice": invoice_data,
         "journal_entries": journal_entries,
+        "workflow": workflow,
         "planned_actions": planned_actions,
         "confidence": extracted.get("confidence", 0),
         "extraction_method": extracted.get("extraction_method", "unknown"),
-        "warnings": [],
+        "warnings": warnings,
         "error": extracted.get("error"),
         "raw_text_preview": extracted.get("raw_text_preview", "")[:300],
         "filename": file.filename,
+        "duplicate_invoice": {
+            "id": str(duplicate_invoice["_id"]),
+            "number": duplicate_invoice.get("number"),
+        } if duplicate_invoice else None,
     }
 
 
@@ -441,6 +843,7 @@ async def confirm_invoice_import(
     now = datetime.now(timezone.utc)
     user_name = current_user.get("full_name") or current_user.get("email", "")
     results = {}
+    workflow = data.workflow or {}
 
     # ── 1. Supplier ────────────────────────────────────────────────────────────
     supplier_id = data.supplier.id
@@ -479,12 +882,131 @@ async def confirm_invoice_import(
     if not supplier_id:
         raise HTTPException(status_code=400, detail="supplier_id manquant — impossible de créer la facture")
 
-    # ── 2. Supplier Invoice ────────────────────────────────────────────────────
+    existing_invoice = await _find_existing_supplier_invoice(
+        company_id,
+        supplier_id,
+        data.invoice.supplier_number,
+        float(data.invoice.total or 0),
+    )
+    if existing_invoice:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Une facture fournisseur existe déjà pour cette référence ({existing_invoice.get('number') or existing_invoice.get('supplier_number')}).",
+        )
+
+    items = [item.dict() for item in data.invoice.items]
+
+    # ── 2. Purchase Order / Receipt chain ──────────────────────────────────────
+    purchase_order_id = workflow.get("purchase_order", {}).get("existing_id")
+    purchase_order_number = workflow.get("purchase_order", {}).get("existing_number")
+    receipt_id = workflow.get("receipt", {}).get("existing_id")
+    receipt_number = workflow.get("receipt", {}).get("existing_number")
+
+    company = await db.companies.find_one({"_id": ObjectId(company_id)})
+    numbering = company.get("numbering", {}) if company else {}
+
+    if workflow.get("purchase_order", {}).get("create", True):
+        po_number = generate_document_number(numbering.get("po_prefix", "BC"), numbering.get("po_next", 1), datetime.now().year)
+        po_doc = {
+            "company_id": ObjectId(company_id),
+            "supplier_id": ObjectId(supplier_id),
+            "supplier_name": data.supplier.name or "",
+            "number": po_number,
+            "date": now,
+            "expected_date": now,
+            "items": items,
+            "subtotal": float(data.invoice.subtotal or 0),
+            "total_tax": float(data.invoice.total_tax or 0),
+            "total_discount": 0,
+            "total": float(data.invoice.total or 0),
+            "status": "confirmed",
+            "confirmed_at": now,
+            "created_at": now,
+            "updated_at": now,
+            "created_by": current_user["_id"],
+            "source": "invoice_scanner",
+            "auto_created": True,
+        }
+        po_result = await db.purchase_orders.insert_one(po_doc)
+        purchase_order_id = str(po_result.inserted_id)
+        purchase_order_number = po_number
+        await db.companies.update_one({"_id": ObjectId(company_id)}, {"$inc": {"numbering.po_next": 1}})
+        results["purchase_order"] = {"created": True, "id": purchase_order_id, "number": po_number}
+    elif purchase_order_id:
+        results["purchase_order"] = {"created": False, "id": purchase_order_id, "number": purchase_order_number}
+
+    items = [await _ensure_stock_product(company_id, current_user, item) for item in items]
+
+    existing_receipt_doc = None
+    if receipt_id and not workflow.get("receipt", {}).get("create", True):
+        existing_receipt_doc = await db.receipts.find_one({"_id": ObjectId(receipt_id), "company_id": ObjectId(company_id)})
+
+    stock_items = [item for item in items if item.get("should_create_stock_movement") and item.get("product_id")]
+    if existing_receipt_doc and existing_receipt_doc.get("status") == "validated":
+        stock_items = []
+    receipt_status = "validated" if stock_items else "draft"
+    if workflow.get("receipt", {}).get("create", True):
+        receipt_number = await _get_next_receipt_number(company_id)
+        receipt_doc = {
+            "number": receipt_number,
+            "date": now,
+            "supplier_id": ObjectId(supplier_id),
+            "purchase_order_id": ObjectId(purchase_order_id) if purchase_order_id else None,
+            "warehouse_id": ObjectId(workflow.get("warehouse_id")) if workflow.get("warehouse_id") else None,
+            "items": [
+                {
+                    "product_id": item.get("product_id"),
+                    "product_name": item.get("product_name"),
+                    "ordered_quantity": item.get("quantity"),
+                    "received_quantity": item.get("quantity"),
+                    "unit": item.get("unit") or "unité",
+                    "unit_price": item.get("unit_price"),
+                    "notes": item.get("stock_reason"),
+                }
+                for item in items if item.get("product_id")
+            ],
+            "total_items": len([item for item in items if item.get("product_id")]),
+            "total_quantity": sum(float(item.get("quantity") or 0) for item in items if item.get("product_id")),
+            "total_value": sum(float(item.get("quantity") or 0) * float(item.get("unit_price") or 0) for item in items if item.get("product_id")),
+            "status": receipt_status,
+            "notes": "Bon de réception auto-généré depuis le scanner de facture fournisseur",
+            "delivery_note_number": data.invoice.supplier_number,
+            "company_id": ObjectId(company_id),
+            "created_by": current_user["_id"],
+            "created_at": now,
+            "updated_at": now,
+            "validated_at": now if receipt_status == "validated" else None,
+            "validated_by": current_user["_id"] if receipt_status == "validated" else None,
+            "source": "invoice_scanner",
+            "auto_created": True,
+        }
+        receipt_result = await db.receipts.insert_one(receipt_doc)
+        receipt_id = str(receipt_result.inserted_id)
+        results["receipt"] = {"created": True, "id": receipt_id, "number": receipt_number, "status": receipt_status}
+    elif receipt_id:
+        results["receipt"] = {
+            "created": False,
+            "id": receipt_id,
+            "number": receipt_number,
+            "status": (existing_receipt_doc or {}).get("status") or workflow.get("receipt", {}).get("status"),
+        }
+
+    created_stock_movements = []
+    if receipt_id:
+        for item in stock_items:
+            movement_id = await _apply_stock_entry(company_id, current_user, receipt_id, data.invoice.supplier_number or receipt_number or "SCAN", item)
+            if movement_id:
+                created_stock_movements.append(movement_id)
+    results["stock_movements"] = {
+        "created": len(created_stock_movements),
+        "ids": created_stock_movements,
+        "skipped_existing_validated_receipt": bool(existing_receipt_doc and existing_receipt_doc.get("status") == "validated"),
+    }
+
+    # ── 3. Supplier Invoice ────────────────────────────────────────────────────
     # Numéro unique basé sur le count réel (évite les doublons)
     count = await db.supplier_invoices.count_documents({"company_id": ObjectId(company_id)})
     si_number = f"FF-{datetime.now().year}-{(count + 1):04d}"
-
-    items = [item.dict() for item in data.invoice.items]
 
     # Parse dates
     try:
@@ -532,6 +1054,8 @@ async def confirm_invoice_import(
         "date": date_dt,
         "due_date": due_dt,
         "items": items,
+        "purchase_order_id": ObjectId(purchase_order_id) if purchase_order_id else None,
+        "receipt_id": ObjectId(receipt_id) if receipt_id else None,
         "subtotal": items_subtotal,   # HT NET des items
         "fodec": fodec,               # FODEC 1%
         "assiette_tva": assiette_tva, # HT + FODEC
@@ -546,7 +1070,13 @@ async def confirm_invoice_import(
         "created_at": now,
         "updated_at": now,
         "created_by": current_user["_id"],
-        "source": "scanner"
+        "source": "scanner",
+        "regulated_purchase_chain": {
+            "purchase_order_id": ObjectId(purchase_order_id) if purchase_order_id else None,
+            "receipt_id": ObjectId(receipt_id) if receipt_id else None,
+            "stock_review_completed": True,
+            "draft_accounting_only": True,
+        },
     }
 
     r = await db.supplier_invoices.insert_one(si_doc)
@@ -562,40 +1092,26 @@ async def confirm_invoice_import(
         "element": f"{si_number} - {data.supplier.name}", "created_at": now
     })
 
-    # ── 3. Journal Entries ─────────────────────────────────────────────────────
-    # Get next entry number
-    last = await db.journal_entries.find_one(
-        {"company_id": ObjectId(company_id)},
-        sort=[("created_at", -1)]
+    # ── 4. Journal Entries (draft only) ────────────────────────────────────────
+    created_entries = await _create_draft_journal_entries(
+        company_id,
+        si_id,
+        si_number,
+        date_dt,
+        data.journal_entries,
+        current_user,
     )
-    try:
-        last_num = int((last.get("entry_number") or "EC-00000").split("-")[-1])
-    except Exception:
-        last_num = 0
+    results["journal_entries"] = {
+        "created": len([entry for entry in created_entries if not entry.get("existing")]),
+        "existing": len([entry for entry in created_entries if entry.get("existing")]),
+        "entries": created_entries,
+        "status": "draft",
+    }
 
-    created_entries = []
-    for i, je in enumerate(data.journal_entries):
-        entry_number = f"EC-{(last_num + i + 1):05d}"
-        entry_doc = {
-            "company_id": ObjectId(company_id),
-            "entry_number": entry_number,
-            "date": date_dt,
-            "reference": si_number,
-            "description": je.description,
-            "journal_type": je.journal_type,
-            "lines": [line.dict() for line in je.lines],
-            "total_debit": je.total_debit,
-            "total_credit": je.total_credit,
-            "status": "posted",
-            "document_type": "supplier_invoice",
-            "document_id": ObjectId(si_id),
-            "created_by": current_user["_id"],
-            "created_at": now
-        }
-        r = await db.journal_entries.insert_one(entry_doc)
-        created_entries.append({"id": str(r.inserted_id), "entry_number": entry_number})
-
-    results["journal_entries"] = {"created": len(created_entries), "entries": created_entries}
+    await db.supplier_invoices.update_one(
+        {"_id": ObjectId(si_id)},
+        {"$set": {"proposed_journal_entry_ids": [ObjectId(entry["id"]) for entry in created_entries]}}
+    )
 
     return {
         "success": True,

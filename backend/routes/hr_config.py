@@ -12,6 +12,11 @@ from data.tunisian_hr_config import (
     FINANCE_LAW_PRESETS, PAYROLL_RUBRICS, PUBLIC_HOLIDAYS,
 )
 from services.payroll_engine import get_active_config, initialize_default_config
+from services.payroll_convention_service import (
+    get_convention_profile,
+    list_tunisian_conventions,
+    resolve_convention_for_config,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +120,12 @@ class HolidayCreate(BaseModel):
     recurring: bool = True
 
 
+class ConventionConfigUpdate(BaseModel):
+    convention_collective_code: str
+    payroll_convention_profile: Optional[dict] = None
+    reason: Optional[str] = None
+
+
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 async def record_change(company_id: str, user_id, user_name: str, section: str, old_value, new_value, reason: Optional[str] = None):
@@ -154,6 +165,71 @@ async def get_full_config(
     if config and "company_id" in config:
         config["company_id"] = str(config["company_id"])
     return config
+
+
+@router.get("/convention")
+async def get_convention_config(
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    await get_current_company(current_user, company_id)
+    config = await get_active_config(company_id)
+    convention_profile = resolve_convention_for_config(config)
+    return {
+        "convention_collective_code": config.get("convention_collective_code", convention_profile.get("code")),
+        "payroll_convention_profile": convention_profile,
+        "available_conventions": list_tunisian_conventions(),
+    }
+
+
+@router.put("/convention")
+async def update_convention_config(
+    data: ConventionConfigUpdate,
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    await get_current_company(current_user, company_id)
+    config = await get_active_config(company_id)
+    old_value = {
+        "convention_collective_code": config.get("convention_collective_code"),
+        "payroll_convention_profile": config.get("payroll_convention_profile"),
+    }
+    update_data = data.dict(exclude_unset=True)
+    reason = update_data.pop("reason", None)
+    selected_code = update_data.get("convention_collective_code")
+    custom_profile = update_data.get("payroll_convention_profile")
+    resolved_profile = get_convention_profile(selected_code, custom_profile)
+
+    await db.company_hr_config.update_one(
+        {"company_id": ObjectId(company_id), "is_active": True},
+        {
+            "$set": {
+                "convention_collective_code": selected_code,
+                "payroll_convention_profile": resolved_profile,
+                "updated_at": datetime.now(timezone.utc),
+            }
+        }
+    )
+
+    user_name = current_user.get("full_name", current_user.get("email", ""))
+    await record_change(
+        company_id,
+        current_user["_id"],
+        user_name,
+        "convention",
+        old_value,
+        {
+            "convention_collective_code": selected_code,
+            "payroll_convention_profile": resolved_profile,
+        },
+        reason,
+    )
+
+    return {
+        "message": "Convention collective mise à jour",
+        "convention_collective_code": selected_code,
+        "payroll_convention_profile": resolved_profile,
+    }
 
 
 # ── IRPP ─────────────────────────────────────────────────────────────────────

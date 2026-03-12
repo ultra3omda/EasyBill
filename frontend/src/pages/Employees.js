@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import api from '../services/api';
+import { hrEmployeesAPI } from '../services/api';
 import { useCompany } from '../hooks/useCompany';
 import AppLayout from '../components/layout/AppLayout';
 import { Card } from '../components/ui/card';
@@ -94,6 +94,7 @@ const INITIAL_FORM = {
   position: '',
   professional_category: '',
   base_salary: '',
+  net_target: '',
   hire_date: '',
   marital_status: 'celibataire',
   children_count: 0,
@@ -102,7 +103,10 @@ const INITIAL_FORM = {
   cnss_number: '',
   work_regime: '48h',
   payment_method: 'virement',
+  salary_input_mode: 'net_target',
   primes: [],
+  mandatory_primes: [],
+  salary_breakdown_snapshot: null,
 };
 
 const Employees = () => {
@@ -120,24 +124,13 @@ const Employees = () => {
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [form, setForm] = useState({ ...INITIAL_FORM });
   const [saving, setSaving] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
-  useEffect(() => {
-    if (currentCompany) {
-      loadEmployees();
-    }
-  }, [currentCompany]);
-
-  useEffect(() => {
-    if (searchParams.get('action') === 'new') {
-      openCreateModal();
-    }
-  }, [searchParams]);
-
-  const loadEmployees = async () => {
+  const loadEmployees = useCallback(async () => {
     if (!currentCompany) return;
     setLoading(true);
     try {
-      const response = await api.get(`/hr/employees?company_id=${currentCompany.id}`);
+      const response = await hrEmployeesAPI.list(currentCompany.id);
       setEmployees(response.data);
     } catch (error) {
       console.error('Error loading employees:', error);
@@ -145,7 +138,19 @@ const Employees = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentCompany]);
+
+  useEffect(() => {
+    if (currentCompany) {
+      loadEmployees();
+    }
+  }, [currentCompany, loadEmployees]);
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'new') {
+      openCreateModal();
+    }
+  }, [searchParams]);
 
   const openCreateModal = () => {
     setEditingEmployee(null);
@@ -166,7 +171,8 @@ const Employees = () => {
       department: employee.department || '',
       position: employee.position || '',
       professional_category: employee.professional_category || '',
-      base_salary: employee.base_salary ?? '',
+      base_salary: employee.base_salary_gross ?? employee.base_salary ?? '',
+      net_target: employee.net_target ?? '',
       hire_date: employee.hire_date || '',
       marital_status: employee.marital_status || 'celibataire',
       children_count: employee.children_count ?? 0,
@@ -175,7 +181,10 @@ const Employees = () => {
       cnss_number: employee.cnss_number || '',
       work_regime: employee.work_regime || '48h',
       payment_method: employee.payment_method || 'virement',
-      primes: employee.primes || [],
+      salary_input_mode: employee.salary_input_mode || 'net_target',
+      primes: (employee.primes || []).filter((prime) => !prime.is_mandatory),
+      mandatory_primes: employee.mandatory_primes || [],
+      salary_breakdown_snapshot: employee.salary_breakdown_snapshot || null,
     });
     setModalOpen(true);
   };
@@ -185,20 +194,25 @@ const Employees = () => {
       toast.error('Le nom et prénom sont obligatoires');
       return;
     }
+    if (!parseFloat(form.net_target || 0)) {
+      toast.error('Le net mensuel cible est obligatoire');
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
         ...form,
         base_salary: form.base_salary ? parseFloat(form.base_salary) : 0,
+        net_target: form.net_target ? parseFloat(form.net_target) : 0,
         children_count: parseInt(form.children_count) || 0,
         primes: form.primes.map(p => ({ ...p, amount: parseFloat(p.amount) || 0 })),
       };
 
       if (editingEmployee) {
-        await api.put(`/hr/employees/${editingEmployee.id}?company_id=${currentCompany.id}`, payload);
+        await hrEmployeesAPI.update(currentCompany.id, editingEmployee.id, payload);
         toast.success('Employé modifié avec succès');
       } else {
-        await api.post(`/hr/employees?company_id=${currentCompany.id}`, payload);
+        await hrEmployeesAPI.create(currentCompany.id, payload);
         toast.success('Employé créé avec succès');
       }
       setModalOpen(false);
@@ -214,7 +228,7 @@ const Employees = () => {
   const handleDelete = async (employeeId) => {
     if (!window.confirm('Voulez-vous vraiment supprimer cet employé ?')) return;
     try {
-      await api.delete(`/hr/employees/${employeeId}?company_id=${currentCompany.id}`);
+      await hrEmployeesAPI.remove(currentCompany.id, employeeId);
       toast.success('Employé supprimé');
       loadEmployees();
     } catch (error) {
@@ -223,8 +237,71 @@ const Employees = () => {
   };
 
   const updateForm = (field, value) => {
-    setForm(prev => ({ ...prev, [field]: value }));
+    setForm((prev) => {
+      if (field === 'net_target' && !value) {
+        return {
+          ...prev,
+          net_target: value,
+          base_salary: '',
+          mandatory_primes: [],
+          salary_breakdown_snapshot: null,
+        };
+      }
+      return { ...prev, [field]: value };
+    });
   };
+
+  useEffect(() => {
+    if (!modalOpen || !currentCompany) return undefined;
+    if (!form.net_target && !form.base_salary && form.primes.length === 0) {
+      setForm((prev) => ({ ...prev, salary_breakdown_snapshot: null, mandatory_primes: [] }));
+      return undefined;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setPreviewLoading(true);
+        const response = await hrEmployeesAPI.previewSalary(currentCompany.id, {
+          base_salary: form.base_salary ? parseFloat(form.base_salary) : 0,
+          net_target: form.net_target ? parseFloat(form.net_target) : 0,
+          hire_date: form.hire_date,
+          work_regime: form.work_regime,
+          professional_category: form.professional_category,
+          marital_status: form.marital_status,
+          children_count: parseInt(form.children_count) || 0,
+          salary_input_mode: form.salary_input_mode,
+          primes: form.primes.map((prime) => ({
+            ...prime,
+            amount: parseFloat(prime.amount) || 0,
+          })),
+        });
+        setForm((prev) => ({
+          ...prev,
+          base_salary: response.data?.base_salary_gross ?? prev.base_salary,
+          mandatory_primes: response.data?.mandatory_primes || [],
+          salary_breakdown_snapshot: response.data || null,
+        }));
+      } catch (error) {
+        console.error('Error previewing salary:', error);
+      } finally {
+        setPreviewLoading(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [
+    modalOpen,
+    currentCompany,
+    form.net_target,
+    form.base_salary,
+    form.hire_date,
+    form.work_regime,
+    form.professional_category,
+    form.marital_status,
+    form.children_count,
+    form.salary_input_mode,
+    form.primes,
+  ]);
 
   const addPrime = () => {
     setForm(prev => ({
@@ -501,14 +578,18 @@ const Employees = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label>Salaire de base (TND)</Label>
-                  <Input type="number" step="0.001" value={form.base_salary} onChange={(e) => updateForm('base_salary', e.target.value)} className="mt-1" />
+                  <Label>Net mensuel cible (TND)</Label>
+                  <Input type="number" step="0.001" value={form.net_target} onChange={(e) => updateForm('net_target', e.target.value)} className="mt-1" />
+                </div>
+                <div>
+                  <Label>Salaire de base brut calculé (TND)</Label>
+                  <Input type="number" step="0.001" value={form.base_salary} readOnly className="mt-1 bg-gray-50" />
                 </div>
                 <div>
                   <Label>Date d'embauche</Label>
                   <Input type="date" value={form.hire_date} onChange={(e) => updateForm('hire_date', e.target.value)} className="mt-1" />
                 </div>
-                <div>
+                <div className="md:col-span-2">
                   <Label>Régime de travail</Label>
                   <Select value={form.work_regime} onValueChange={(v) => updateForm('work_regime', v)}>
                     <SelectTrigger className="mt-1">
@@ -564,6 +645,19 @@ const Employees = () => {
                   <Plus className="w-3 h-3 mr-1" /> Ajouter une prime
                 </Button>
               </div>
+              {(form.mandatory_primes || []).length > 0 && (
+                <div className="mb-3 space-y-2">
+                  <div className="text-xs font-medium text-gray-500 uppercase">Primes minimales obligatoires injectées</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {form.mandatory_primes.map((prime, index) => (
+                      <div key={`${prime.code}-${index}`} className="flex items-center justify-between rounded-lg border bg-violet-50 px-3 py-2 text-sm">
+                        <span>{prime.name}</span>
+                        <span className="font-medium">{Number(prime.amount || 0).toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} TND</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {form.primes.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-4 bg-gray-50 rounded-lg">Aucune prime définie</p>
               ) : (
@@ -604,6 +698,43 @@ const Employees = () => {
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Simulation de paie</h3>
+                {previewLoading && <span className="text-xs text-gray-500">Calcul en cours...</span>}
+              </div>
+              {form.salary_breakdown_snapshot ? (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <div className="rounded-lg border bg-gray-50 p-3">
+                    <div className="text-xs text-gray-500">Brut mensuel</div>
+                    <div className="mt-1 font-semibold text-gray-900">
+                      {Number(form.salary_breakdown_snapshot.total_brut || 0).toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} TND
+                    </div>
+                  </div>
+                  <div className="rounded-lg border bg-gray-50 p-3">
+                    <div className="text-xs text-gray-500">Retenues</div>
+                    <div className="mt-1 font-semibold text-gray-900">
+                      {Number(form.salary_breakdown_snapshot.total_deductions || 0).toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} TND
+                    </div>
+                  </div>
+                  <div className="rounded-lg border bg-gray-50 p-3">
+                    <div className="text-xs text-gray-500">Net à payer</div>
+                    <div className="mt-1 font-semibold text-violet-700">
+                      {Number(form.salary_breakdown_snapshot.net_a_payer || 0).toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} TND
+                    </div>
+                  </div>
+                  <div className="rounded-lg border bg-gray-50 p-3">
+                    <div className="text-xs text-gray-500">Charges patronales</div>
+                    <div className="mt-1 font-semibold text-gray-900">
+                      {Number(form.salary_breakdown_snapshot.total_employer_charges || 0).toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} TND
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400 text-center py-4 bg-gray-50 rounded-lg">Saisis le net cible pour lancer la simulation automatique.</p>
               )}
             </div>
           </div>

@@ -38,6 +38,10 @@ class PayrollConfigUpdate(BaseModel):
 
 
 def serialize_payslip(p: dict) -> dict:
+    employer_charges = p.get("employer_charges", [])
+    employer_charges_total = p.get("employer_charges_total", p.get("total_employer_charges", 0))
+    if isinstance(employer_charges, list):
+        employer_charges_total = employer_charges_total or sum(item.get("amount", 0) for item in employer_charges)
     return {
         "id": str(p["_id"]),
         "company_id": str(p.get("company_id", "")),
@@ -59,7 +63,8 @@ def serialize_payslip(p: dict) -> dict:
         "bonuses": p.get("bonuses", []),
         "total_deductions": p.get("total_deductions", 0),
         "total_bonuses": p.get("total_bonuses", 0),
-        "employer_charges": p.get("employer_charges", 0),
+        "employer_charges": employer_charges_total,
+        "employer_charges_detail": employer_charges,
         "department": p.get("department", ""),
         "status": p.get("status", "draft"),
         "created_at": p["created_at"].isoformat() if isinstance(p.get("created_at"), datetime) else p.get("created_at"),
@@ -120,12 +125,11 @@ async def calculate_payroll(
             detail="No active employees found"
         )
 
-    config = await get_active_config(company_id)
     payslips = []
 
     for emp in employees:
         try:
-            payslip = await calculate_payslip(emp, data.month, data.year, config)
+            payslip = await calculate_payslip(emp, data.month, data.year, company_id)
             payslip["employee_id"] = str(emp["_id"])
             payslip["employee_name"] = f"{emp.get('first_name', '')} {emp.get('last_name', '')}"
             payslip["matricule"] = emp.get("matricule", "")
@@ -215,7 +219,7 @@ async def get_payroll_history(
             "_id": {"month": "$month", "year": "$year"},
             "total_gross": {"$sum": "$gross_salary"},
             "total_net": {"$sum": "$net_salary"},
-            "total_employer_charges": {"$sum": "$employer_charges"},
+            "total_employer_charges": {"$sum": "$employer_charges_total"},
             "employee_count": {"$sum": 1},
             "validated_at": {"$max": "$validated_at"},
         }},
@@ -277,7 +281,7 @@ async def get_payroll_summary(
 
     total_brut = sum(p.get("gross_salary", 0) for p in payslips)
     total_net = sum(p.get("net_salary", 0) for p in payslips)
-    total_charges = sum(p.get("employer_charges", 0) for p in payslips)
+    total_charges = sum(p.get("employer_charges_total", 0) for p in payslips)
 
     # By department
     by_department = {}
@@ -287,7 +291,7 @@ async def get_payroll_summary(
             by_department[dept] = {"gross": 0, "net": 0, "charges": 0, "count": 0}
         by_department[dept]["gross"] += p.get("gross_salary", 0)
         by_department[dept]["net"] += p.get("net_salary", 0)
-        by_department[dept]["charges"] += p.get("employer_charges", 0)
+        by_department[dept]["charges"] += p.get("employer_charges_total", 0)
         by_department[dept]["count"] += 1
 
     return {

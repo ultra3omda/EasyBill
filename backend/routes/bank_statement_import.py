@@ -56,11 +56,11 @@ async def _run_import_job(import_id: str, company_id: str, file_path: str, user_
             raise FileNotFoundError(f"Fichier introuvable: {file_path}")
         await db.bank_statement_imports.update_one(
             {"_id": ObjectId(import_id)},
-            {"$set": {"status": "processing", "updated_at": datetime.now(timezone.utc)}},
+            {"$set": {"status": "processing", "error_message": None, "updated_at": datetime.now(timezone.utc)}},
         )
         extracted = await asyncio.wait_for(
             bank_statement_extraction_service.extract_from_file(file_path, company_id),
-            timeout=600.0
+            timeout=240.0
         )
         transactions = extracted.get("transactions") or []
         recon_engine = ReconciliationEngineService(db)
@@ -84,6 +84,7 @@ async def _run_import_job(import_id: str, company_id: str, file_path: str, user_
                         "ocr_raw": extracted.get("ocr_raw"),
                         "ocr_text": extracted.get("ocr_text"),
                         "parsing_warnings": extracted.get("parsing_warnings", []),
+                        "error_message": None,
                         "updated_at": datetime.now(timezone.utc),
                     }
                 },
@@ -127,6 +128,7 @@ async def _run_import_job(import_id: str, company_id: str, file_path: str, user_
                     "ocr_text": extracted.get("ocr_text"),
                     "parsing_warnings": extracted.get("parsing_warnings", []),
                     "processed_at": datetime.now(timezone.utc),
+                    "error_message": None,
                     "updated_at": datetime.now(timezone.utc),
                 }
             },
@@ -139,7 +141,7 @@ async def _run_import_job(import_id: str, company_id: str, file_path: str, user_
             {
                 "$set": {
                     "status": "failed",
-                    "error_message": "Timeout extraction (10 min). Réessayez.",
+                    "error_message": "Timeout extraction (4 min). Réessayez.",
                     "updated_at": datetime.now(timezone.utc),
                 }
             },

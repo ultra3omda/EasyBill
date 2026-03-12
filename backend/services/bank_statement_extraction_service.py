@@ -1,7 +1,7 @@
 """
 bank_statement_extraction_service.py
-Extracts transactions from bank statement PDFs/images using Google Document AI only.
-No Gemini fallback - use the lettrage bancaire module for that.
+Fast, generic extraction for bank statement PDFs/images.
+Strategy: native PDF text -> OCR text -> Gemini only as last resort.
 """
 import os
 import re
@@ -142,7 +142,7 @@ def _get_amount_from_normalized_value(norm_val) -> float:
 
 
 class BankStatementExtractionService:
-    """Extract transactions from bank statements using Document AI only."""
+    """Extract transactions from bank statements with fast text-first fallbacks."""
 
     def __init__(self):
         self.project_id = os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get("DOCUMENT_AI_PROJECT_ID")
@@ -170,11 +170,21 @@ class BankStatementExtractionService:
     async def extract_from_file(self, file_path: str, company_id: str) -> Dict[str, Any]:
         """
         Extract transactions from a bank statement file.
-        Strategy: Document AI (if <= 30 pages) -> Gemini fallback -> pdfplumber fallback.
+        Strategy: native PDF text -> Document AI OCR -> Gemini fallback -> pdfplumber fallback.
         Returns: { transactions: [...], bank_name, account_number, period_start, period_end, ... }
         """
         result = None
         page_count = self._get_pdf_page_count(file_path)
+        native_pdf_result = None
+
+        if file_path.lower().endswith(".pdf"):
+            native_pdf_result = self._extract_native_pdf_text(file_path)
+            if native_pdf_result and not self._is_low_quality_extraction(native_pdf_result):
+                logger.info(
+                    "Native PDF text extraction succeeded: %d transactions",
+                    len(native_pdf_result.get("transactions") or []),
+                )
+                return native_pdf_result
 
         if self.use_document_ai and page_count <= 30:
             try:
@@ -183,6 +193,13 @@ class BankStatementExtractionService:
                 logger.warning("Document AI extraction failed: %s", e)
         elif self.use_document_ai and page_count > 30:
             logger.info("PDF has %d pages (> 30 limit), skipping Document AI", page_count)
+
+        if result and self._is_low_quality_extraction(result) and native_pdf_result and (native_pdf_result.get("transactions") or []):
+            logger.info(
+                "Document AI quality too low, falling back to native PDF text: %d transactions",
+                len(native_pdf_result.get("transactions") or []),
+            )
+            return native_pdf_result
 
         if not result or len(result.get("transactions") or []) < 10 or self._is_low_quality_extraction(result or {}):
             gemini_result = await self._extract_gemini_fallback(file_path, company_id)
@@ -194,7 +211,7 @@ class BankStatementExtractionService:
                 return gemini_result
 
         if not result or len(result.get("transactions") or []) < 3:
-            pdfplumber_result = self._extract_pdfplumber(file_path)
+            pdfplumber_result = native_pdf_result or self._extract_pdfplumber(file_path)
             if pdfplumber_result and (pdfplumber_result.get("transactions") or []):
                 logger.info("Fallback pdfplumber: %d transactions", len(pdfplumber_result["transactions"]))
                 pdfplumber_result.setdefault("ocr_provider", "pdfplumber")
@@ -222,6 +239,40 @@ class BankStatementExtractionService:
                 return len(pdf.pages)
         except Exception:
             return 0
+
+    def _extract_native_pdf_text(self, file_path: str) -> Optional[Dict[str, Any]]:
+        """Fast path for digital PDFs that already contain extractable text."""
+        if not file_path.lower().endswith(".pdf"):
+            return None
+        try:
+            import pdfplumber
+            text_chunks = []
+            with pdfplumber.open(file_path) as pdf:
+                for page in pdf.pages:
+                    page_text = page.extract_text() or ""
+                    if page_text.strip():
+                        text_chunks.append(page_text)
+            full_text = "\n".join(text_chunks).strip()
+            if not full_text:
+                return None
+            transactions = self._parse_text_fallback(full_text)
+            meta = self._extract_metadata_from_text(full_text)
+            return {
+                "transactions": transactions,
+                "bank_name": meta.get("bank_name"),
+                "account_number": meta.get("account_number"),
+                "period_start": meta.get("period_start"),
+                "period_end": meta.get("period_end"),
+                "currency": meta.get("currency", "TND"),
+                "opening_balance": meta.get("opening_balance", 0),
+                "closing_balance": meta.get("closing_balance", 0),
+                "ocr_text": full_text,
+                "ocr_provider": "native_pdf_text",
+                "parsing_warnings": [],
+            }
+        except Exception as e:
+            logger.warning("Native PDF text extraction failed: %s", e)
+            return None
 
     def _extract_pdfplumber(self, file_path: str) -> Optional[Dict[str, Any]]:
         """Extract transactions from PDF using pdfplumber text extraction."""
@@ -302,12 +353,10 @@ class BankStatementExtractionService:
             raise RuntimeError("Document AI timeout (120s)")
         document = result.document
 
-        transactions = []
         doc_text = getattr(document, "text", None) or ""
+        transactions = self._parse_text_fallback(doc_text) if doc_text else []
 
-        if self.use_ocr_only:
-            transactions = self._parse_text_fallback(doc_text)
-        else:
+        if not transactions and not self.use_ocr_only:
             entities = getattr(document, "entities", None) or []
             for entity in entities:
                 etype = getattr(entity, "type_", None) or getattr(entity, "type", None) or ""
@@ -322,9 +371,6 @@ class BankStatementExtractionService:
                         row = self._parse_document_ai_entity(row_entity, doc_text)
                         if row:
                             transactions.append(row)
-            if not transactions and doc_text:
-                transactions = self._parse_text_fallback(doc_text)
-
         meta = self._extract_metadata(document)
         return {
             "transactions": transactions,
@@ -455,42 +501,38 @@ class BankStatementExtractionService:
         s = (s or "").strip().replace(" ", "")
         if not s:
             return 0.0
-        if "." in s and "," in s:
+        if "," in s:
+            left, right = s.rsplit(",", 1)
+            left_digits = re.sub(r"[^\d\-]", "", left.replace(".", ""))
+            right_digits = re.sub(r"\D", "", right)[:3].ljust(3, "0")
+            if not left_digits:
+                return 0.0
             try:
-                return round(float(s.replace(".", "").replace(",", ".")), 3)
+                return round(float(f"{left_digits}.{right_digits}"), 3)
             except Exception:
                 return 0.0
-        parts = s.split(",")
-        if len(parts) == 2:
-            left, right = parts[0], parts[1].ljust(3, "0")[:3]
-            if right == "000":
-                return float(int(left or 0) * 1000)
-            try:
-                return round(int(left) + int(right) / 1000, 3)
-            except Exception:
-                pass
-        if len(parts) >= 3:
-            try:
-                return float("".join(parts))
-            except Exception:
-                pass
         try:
-            return round(float(s.replace(",", ".")), 3)
+            cleaned = re.sub(r"[^\d.\-]", "", s)
+            return round(float(cleaned), 3) if cleaned else 0.0
         except Exception:
             return 0.0
 
     def _parse_text_fallback(self, text: str) -> List[Dict]:
-        """Parse transaction lines from OCR text. Format tunisien: DD/MM Libellé Débit Crédit (comme lettrage bancaire)."""
+        """Parse transaction lines from OCR/native text for Tunisian bank statements."""
         def _is_credit_tx(desc: str) -> bool:
             u = (desc or "").upper()
             return any(k in u for k in [
                 "VIR RECU", "RECU", "CREDIT", "REMISE", "EXTOURNE",
-                "ALIMENTATION", "PROVISION C", "ENTRANT", "REMBOURSEMENT"
+                "ALIMENTATION", "PROVISION C", "ENTRANT", "REMBOURSEMENT",
+                "ANNUL", "VERSEMENT", "VIR ENTRANT", "RETOUR"
             ])
 
         TN_AMT_PAT = r"(\d[\d\.]*(?:\.\d{3})*,\d{3}|\d[\d,]*,\d{3})"
         TN_AMT_RE = re.compile(TN_AMT_PAT)
         TX_LINE_RE = re.compile(r"^(\d{1,2}/\d{1,2})\s+(.*)")
+        SPACE_DATE_LINE_RE = re.compile(
+            r"^(\d{2})\s+(\d{2})\s+(.+?)\s+(\d{2})\s+(\d{2})\s+(\d{4})\s+(\d[\d\s]*,\d{3})$"
+        )
         FRAG_NUM_RE = re.compile(r"\d+\.\s*$")
         transactions = []
         opening_balance = 0.0
@@ -499,6 +541,10 @@ class BankStatementExtractionService:
         for m in re.finditer(r"du\s*[:\s]+(\d{2}/\d{2}/\d{4})\s+au\s+(\d{2}/\d{2}/\d{4})", text, re.I):
             year = m.group(2).split("/")[2] if len(m.group(2).split("/")) >= 3 else year
             break
+        if year == datetime.now().strftime("%Y"):
+            m = re.search(r"\bAu\s*:\s*(\d{2}/\d{2}/\d{4})", text, re.I)
+            if m:
+                year = m.group(1).split("/")[2]
         for m in re.finditer(r"solde\s+(?:v[ei]ille|pr[eé]c|initial)\s*[:\s]+([\d,\.\s]+)", text, re.I):
             opening_balance = self._parse_tn_amount(m.group(1).strip().split()[0])
             break
@@ -519,6 +565,46 @@ class BankStatementExtractionService:
             line_s = raw_line.strip()
             if not line_s:
                 continue
+            if re.match(r"^(RELEVE DE COMPTE|FOLIO|DATE LIBELLE|DATE\s+LIBELLE|SITE WEB|CHER CLIENT|SA AU CAPITAL)", line_s, re.I):
+                continue
+            if re.match(r"^(SOLDE AU|REPORT)\b", line_s, re.I):
+                continue
+
+            m_space = SPACE_DATE_LINE_RE.match(line_s)
+            if m_space:
+                if current_tx:
+                    transactions.append(current_tx)
+                tx_day, tx_month = m_space.group(1), m_space.group(2)
+                description = _clean_label(m_space.group(3))
+                value_day, value_month, value_year = m_space.group(4), m_space.group(5), m_space.group(6)
+                amount_val = self._parse_tn_amount(m_space.group(7))
+                debit = credit = 0.0
+                if _is_credit_tx(description):
+                    credit = amount_val
+                else:
+                    debit = amount_val
+                amount_signed = credit if credit > 0 else -debit if debit > 0 else 0
+                if amount_signed == 0:
+                    current_tx = None
+                    continue
+                iso_date = f"{year}-{tx_month.zfill(2)}-{tx_day.zfill(2)}"
+                value_date = f"{value_year}-{value_month.zfill(2)}-{value_day.zfill(2)}"
+                hash_unique = _compute_hash_unique(iso_date, amount_signed, description or "Transaction")
+                current_tx = {
+                    "date": iso_date,
+                    "value_date": value_date,
+                    "description": description or "Transaction",
+                    "debit": debit,
+                    "credit": credit,
+                    "balance": None,
+                    "amount_signed": amount_signed,
+                    "label_raw": description or "Transaction",
+                    "label_clean": description or "Transaction",
+                    "hash_unique": hash_unique,
+                    "reference": None,
+                }
+                continue
+
             m_tx = TX_LINE_RE.match(line_s)
             if m_tx:
                 if current_tx:
@@ -579,13 +665,14 @@ class BankStatementExtractionService:
                     "reference": None,
                 }
             else:
-                if current_tx and not re.match(r"^[\d\s,\./%]+$", line_s) and not re.match(r"^(page|solde|date|lib|ref|d[eé]bit|cr[eé]dit)", line_s, re.I) and len(line_s) > 2:
+                if current_tx and not re.match(r"^[\d\s,\./%]+$", line_s) and not re.match(r"^(page|solde|report|folio|date|lib|ref|d[eé]bit|cr[eé]dit|dont tva)", line_s, re.I) and len(line_s) > 2:
                     current_tx["description"] = _clean_label((current_tx.get("description") or "") + " " + line_s)
                     current_tx["label_raw"] = current_tx["description"]
                     current_tx["label_clean"] = current_tx["description"]
+                    current_tx["amount_signed"] = current_tx["credit"] if current_tx["credit"] > 0 else -current_tx["debit"]
         if current_tx:
             transactions.append(current_tx)
-        return transactions
+        return [tx for tx in transactions if abs(tx.get("amount_signed", 0)) > 0]
 
     async def _extract_gemini_fallback(self, file_path: str, company_id: str) -> Dict[str, Any]:
         """Fallback to Gemini Vision for bank statement extraction.
@@ -609,7 +696,10 @@ class BankStatementExtractionService:
         with open(file_path, "rb") as f:
             content = f.read()
 
-        result = await asyncio.to_thread(self._gemini_extract_single, content, mime, api_key)
+        result = await asyncio.wait_for(
+            asyncio.to_thread(self._gemini_extract_single, content, mime, api_key),
+            timeout=90.0,
+        )
         if not result:
             return {"transactions": [], "bank_name": None, "account_number": None}
         return self._normalize_gemini_result(result)

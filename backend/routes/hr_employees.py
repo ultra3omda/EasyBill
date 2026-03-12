@@ -4,10 +4,12 @@ from bson import ObjectId
 from datetime import datetime, timezone, timedelta
 import os
 import logging
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 from utils.dependencies import get_current_user, get_current_company
 from data.tunisian_hr_config import CONTRACT_TYPES, PROFESSIONAL_CATEGORIES
+from services.payroll_engine import get_active_config
+from services.payroll_salary_solver import build_salary_breakdown, parse_number, solve_base_salary_from_net_target
 
 logger = logging.getLogger(__name__)
 
@@ -21,19 +23,29 @@ db = client[os.environ['DB_NAME']]
 class EmployeeCreate(BaseModel):
     first_name: str
     last_name: str
-    cin: str
-    base_salary: float
-    hire_date: str
-    department: str
-    position: str
+    cin: Optional[str] = ""
+    base_salary: Optional[float] = 0
+    net_target: Optional[float] = 0
+    hire_date: Optional[str] = ""
+    department: Optional[str] = ""
+    position: Optional[str] = ""
     email: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    gender: Optional[str] = None
     cnss_number: Optional[str] = None
     bank_account: Optional[str] = None
+    bank_name: Optional[str] = None
+    rib: Optional[str] = None
     category: Optional[str] = None
+    professional_category: Optional[str] = None
     marital_status: Optional[str] = None
     children_count: int = 0
+    work_regime: Optional[str] = "48h"
+    payment_method: Optional[str] = "virement"
+    salary_input_mode: Optional[str] = "net_target"
+    primes: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class EmployeeUpdate(BaseModel):
@@ -41,16 +53,40 @@ class EmployeeUpdate(BaseModel):
     last_name: Optional[str] = None
     cin: Optional[str] = None
     base_salary: Optional[float] = None
+    net_target: Optional[float] = None
     department: Optional[str] = None
     position: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    gender: Optional[str] = None
     cnss_number: Optional[str] = None
     bank_account: Optional[str] = None
+    bank_name: Optional[str] = None
+    rib: Optional[str] = None
     category: Optional[str] = None
+    professional_category: Optional[str] = None
     marital_status: Optional[str] = None
     children_count: Optional[int] = None
+    hire_date: Optional[str] = None
+    work_regime: Optional[str] = None
+    payment_method: Optional[str] = None
+    salary_input_mode: Optional[str] = None
+    primes: Optional[List[Dict[str, Any]]] = None
+
+
+class EmployeeSalaryPreviewRequest(BaseModel):
+    base_salary: Optional[float] = 0
+    net_target: Optional[float] = 0
+    hire_date: Optional[str] = None
+    work_regime: Optional[str] = "48h"
+    professional_category: Optional[str] = None
+    category: Optional[str] = None
+    marital_status: Optional[str] = None
+    children_count: int = 0
+    salary_input_mode: Optional[str] = "net_target"
+    primes: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class ContractCreate(BaseModel):
@@ -83,16 +119,30 @@ def serialize_employee(e: dict) -> dict:
         "email": e.get("email"),
         "phone": e.get("phone"),
         "address": e.get("address"),
+        "date_of_birth": e.get("date_of_birth"),
+        "gender": e.get("gender"),
         "department": e.get("department"),
         "position": e.get("position"),
         "category": e.get("category"),
+        "professional_category": e.get("professional_category"),
         "base_salary": e.get("base_salary", 0),
+        "base_salary_gross": e.get("base_salary_gross", e.get("base_salary", 0)),
+        "net_target": e.get("net_target", 0),
+        "salary_input_mode": e.get("salary_input_mode", "gross_base"),
         "hire_date": e.get("hire_date"),
         "status": e.get("status", "active"),
         "cnss_number": e.get("cnss_number"),
         "bank_account": e.get("bank_account"),
+        "bank_name": e.get("bank_name"),
+        "rib": e.get("rib"),
+        "work_regime": e.get("work_regime"),
+        "payment_method": e.get("payment_method"),
         "marital_status": e.get("marital_status"),
         "children_count": e.get("children_count", 0),
+        "primes": e.get("primes", []),
+        "mandatory_primes": e.get("mandatory_primes", []),
+        "salary_breakdown_snapshot": e.get("salary_breakdown_snapshot", {}),
+        "convention_collective_code": e.get("convention_collective_code"),
         "created_at": e["created_at"].isoformat() if isinstance(e.get("created_at"), datetime) else e.get("created_at"),
         "updated_at": e["updated_at"].isoformat() if isinstance(e.get("updated_at"), datetime) else e.get("updated_at"),
     }
@@ -108,6 +158,8 @@ def serialize_employee_summary(e: dict) -> dict:
         "department": e.get("department"),
         "status": e.get("status", "active"),
         "base_salary": e.get("base_salary", 0),
+        "net_target": e.get("net_target", 0),
+        "salary_input_mode": e.get("salary_input_mode", "gross_base"),
         "hire_date": e.get("hire_date"),
     }
 
@@ -127,6 +179,40 @@ def serialize_contract(c: dict) -> dict:
     }
 
 
+async def compute_employee_salary(company_id: str, employee_payload: Dict[str, Any]) -> Dict[str, Any]:
+    config = await get_active_config(company_id)
+    normalized_payload = dict(employee_payload)
+    normalized_payload["primes"] = normalized_payload.get("primes") or []
+    normalized_payload["professional_category"] = normalized_payload.get("professional_category") or normalized_payload.get("category")
+    normalized_payload["category"] = normalized_payload.get("professional_category") or normalized_payload.get("category")
+    normalized_payload["bank_account"] = normalized_payload.get("bank_account") or normalized_payload.get("rib")
+
+    net_target = parse_number(normalized_payload.get("net_target"))
+    base_salary = parse_number(normalized_payload.get("base_salary"))
+    salary_mode = normalized_payload.get("salary_input_mode") or ("net_target" if net_target > 0 else "gross_base")
+
+    if salary_mode == "net_target" and net_target <= 0 and base_salary <= 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Le net cible doit être supérieur à 0")
+
+    if (salary_mode == "net_target" and net_target > 0) or (net_target > 0 and base_salary <= 0):
+        breakdown = solve_base_salary_from_net_target(normalized_payload, config, net_target)
+    else:
+        breakdown = build_salary_breakdown(normalized_payload, config)
+
+    normalized_payload.update({
+        "salary_input_mode": "net_target" if net_target > 0 or salary_mode == "net_target" else "gross_base",
+        "base_salary": breakdown["base_salary_gross"],
+        "base_salary_gross": breakdown["base_salary_gross"],
+        "net_target": breakdown.get("net_target", net_target),
+        "primes": breakdown["primes"],
+        "mandatory_primes": breakdown["mandatory_primes"],
+        "monthly_primes": breakdown["total_primes"],
+        "salary_breakdown_snapshot": breakdown["salary_breakdown_snapshot"],
+        "convention_collective_code": breakdown["convention_profile"].get("code"),
+    })
+    return normalized_payload
+
+
 @router.get("/employees")
 async def list_employees(
     company_id: str = Query(...),
@@ -143,7 +229,7 @@ async def list_employees(
         query["department"] = department
 
     employees = await db.hr_employees.find(query).sort("created_at", -1).to_list(1000)
-    return [serialize_employee_summary(e) for e in employees]
+    return [serialize_employee(e) for e in employees]
 
 
 @router.post("/employees", status_code=status.HTTP_201_CREATED)
@@ -171,7 +257,7 @@ async def create_employee(
     matricule = f"EMP-{next_num:03d}"
 
     now = datetime.now(timezone.utc)
-    employee_dict = employee_data.dict()
+    employee_dict = await compute_employee_salary(company_id, employee_data.dict())
     employee_dict.update({
         "company_id": ObjectId(company_id),
         "matricule": matricule,
@@ -188,6 +274,17 @@ async def create_employee(
         "matricule": matricule,
         "message": "Employee created successfully"
     }
+
+
+@router.post("/employees/salary-preview")
+async def preview_employee_salary(
+    payload: EmployeeSalaryPreviewRequest,
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    await get_current_company(current_user, company_id)
+    employee_payload = await compute_employee_salary(company_id, payload.dict())
+    return employee_payload.get("salary_breakdown_snapshot", {})
 
 
 @router.get("/employees/{id}")
@@ -225,6 +322,17 @@ async def update_employee(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
 
     update_data = {k: v for k, v in employee_data.dict(exclude_unset=True).items()}
+    computed_employee = await compute_employee_salary(company_id, {**employee, **update_data})
+    fields_to_keep = {
+        "first_name", "last_name", "cin", "email", "phone", "address",
+        "date_of_birth", "gender", "department", "position", "category",
+        "professional_category", "base_salary", "base_salary_gross", "net_target",
+        "salary_input_mode", "hire_date", "cnss_number", "bank_account",
+        "bank_name", "rib", "work_regime", "payment_method", "marital_status",
+        "children_count", "primes", "mandatory_primes", "monthly_primes",
+        "salary_breakdown_snapshot", "convention_collective_code",
+    }
+    update_data = {k: v for k, v in computed_employee.items() if k in fields_to_keep}
     update_data["updated_at"] = datetime.now(timezone.utc)
 
     await db.hr_employees.update_one(

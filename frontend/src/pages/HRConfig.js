@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import AppLayout from '../components/layout/AppLayout';
 import { useCompany } from '../hooks/useCompany';
-import api from '../services/api';
+import api, { hrConfigAPI } from '../services/api';
 import { toast } from 'sonner';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -28,6 +28,11 @@ const HRConfig = () => {
   const [loading, setLoading] = useState(false);
   const [financeLaw, setFinanceLaw] = useState('LF 2025');
   const [applyingLaw, setApplyingLaw] = useState(false);
+  const [conventionConfig, setConventionConfig] = useState({
+    convention_collective_code: '',
+    payroll_convention_profile: { mandatory_primes: [] },
+    available_conventions: [],
+  });
 
   // IRPP
   const [irppBrackets, setIrppBrackets] = useState([]);
@@ -135,6 +140,22 @@ const HRConfig = () => {
     } finally {
       setLoading(false);
     }
+  }, [companyId, accounting, familyDeductions, parafiscal, smig]);
+
+  const loadConventionConfig = useCallback(async () => {
+    if (!companyId) return;
+    try {
+      const res = await hrConfigAPI.getConventionConfig(companyId);
+      if (res.data) {
+        setConventionConfig({
+          convention_collective_code: res.data.convention_collective_code || '',
+          payroll_convention_profile: res.data.payroll_convention_profile || { mandatory_primes: [] },
+          available_conventions: res.data.available_conventions || [],
+        });
+      }
+    } catch {
+      // keep defaults
+    }
   }, [companyId]);
 
   useEffect(() => {
@@ -148,6 +169,10 @@ const HRConfig = () => {
         .catch(() => {});
     }
   }, [companyId]);
+
+  useEffect(() => {
+    loadConventionConfig();
+  }, [loadConventionConfig]);
 
   const handleApplyLaw = async (code) => {
     setApplyingLaw(true);
@@ -170,6 +195,37 @@ const HRConfig = () => {
       toast.success('Configuration sauvegardée');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Erreur lors de la sauvegarde');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateConventionPrime = (index, field, value) => {
+    setConventionConfig((prev) => {
+      const profile = { ...(prev.payroll_convention_profile || {}), mandatory_primes: [...((prev.payroll_convention_profile || {}).mandatory_primes || [])] };
+      const currentPrime = { ...(profile.mandatory_primes[index] || {}) };
+      if (field.startsWith('amounts_by_category.')) {
+        const category = field.split('.')[1];
+        currentPrime.amounts_by_category = { ...(currentPrime.amounts_by_category || {}), [category]: value };
+      } else {
+        currentPrime[field] = value;
+      }
+      profile.mandatory_primes[index] = currentPrime;
+      return { ...prev, payroll_convention_profile: profile };
+    });
+  };
+
+  const saveConventionConfig = async () => {
+    setSaving(true);
+    try {
+      await hrConfigAPI.updateConventionConfig(companyId, {
+        convention_collective_code: conventionConfig.convention_collective_code,
+        payroll_convention_profile: conventionConfig.payroll_convention_profile,
+      });
+      toast.success('Convention collective sauvegardée');
+      loadConventionConfig();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de la sauvegarde de la convention');
     } finally {
       setSaving(false);
     }
@@ -284,6 +340,108 @@ const HRConfig = () => {
                 Charger LF 2025
               </Button>
             </div>
+          </div>
+        </Card>
+
+        <Card className="p-5 space-y-4">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            <div>
+              <h3 className="font-semibold text-gray-900">Convention collective</h3>
+              <p className="text-sm text-gray-500 mt-1">Convention société utilisée pour la paie nette automatique et les primes minimales.</p>
+            </div>
+            <Button onClick={saveConventionConfig} disabled={saving}>
+              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+              Sauvegarder la convention
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Convention collective société</Label>
+              <Select
+                value={conventionConfig.convention_collective_code || ''}
+                onValueChange={(value) => {
+                  const selected = conventionConfig.available_conventions.find((item) => item.code === value);
+                  setConventionConfig((prev) => ({
+                    ...prev,
+                    convention_collective_code: value,
+                    payroll_convention_profile: selected || prev.payroll_convention_profile,
+                  }));
+                }}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Choisir une convention" />
+                </SelectTrigger>
+                <SelectContent>
+                  {conventionConfig.available_conventions.map((item) => (
+                    <SelectItem key={item.code} value={item.code}>{item.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="text-sm text-gray-600">
+              <div className="font-medium text-gray-800">Profil chargé</div>
+              <div className="mt-1">{conventionConfig.payroll_convention_profile?.notes || 'Aucune note disponible.'}</div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="font-medium text-sm text-gray-800">Primes minimales obligatoires</div>
+            {(conventionConfig.payroll_convention_profile?.mandatory_primes || []).length === 0 ? (
+              <div className="text-sm text-gray-500 bg-gray-50 rounded-lg p-3">
+                Aucun minimum préchargé pour cette convention. Tu peux utiliser ce profil comme base société et le compléter plus tard.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {(conventionConfig.payroll_convention_profile?.mandatory_primes || []).map((prime, index) => (
+                  <div key={`${prime.code}-${index}`} className="border rounded-lg p-3 space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <Label>Code</Label>
+                        <Input value={prime.code || ''} readOnly className="mt-1 bg-gray-50" />
+                      </div>
+                      <div>
+                        <Label>Libellé</Label>
+                        <Input value={prime.name || ''} readOnly className="mt-1 bg-gray-50" />
+                      </div>
+                      {'amount' in prime ? (
+                        <div>
+                          <Label>Minimum mensuel (TND)</Label>
+                          <Input
+                            type="number"
+                            step="0.001"
+                            value={prime.amount ?? ''}
+                            onChange={(e) => updateConventionPrime(index, 'amount', e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                      ) : (
+                        <div className="text-xs text-gray-500 flex items-end">
+                          Montant défini par catégorie professionnelle.
+                        </div>
+                      )}
+                    </div>
+                    {prime.amounts_by_category && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {Object.entries(prime.amounts_by_category).map(([category, amount]) => (
+                          <div key={category}>
+                            <Label>{category}</Label>
+                            <Input
+                              type="number"
+                              step="0.001"
+                              value={amount}
+                              onChange={(e) => updateConventionPrime(index, `amounts_by_category.${category}`, e.target.value)}
+                              className="mt-1"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="text-xs text-gray-500">{prime.source || conventionConfig.payroll_convention_profile?.source}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </Card>
 

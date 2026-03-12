@@ -13,6 +13,14 @@ import copy
 import logging
 
 from data.tunisian_hr_config import DEFAULT_HR_CONFIG
+from services.payroll_salary_solver import (
+    build_salary_breakdown,
+    calculate_family_deductions as solver_calculate_family_deductions,
+    calculate_irpp_monthly as solver_calculate_irpp_monthly,
+    calculate_seniority_bonus as solver_calculate_seniority_bonus,
+    parse_number,
+    solve_base_salary_from_net_target,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,111 +65,15 @@ async def initialize_default_config(company_id: str) -> dict:
 
 
 def calculate_irpp_monthly(monthly_taxable_income: float, family_deductions_annual: float = 0) -> float:
-    """
-    Calcule l'IRPP mensuel selon le barème progressif tunisien.
-    1. Annualise le revenu imposable mensuel (×12)
-    2. Applique les tranches progressives
-    3. Soustrait les déductions familiales annuelles
-    4. Divise par 12 pour obtenir le montant mensuel
-    """
-    if monthly_taxable_income <= 0:
-        return 0.0
-
-    annual_taxable = monthly_taxable_income * 12
-    brackets = DEFAULT_HR_CONFIG["irpp_config"]["brackets"]
-    annual_irpp = 0.0
-
-    for bracket in brackets:
-        bracket_min = bracket["min"]
-        bracket_max = bracket["max"]
-        rate = bracket["rate"]
-
-        if annual_taxable <= bracket_min:
-            break
-
-        if bracket_max is None:
-            taxable_in_bracket = annual_taxable - bracket_min
-        else:
-            taxable_in_bracket = min(annual_taxable, bracket_max) - bracket_min
-
-        if taxable_in_bracket > 0:
-            annual_irpp += taxable_in_bracket * rate / 100
-
-    annual_irpp -= family_deductions_annual
-    if annual_irpp < 0:
-        annual_irpp = 0.0
-
-    monthly_irpp = annual_irpp / 12
-    return round(monthly_irpp, 3)
+    return solver_calculate_irpp_monthly(monthly_taxable_income, family_deductions_annual)
 
 
 def calculate_family_deductions(employee: dict, config: dict) -> float:
-    """
-    Calcule les déductions familiales annuelles selon la situation de l'employé.
-    Prend en compte : statut marital, nombre d'enfants, personnes à charge.
-    """
-    family_cfg = config.get("irpp_config", {}).get("family_deductions", {})
-    deductions = 0.0
-
-    marital_status = employee.get("marital_status", "single")
-    children_count = employee.get("children_count", 0)
-    dependents = employee.get("dependents", [])
-
-    if marital_status == "married":
-        deductions += family_cfg.get("chef_de_famille", 0)
-        if employee.get("spouse_dependent", False):
-            deductions += family_cfg.get("conjoint_a_charge", 0)
-
-    children_keys = ["enfant_1", "enfant_2", "enfant_3", "enfant_4"]
-    for i in range(children_count):
-        if i < len(children_keys):
-            deductions += family_cfg.get(children_keys[i], 0)
-        else:
-            deductions += family_cfg.get("enfant_supplementaire", 0)
-
-    for dep in dependents:
-        if dep.get("type") == "parent":
-            deductions += family_cfg.get("parent_a_charge", 0)
-        elif dep.get("type") == "handicape":
-            deductions += family_cfg.get("handicape", 0)
-
-    return deductions
+    return solver_calculate_family_deductions(employee, config)
 
 
 def calculate_seniority_bonus(base_salary: float, hire_date_str: str) -> float:
-    """
-    Calcule la prime d'ancienneté selon le barème légal tunisien.
-    2% après 2 ans, 5% après 5 ans, 10% après 10 ans,
-    15% après 15 ans, 20% après 20 ans.
-    """
-    try:
-        if isinstance(hire_date_str, datetime):
-            hire_date = hire_date_str.date() if hasattr(hire_date_str, 'date') else hire_date_str
-        elif isinstance(hire_date_str, date):
-            hire_date = hire_date_str
-        else:
-            hire_date = datetime.strptime(str(hire_date_str)[:10], "%Y-%m-%d").date()
-    except (ValueError, TypeError):
-        logger.warning("Invalid hire_date format: %s", hire_date_str)
-        return 0.0
-
-    today = date.today()
-    years = (today - hire_date).days / 365.25
-
-    if years >= 20:
-        rate = 20
-    elif years >= 15:
-        rate = 15
-    elif years >= 10:
-        rate = 10
-    elif years >= 5:
-        rate = 5
-    elif years >= 2:
-        rate = 2
-    else:
-        rate = 0
-
-    return round(base_salary * rate / 100, 3)
+    return solver_calculate_seniority_bonus(base_salary, hire_date_str)
 
 
 async def calculate_payslip(employee: dict, month: int, year: int, company_id: str, extras: dict = None) -> dict:
@@ -171,88 +83,22 @@ async def calculate_payslip(employee: dict, month: int, year: int, company_id: s
     """
     config = await get_active_config(company_id)
     extras = extras or {}
+    base_salary = parse_number(employee.get("base_salary", 0))
+    net_target = parse_number(employee.get("net_target", 0))
 
-    base_salary = employee.get("base_salary", 0)
-    monthly_primes = employee.get("monthly_primes", 0)
-    hire_date_str = employee.get("hire_date", "")
+    if (employee.get("salary_input_mode") == "net_target" or net_target > 0) and base_salary <= 0:
+        calculated = solve_base_salary_from_net_target(employee, config, net_target, extras=extras)
+    else:
+        calculated = build_salary_breakdown(employee, config, extras=extras)
 
-    seniority_bonus = calculate_seniority_bonus(base_salary, hire_date_str)
-    heures_sup = extras.get("heures_sup", 0)
-    primes_exceptionnelles = extras.get("primes_exceptionnelles", 0)
-
-    # --- Salaire brut ---
-    total_brut = base_salary + monthly_primes + seniority_bonus + heures_sup + primes_exceptionnelles
-
-    gains = [
-        {"code": "SAL_BASE", "label": "Salaire de base", "amount": round(base_salary, 3)},
-    ]
-    if monthly_primes > 0:
-        gains.append({"code": "PRIMES", "label": "Primes mensuelles", "amount": round(monthly_primes, 3)})
-    if seniority_bonus > 0:
-        gains.append({"code": "PRIME_ANC", "label": "Prime d'ancienneté", "amount": round(seniority_bonus, 3)})
-    if heures_sup > 0:
-        gains.append({"code": "HEURES_SUP", "label": "Heures supplémentaires", "amount": round(heures_sup, 3)})
-    if primes_exceptionnelles > 0:
-        gains.append({"code": "PRIME_EXCEPT", "label": "Prime exceptionnelle", "amount": round(primes_exceptionnelles, 3)})
-
-    total_brut = round(total_brut, 3)
-
-    # --- CNSS salariale ---
-    cnss_employee_rate = config.get("cnss_config", {}).get("employee_rate", DEFAULT_HR_CONFIG["cnss_config"]["employee_rate"])
-    cnss_salariale = round(total_brut * cnss_employee_rate / 100, 3)
-
-    # --- Frais professionnels ---
-    pro_expenses_cfg = config.get("irpp_config", {}).get("professional_expenses", DEFAULT_HR_CONFIG["irpp_config"]["professional_expenses"])
-    pro_rate = pro_expenses_cfg.get("rate", 10)
-    annual_cap = pro_expenses_cfg.get("annual_cap", 2000)
-    monthly_cap = round(annual_cap / 12, 3)
-    frais_pro = round(min(total_brut * pro_rate / 100, monthly_cap), 3)
-
-    # --- Revenu imposable ---
-    taxable = round(total_brut - cnss_salariale - frais_pro, 3)
-    if taxable < 0:
-        taxable = 0.0
-
-    # --- Déductions familiales et IRPP ---
-    family_deductions = calculate_family_deductions(employee, config)
-    irpp = calculate_irpp_monthly(taxable, family_deductions)
-
-    # --- CSS ---
-    css_rate = config.get("irpp_config", {}).get("css_rate", DEFAULT_HR_CONFIG["irpp_config"]["css_rate"])
-    css = round(taxable * css_rate / 100, 3)
-
-    # --- Autres retenues ---
-    other_deductions_amount = extras.get("other_deductions", 0)
-
-    deductions = [
-        {"code": "CNSS_SAL", "label": "CNSS salariale", "amount": cnss_salariale},
-        {"code": "IRPP", "label": "IRPP", "amount": irpp},
-        {"code": "CSS", "label": "Contribution Sociale de Solidarité", "amount": css},
-    ]
-    if other_deductions_amount > 0:
-        deductions.append({"code": "AUTRES", "label": "Autres retenues", "amount": round(other_deductions_amount, 3)})
-
-    total_deductions = round(cnss_salariale + irpp + css + other_deductions_amount, 3)
-
-    # --- Net à payer ---
-    net_a_payer = round(total_brut - total_deductions, 3)
-
-    # --- Charges patronales ---
-    cnss_employer_rate = config.get("cnss_config", {}).get("employer_rate", DEFAULT_HR_CONFIG["cnss_config"]["employer_rate"])
-    cnss_patronale = round(total_brut * cnss_employer_rate / 100, 3)
-
-    tfp_rate = config.get("parafiscal_config", {}).get("tfp", {}).get("rate", DEFAULT_HR_CONFIG["parafiscal_config"]["tfp"]["rate"])
-    foprolos_rate = config.get("parafiscal_config", {}).get("foprolos", {}).get("rate", DEFAULT_HR_CONFIG["parafiscal_config"]["foprolos"]["rate"])
-    tfp = round(total_brut * tfp_rate / 100, 3)
-    foprolos = round(total_brut * foprolos_rate / 100, 3)
-
-    employer_charges = [
-        {"code": "CNSS_PAT", "label": "CNSS patronale", "amount": cnss_patronale},
-        {"code": "TFP", "label": "Taxe de Formation Professionnelle", "amount": tfp},
-        {"code": "FOPROLOS", "label": "FOPROLOS", "amount": foprolos},
-    ]
-    total_employer_charges = round(cnss_patronale + tfp + foprolos, 3)
-    cost_total_employer = round(total_brut + total_employer_charges, 3)
+    total_brut = calculated["total_brut"]
+    total_deductions = calculated["total_deductions"]
+    net_a_payer = calculated["net_a_payer"]
+    gains = calculated["gains"]
+    deductions = calculated["deductions"]
+    employer_charges = calculated["employer_charges"]
+    total_employer_charges = calculated["total_employer_charges"]
+    cost_total_employer = calculated["cost_total_employer"]
 
     employee_id = employee.get("_id")
     if isinstance(employee_id, ObjectId):
@@ -262,14 +108,27 @@ async def calculate_payslip(employee: dict, month: int, year: int, company_id: s
         "employee_id": employee_id,
         "month": month,
         "year": year,
+        "base_salary": calculated["base_salary_gross"],
         "gains": gains,
         "total_brut": total_brut,
+        "gross_salary": total_brut,
         "deductions": deductions,
         "total_deductions": total_deductions,
         "net_a_payer": net_a_payer,
+        "net_salary": net_a_payer,
+        "cnss_employee": calculated["cnss_employee"],
+        "cnss_employer": calculated["cnss_employer"],
+        "irpp": calculated["irpp"],
+        "css": calculated["css"],
+        "tfp": calculated["tfp"],
+        "foprolos": calculated["foprolos"],
         "employer_charges": employer_charges,
+        "employer_charges_total": total_employer_charges,
         "total_employer_charges": total_employer_charges,
         "cost_total_employer": cost_total_employer,
+        "mandatory_primes": calculated["mandatory_primes"],
+        "primes": calculated["primes"],
+        "salary_breakdown_snapshot": calculated["salary_breakdown_snapshot"],
     }
 
     logger.info(
