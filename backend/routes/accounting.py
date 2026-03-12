@@ -7,6 +7,8 @@ import os
 from typing import Optional, List
 from pydantic import BaseModel
 from utils.dependencies import get_current_user, get_current_company
+from services.chart_of_accounts_service import ChartOfAccountsService
+from services.account_resolution_service import AccountResolutionService
 
 router = APIRouter(prefix="/api/accounting", tags=["Accounting"])
 
@@ -22,12 +24,17 @@ class AccountCreate(BaseModel):
     parent_code: Optional[str] = None
     is_group: bool = False
     notes: Optional[str] = None
+    semantic_key: Optional[str] = None
+    category: Optional[str] = None
 
 
 class AccountUpdate(BaseModel):
     name: Optional[str] = None
     notes: Optional[str] = None
     is_active: Optional[bool] = None
+    semantic_key: Optional[str] = None
+    category: Optional[str] = None
+    label: Optional[str] = None
 
 
 def serialize_account(a: dict) -> dict:
@@ -37,12 +44,22 @@ def serialize_account(a: dict) -> dict:
         "code": a.get("code"),
         "name": a.get("name"),
         "type": a.get("type"),
+        "class": a.get("class"),
+        "category": a.get("category"),
         "parent_code": a.get("parent_code"),
         "is_group": a.get("is_group", False),
         "is_system": a.get("is_system", False),
+        "is_system_default": a.get("is_system_default", False),
+        "is_user_editable": a.get("is_user_editable", True),
+        "protected": a.get("protected", False),
         "is_active": a.get("is_active", True),
         "balance": a.get("balance", 0),
         "notes": a.get("notes"),
+        "label": a.get("label", a.get("name")),
+        "semantic_key": a.get("semantic_key"),
+        "country_code": a.get("country_code"),
+        "code_system": a.get("code_system"),
+        "metadata": a.get("metadata", {}),
         "level": len(a.get("code", "")) // 2 if a.get("code") else 0
     }
 
@@ -62,6 +79,42 @@ async def list_accounts(company_id: str = Query(...), type_filter: Optional[str]
     
     accounts = await db.chart_of_accounts.find(query).sort("code", 1).to_list(2000)
     return [serialize_account(a) for a in accounts]
+
+
+@router.get("/chart")
+async def get_chart_metadata(company_id: str = Query(...), current_user: dict = Depends(get_current_user)):
+    company = await get_current_company(current_user, company_id)
+    count = await db.chart_of_accounts.count_documents({"company_id": ObjectId(company_id)})
+    semantic_count = await db.chart_of_accounts.count_documents(
+        {"company_id": ObjectId(company_id), "semantic_key": {"$exists": True, "$ne": None}}
+    )
+    return {
+        "company_id": company_id,
+        "country_code": ((company.get("fiscal_settings") or {}).get("country_code")) or ((company.get("address") or {}).get("country")) or "TN",
+        "active_chart_country_code": ((company.get("accounting_settings") or {}).get("active_chart_country_code")),
+        "active_chart_code_system": ((company.get("accounting_settings") or {}).get("active_chart_code_system")),
+        "chart_initialized": ((company.get("accounting_settings") or {}).get("chart_initialized", count > 0)),
+        "account_count": count,
+        "semantic_account_count": semantic_count,
+        "configuration_warnings": ((company.get("accounting_settings") or {}).get("configuration_warnings") or []),
+        "processing_controls": ((company.get("accounting_settings") or {}).get("processing_controls") or {}),
+    }
+
+
+@router.post("/chart/initialize")
+async def initialize_chart(company_id: str = Query(...), force: bool = Query(False), current_user: dict = Depends(get_current_user)):
+    company = await get_current_company(current_user, company_id)
+    service = ChartOfAccountsService(db)
+    result = await service.initialize_default_chart(
+        company_id=ObjectId(company_id),
+        country_code=((company.get("fiscal_settings") or {}).get("country_code")) or None,
+        created_by=current_user["_id"],
+        force=force,
+    )
+    return {
+        "message": "Plan comptable initialisé",
+        **result,
+    }
 
 
 @router.get("/accounts/{account_id}")
@@ -86,8 +139,14 @@ async def create_account(data: AccountCreate, company_id: str = Query(...), curr
     account_dict.update({
         "company_id": ObjectId(company_id),
         "is_system": False,
+        "is_system_default": False,
+        "is_user_editable": True,
+        "protected": False,
         "is_active": True,
         "balance": 0,
+        "label": data.name,
+        "class": data.code[:1],
+        "category": data.category or data.type,
         "created_at": datetime.now(timezone.utc)
     })
     
@@ -103,13 +162,17 @@ async def update_account(account_id: str, data: AccountUpdate, company_id: str =
     if not account:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
     
-    if account.get("is_system"):
+    if account.get("is_system") and not account.get("is_user_editable", False):
         # Only allow updating notes for system accounts
         update_data = {}
         if data.notes is not None:
             update_data["notes"] = data.notes
+        if data.label is not None:
+            update_data["label"] = data.label
     else:
         update_data = {k: v for k, v in data.dict(exclude_unset=True).items()}
+    if "name" in update_data and "label" not in update_data:
+        update_data["label"] = update_data["name"]
     
     if update_data:
         await db.chart_of_accounts.update_one({"_id": ObjectId(account_id)}, {"$set": update_data})
@@ -125,11 +188,13 @@ async def delete_account(account_id: str, company_id: str = Query(...), current_
     if not account:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
     
+    if account.get("protected") or account.get("is_system_default"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete protected account")
     if account.get("is_system"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete system account")
     
     # Check if account has entries
-    entries_count = await db.journal_entries.count_documents({"$or": [{"debit_account": account["code"]}, {"credit_account": account["code"]}], "company_id": ObjectId(company_id)})
+    entries_count = await db.journal_entries.count_documents({"company_id": ObjectId(company_id), "lines.account_code": account["code"]})
     if entries_count > 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete account with journal entries")
     

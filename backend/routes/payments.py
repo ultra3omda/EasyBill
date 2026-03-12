@@ -163,7 +163,16 @@ async def create_payment(
     
     await log_action(company_id, str(current_user["_id"]), current_user.get("full_name", ""), "Créer", number, request.client.host if request.client else None)
     
-    # Synchronisation comptable automatique
+    # Synchronisation comptable : écriture de vente pour chaque facture allouée (si pas encore créée)
+    for allocation in payment_data.allocations:
+        try:
+            inv = await db.invoices.find_one({"_id": allocation.invoice_id})
+            if inv and not inv.get("accounting_entry_id"):
+                await accounting_sync_service.sync_invoice(str(allocation.invoice_id))
+        except Exception as e:
+            logger.error(f"Erreur sync facture {allocation.invoice_id}: {str(e)}")
+    
+    # Synchronisation comptable : écriture de règlement (531/521 / 411)
     try:
         await accounting_sync_service.sync_payment(str(result.inserted_id))
     except Exception as e:

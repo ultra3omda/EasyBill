@@ -228,7 +228,7 @@ const Quotes = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Total Devis</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalAmount.toFixed(2)} TND</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalAmount.toFixed(3)} TND</p>
                 <p className="text-xs text-gray-500">{filteredQuotes.length} devis</p>
               </div>
             </div>
@@ -240,7 +240,7 @@ const Quotes = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Acceptés</p>
-                <p className="text-2xl font-bold text-green-600">{stats.acceptedAmount.toFixed(2)} TND</p>
+                <p className="text-2xl font-bold text-green-600">{stats.acceptedAmount.toFixed(3)} TND</p>
                 <p className="text-xs text-gray-500">{stats.acceptedCount} devis</p>
               </div>
             </div>
@@ -252,7 +252,7 @@ const Quotes = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">En attente</p>
-                <p className="text-2xl font-bold text-orange-600">{stats.pendingAmount.toFixed(2)} TND</p>
+                <p className="text-2xl font-bold text-orange-600">{stats.pendingAmount.toFixed(3)} TND</p>
                 <p className="text-xs text-gray-500">{stats.pendingCount} devis</p>
               </div>
             </div>
@@ -316,7 +316,7 @@ const Quotes = () => {
                         <TableCell>{quote.customer_name}</TableCell>
                         <TableCell>{quote.date ? new Date(quote.date).toLocaleDateString('fr-FR') : '-'}</TableCell>
                         <TableCell>{quote.valid_until ? new Date(quote.valid_until).toLocaleDateString('fr-FR') : '-'}</TableCell>
-                        <TableCell className="font-semibold">{(quote.total || 0).toFixed(2)} TND</TableCell>
+                        <TableCell className="font-semibold">{(quote.total || 0).toFixed(3)} TND</TableCell>
                         <TableCell>
                           <Badge className={statusConfig.className}>
                             {statusConfig.label}

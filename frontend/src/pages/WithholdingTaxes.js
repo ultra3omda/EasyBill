@@ -118,7 +118,7 @@ const WithholdingTaxes = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">Montant total</p>
-                <h3 className="text-2xl font-bold text-purple-600 mt-1">{stats.total_amount?.toFixed(2)} TND</h3>
+                <h3 className="text-2xl font-bold text-purple-600 mt-1">{stats.total_amount?.toFixed(3)} TND</h3>
               </div>
               <DollarSign className="w-8 h-8 text-purple-600" />
             </div>
@@ -177,7 +177,7 @@ const WithholdingTaxes = () => {
                     <TableCell>{new Date(tax.date).toLocaleDateString('fr-FR')}</TableCell>
                     <TableCell>{tax.tax_type}</TableCell>
                     <TableCell>{tax.rate}%</TableCell>
-                    <TableCell>{tax.amount?.toFixed(2)} TND</TableCell>
+                    <TableCell>{tax.amount?.toFixed(3)} TND</TableCell>
                     <TableCell>{getStatusBadge(tax.status)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">

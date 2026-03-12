@@ -16,7 +16,7 @@ const Register = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [company, setCompany] = useState('');
   const [loading, setLoading] = useState(false);
-  const { register, loginWithGoogle } = useAuth();
+  const { register } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
 
@@ -53,26 +53,9 @@ const Register = () => {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    try {
-      const result = await loginWithGoogle();
-      if (result.success) {
-        toast({
-          title: 'Connexion réussie',
-          description: 'Bienvenue sur EasyBill!',
-        });
-        navigate('/dashboard');
-      }
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: 'Erreur lors de la connexion avec Google',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleGoogleLogin = () => {
+    // Redirection vers la page login pour la connexion Google (flux redirect)
+    navigate('/login');
   };
 
   return (

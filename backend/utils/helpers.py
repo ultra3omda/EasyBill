@@ -3,11 +3,11 @@ import string
 
 def generate_document_number(prefix: str, next_number: int, year: int = None) -> str:
     """
-    Generate document number with format: PREFIX-YYYY-NNNN or PREFIX-NNNN
+    Generate document number with format: PREFIX-YYYY-NNNNN or PREFIX-NNNNN (5 digits)
     """
     if year:
-        return f"{prefix}-{year}-{next_number:04d}"
-    return f"{prefix}-{next_number:04d}"
+        return f"{prefix}-{year}-{next_number:05d}"
+    return f"{prefix}-{next_number:05d}"
 
 def generate_random_token(length: int = 32) -> str:
     """

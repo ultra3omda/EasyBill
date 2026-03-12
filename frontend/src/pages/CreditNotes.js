@@ -221,15 +221,15 @@ const CreditNotes = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="p-6">
             <p className="text-sm text-gray-600">Total des avoirs</p>
-            <p className="text-2xl font-bold text-violet-600">{filteredDocs.reduce((s, d) => s + (d.total || 0), 0).toFixed(2)} TND</p>
+            <p className="text-2xl font-bold text-violet-600">{filteredDocs.reduce((s, d) => s + (d.total || 0), 0).toFixed(3)} TND</p>
           </Card>
           <Card className="p-6">
             <p className="text-sm text-gray-600">Avoirs appliqués</p>
-            <p className="text-2xl font-bold text-green-600">{filteredDocs.filter(d => d.status === 'applied').reduce((s, d) => s + (d.total || 0), 0).toFixed(2)} TND</p>
+            <p className="text-2xl font-bold text-green-600">{filteredDocs.filter(d => d.status === 'applied').reduce((s, d) => s + (d.total || 0), 0).toFixed(3)} TND</p>
           </Card>
           <Card className="p-6">
             <p className="text-sm text-gray-600">En attente</p>
-            <p className="text-2xl font-bold text-orange-600">{filteredDocs.filter(d => d.status !== 'applied').reduce((s, d) => s + (d.total || 0), 0).toFixed(2)} TND</p>
+            <p className="text-2xl font-bold text-orange-600">{filteredDocs.filter(d => d.status !== 'applied').reduce((s, d) => s + (d.total || 0), 0).toFixed(3)} TND</p>
           </Card>
         </div>
 
@@ -264,7 +264,7 @@ const CreditNotes = () => {
                       <TableCell>{doc.customer_name}</TableCell>
                       <TableCell>{doc.date ? new Date(doc.date).toLocaleDateString('fr-FR') : '-'}</TableCell>
                       <TableCell>{getReasonLabel(doc.reason)}</TableCell>
-                      <TableCell className="font-semibold text-red-600">-{(doc.total || 0).toFixed(2)} TND</TableCell>
+                      <TableCell className="font-semibold text-red-600">-{(doc.total || 0).toFixed(3)} TND</TableCell>
                       <TableCell><Badge className={statusConfig.className}>{statusConfig.label}</Badge></TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -356,12 +356,12 @@ const CreditNotes = () => {
                     <div><Label className="text-xs">Prix HT</Label><Input type="number" value={item.unit_price} onChange={(e) => handleItemChange(index, 'unit_price', parseFloat(e.target.value) || 0)} /></div>
                     <div><Label className="text-xs">TVA %</Label><Input type="number" value={item.tax_rate} onChange={(e) => handleItemChange(index, 'tax_rate', parseFloat(e.target.value) || 0)} /></div>
                     <div><Label className="text-xs">Remise %</Label><Input type="number" value={item.discount} onChange={(e) => handleItemChange(index, 'discount', parseFloat(e.target.value) || 0)} /></div>
-                    <div><Label className="text-xs">Total</Label><Input type="number" value={item.total.toFixed(2)} disabled className="bg-gray-100" /></div>
+                    <div><Label className="text-xs">Total</Label><Input type="number" value={item.total.toFixed(3)} disabled className="bg-gray-100" /></div>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="flex justify-end"><div className="bg-gray-50 p-4 rounded-lg text-right"><p className="text-sm text-gray-600">Total Avoir</p><p className="text-2xl font-bold text-red-600">-{calculateTotal().toFixed(2)} TND</p></div></div>
+            <div className="flex justify-end"><div className="bg-gray-50 p-4 rounded-lg text-right"><p className="text-sm text-gray-600">Total Avoir</p><p className="text-2xl font-bold text-red-600">-{calculateTotal().toFixed(3)} TND</p></div></div>
             <div><Label>Notes</Label><Textarea value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} rows={2} /></div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Annuler</Button>
