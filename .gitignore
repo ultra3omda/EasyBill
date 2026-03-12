@@ -66,6 +66,9 @@ agenthub/agents/youtube/db
 backend/uploads/
 backend/config/google/document-ai.json
 
+# Backend uploaded files (avatars)
+backend/uploads/
+
 # Archive files and large assets
 **/*.zip
 **/*.tar.gz

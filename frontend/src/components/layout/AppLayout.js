@@ -41,9 +41,11 @@ import {
   Calendar,
   FileBarChart,
   Settings,
+  User,
   Brain,
   UserPlus,
   Shield,
+  Lock,
   PlusCircle,
   Landmark,
   Palette,
@@ -64,6 +66,7 @@ import {
   Wallet,
   Bot,
   Scan,
+  Phone
   FileSpreadsheet
 } from 'lucide-react';
 import {
@@ -142,6 +145,69 @@ const FISCAL_YEARS = [
   { value: 'oct-sep', label: 'Octobre - Septembre' }
 ];
 
+// Phone prefixes (country code)
+const PHONE_PREFIXES = [
+  { value: '+216', label: '🇹🇳 +216' },
+  { value: '+33', label: '🇫🇷 +33' },
+  { value: '+213', label: '🇩🇿 +213' },
+  { value: '+212', label: '🇲🇦 +212' },
+  { value: '+218', label: '🇱🇾 +218' },
+  { value: '+20', label: '🇪🇬 +20' },
+  { value: '+32', label: '🇧🇪 +32' },
+  { value: '+41', label: '🇨🇭 +41' },
+  { value: '+39', label: '🇮🇹 +39' },
+  { value: '+34', label: '🇪🇸 +34' },
+  { value: '+1', label: '🇺🇸 +1' },
+  { value: '+44', label: '🇬🇧 +44' },
+  { value: '+49', label: '🇩🇪 +49' },
+  { value: '+90', label: '🇹🇷 +90' },
+  { value: '+971', label: '🇦🇪 +971' },
+];
+
+function parsePhone(full) {
+  if (!full || !String(full).trim()) return { prefix: '+216', number: '' };
+  const s = String(full).trim();
+  const match = s.match(/^(\+\d{1,4})\s*(.*)$/);
+  if (match) return { prefix: match[1], number: match[2].trim() };
+  if (/^\+\d+/.test(s)) {
+    const prefixMatch = s.match(/^(\+\d{1,4})/);
+    const prefix = prefixMatch ? prefixMatch[1] : '+216';
+    return { prefix, number: s.replace(/^\+\d{1,4}\s*/, '').trim() };
+  }
+  return { prefix: '+216', number: s };
+}
+
+// Pays avec code ISO pour drapeaux (flagcdn.com)
+const COUNTRIES = [
+  { code: 'TN', name: 'Tunisie' },
+  { code: 'FR', name: 'France' },
+  { code: 'DZ', name: 'Algérie' },
+  { code: 'MA', name: 'Maroc' },
+  { code: 'LY', name: 'Libye' },
+  { code: 'EG', name: 'Égypte' },
+  { code: 'BE', name: 'Belgique' },
+  { code: 'CH', name: 'Suisse' },
+  { code: 'IT', name: 'Italie' },
+  { code: 'ES', name: 'Espagne' },
+  { code: 'DE', name: 'Allemagne' },
+  { code: 'GB', name: 'Royaume-Uni' },
+  { code: 'US', name: 'États-Unis' },
+  { code: 'CA', name: 'Canada' },
+  { code: 'TR', name: 'Turquie' },
+  { code: 'AE', name: 'Émirats arabes unis' },
+  { code: 'SA', name: 'Arabie saoudite' },
+  { code: 'NL', name: 'Pays-Bas' },
+  { code: 'PT', name: 'Portugal' },
+  { code: 'LU', name: 'Luxembourg' },
+];
+
+function getUserInitials(fullName) {
+  if (!fullName || !String(fullName).trim()) return 'U';
+  const parts = String(fullName).trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return fullName.slice(0, 2).toUpperCase();
+}
+
 const AppLayout = ({ children }) => {
   const { user, logout } = useAuth();
   const { language, changeLanguage, t } = useLanguage();
@@ -169,6 +235,16 @@ const AppLayout = ({ children }) => {
       country: 'Tunisie'
     }
   });
+  const [companyPhonePrefix, setCompanyPhonePrefix] = useState('+216');
+  const [companyPhoneNumber, setCompanyPhoneNumber] = useState('');
+
+  useEffect(() => {
+    if (newCompanyModalOpen) {
+      const parsed = parsePhone(newCompanyData.phone);
+      setCompanyPhonePrefix(parsed.prefix);
+      setCompanyPhoneNumber(parsed.number);
+    }
+  }, [newCompanyModalOpen]);
 
   // Mock notifications
   const [notifications] = useState([
@@ -224,6 +300,8 @@ const AppLayout = ({ children }) => {
         logo: null,
         address: { street: '', governorate: '', postal_code: '', country: 'Tunisie' }
       });
+      setCompanyPhonePrefix('+216');
+      setCompanyPhoneNumber('');
       navigate('/dashboard');
     } catch (error) {
       console.error('Error creating company:', error);
@@ -362,6 +440,10 @@ const AppLayout = ({ children }) => {
       icon: Settings,
       label: 'Paramètres',
       items: [
+        { icon: User, label: 'Profil', path: '/settings' },
+        { icon: Building2, label: 'Entreprise', path: '/settings/company' },
+        { icon: Bell, label: 'Notifications', path: '/settings/notifications' },
+        { icon: Lock, label: 'Sécurité', path: '/settings/security' },
         { icon: UserPlus, label: 'Collaborateurs', path: '/collaborators' },
         { icon: Shield, label: 'Rôles & permissions', path: '/roles-permissions' },
         { icon: PlusCircle, label: 'Entrées supplémentaires', path: '/additional-entries' },
@@ -378,19 +460,49 @@ const AppLayout = ({ children }) => {
     }
   ];
 
-  const isActiveItem = (path) => location.pathname === path;
-  const isActiveGroup = (items) => items?.some(item => {
-    if (item.type === 'nested') {
-      return item.items?.some(subItem => location.pathname === subItem.path);
-    }
-    return location.pathname === item.path;
-  });
+  const isActiveItem = (path) => path && location.pathname === path;
+  const isActiveGroup = (items, groupKey) => {
+    if (!items) return false;
+    if (groupKey === 'parametres' && location.pathname.startsWith('/settings')) return true;
+    return items.some(item => {
+      if (item.type === 'nested') {
+        return item.items?.some(subItem => location.pathname === subItem.path);
+      }
+      return location.pathname === item.path;
+    });
+  };
+  const isGroupExpanded = (item) => expandedMenus[item.key];
+
+  // À la navigation, ouvrir le(s) menu(s) parent(s) qui contiennent la page actuelle (l'utilisateur peut les fermer ensuite)
+  useEffect(() => {
+    const pathname = location.pathname;
+    const pathInGroup = (items, groupKey) => {
+      if (!items) return false;
+      if (groupKey === 'parametres' && pathname.startsWith('/settings')) return true;
+      return items.some(it => {
+        if (it.type === 'nested') return it.items?.some(s => s.path === pathname);
+        return it.path === pathname;
+      });
+    };
+    setExpandedMenus(prev => {
+      const next = { ...prev };
+      menuStructure.forEach((item) => {
+        if (item.type !== 'group' || !item.items) return;
+        if (pathInGroup(item.items, item.key)) next[item.key] = true;
+        item.items.forEach((subItem) => {
+          if (subItem.type === 'nested' && subItem.items?.some(s => s.path === pathname))
+            next[subItem.key] = true;
+        });
+      });
+      return next;
+    });
+  }, [location.pathname]);
 
   // Render menu item (handles nested submenus)
   const renderMenuItem = (item, depth = 0) => {
     if (item.type === 'nested') {
-      const isExpanded = expandedMenus[item.key];
       const hasActiveChild = item.items?.some(subItem => location.pathname === subItem.path);
+      const isExpanded = expandedMenus[item.key];
       
       return (
         <div key={item.key}>
@@ -564,9 +676,8 @@ const AppLayout = ({ children }) => {
                   );
                 } else {
                   const Icon = item.icon;
-                  const isExpanded = expandedMenus[item.key];
-                  const hasActiveChild = isActiveGroup(item.items);
-                  
+                  const hasActiveChild = isActiveGroup(item.items, item.key);
+                  const isExpanded = isGroupExpanded(item);
                   return (
                     <div key={item.key}>
                       <button
@@ -721,9 +832,17 @@ const AppLayout = ({ children }) => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-lg">
-                  <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                    {user?.name?.charAt(0) || user?.full_name?.charAt(0) || 'U'}
-                  </div>
+                  {user?.photo ? (
+                    <img
+                      src={user.photo.startsWith('http') ? user.photo : `${process.env.REACT_APP_BACKEND_URL || ''}${user.photo}`}
+                      alt=""
+                      className="w-8 h-8 rounded-full object-cover border border-gray-200"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                      {getUserInitials(user?.full_name || user?.name)}
+                    </div>
+                  )}
                   <ChevronDown className="w-4 h-4 text-gray-600" />
                 </button>
               </DropdownMenuTrigger>
@@ -877,12 +996,41 @@ const AppLayout = ({ children }) => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Téléphone</Label>
-                  <Input
-                    value={newCompanyData.phone}
-                    onChange={(e) => setNewCompanyData(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="+216 XX XXX XXX"
-                    className="mt-1"
-                  />
+                  <div className="flex rounded-lg border border-input bg-background shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 mt-1">
+                    <div className="flex items-center pl-3 bg-muted/50 border-r border-input">
+                      <Phone className="h-4 w-4 text-muted-foreground mr-2 shrink-0" />
+                      <Select
+                        value={companyPhonePrefix}
+                        onValueChange={(v) => {
+                          setCompanyPhonePrefix(v);
+                          setNewCompanyData(prev => ({ ...prev, phone: (v + ' ' + companyPhoneNumber).trim() }));
+                        }}
+                      >
+                        <SelectTrigger className="w-[7.5rem] h-10 border-0 bg-transparent shadow-none focus:ring-0 focus-visible:ring-0">
+                          <span className="truncate text-sm">
+                            {PHONE_PREFIXES.find((p) => p.value === companyPhonePrefix)?.label ?? '+216'}
+                          </span>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PHONE_PREFIXES.map((p) => (
+                            <SelectItem key={p.value} value={p.value}>
+                              {p.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Input
+                      className="rounded-none border-0 focus-visible:ring-0 flex-1 min-w-0"
+                      value={companyPhoneNumber}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setCompanyPhoneNumber(v);
+                        setNewCompanyData(prev => ({ ...prev, phone: (companyPhonePrefix + ' ' + v).trim() }));
+                      }}
+                      placeholder="12 345 678"
+                    />
+                  </div>
                 </div>
                 <div>
                   <Label>Site Internet</Label>
@@ -950,14 +1098,21 @@ const AppLayout = ({ children }) => {
                     }))}
                   >
                     <SelectTrigger className="mt-1">
-                      <SelectValue />
+                      <SelectValue placeholder="Choisir un pays" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Tunisie">Tunisie</SelectItem>
-                      <SelectItem value="France">France</SelectItem>
-                      <SelectItem value="Algérie">Algérie</SelectItem>
-                      <SelectItem value="Maroc">Maroc</SelectItem>
-                      <SelectItem value="Libye">Libye</SelectItem>
+                      {COUNTRIES.map((c) => (
+                        <SelectItem key={c.code} value={c.name}>
+                          <span className="flex items-center gap-2">
+                            <img
+                              src={`https://flagcdn.com/w40/${c.code.toLowerCase()}.png`}
+                              alt=""
+                              className="w-5 h-4 object-cover rounded"
+                            />
+                            {c.name}
+                          </span>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

@@ -1,9 +1,13 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Header, Body
+
+from fastapi import APIRouter, HTTPException, status, Depends, Header, UploadFile, File, Body
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 import os
 import logging
+import shutil
+import uuid
 
 logger = logging.getLogger(__name__)
 from models.user import UserCreate, UserLogin, User, UserUpdate, PasswordUpdate, ForgotPassword, ResetPassword
@@ -31,19 +35,19 @@ async def create_default_chart_of_accounts_for_company(company_id: ObjectId):
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(user_data: UserCreate):
-    # Check if user exists
-    existing_user = await db.users.find_one({"email": user_data.email})
+    # Vérifier si un compte existe déjà avec cet email (réponse 200 pour éviter erreur console frontend)
+    existing_user = await db.users.find_one({"email": user_data.email.lower().strip()})
     if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
-        )
+        return {
+            "alreadyRegistered": True,
+            "message": "Un compte existe déjà avec cet email. Vous pouvez vous connecter directement."
+        }
     
     # Create user
     verification_token = generate_random_token(32)
-    
+    email_normalized = user_data.email.lower().strip()
     user_dict = {
-        "email": user_data.email,
+        "email": email_normalized,
         "password_hash": get_password_hash(user_data.password),
         "full_name": user_data.full_name,
         "email_verified": False,  # Require email verification
@@ -132,23 +136,17 @@ async def register(user_data: UserCreate):
         # Initialize Tunisian chart of accounts (490 accounts)
         await create_default_chart_of_accounts_for_company(company_result.inserted_id)
     
-    # Create access token
-    access_token = create_access_token(data={"sub": str(user_id)})
-    
+    # Ne pas retourner de token : l'utilisateur doit d'abord vérifier son email
     return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user": {
-            "id": str(user_id),
-            "email": user_data.email,
-            "full_name": user_data.full_name
-        }
+        "message": "Compte créé. Un email de vérification a été envoyé à votre adresse. Consultez votre boîte mail pour activer votre compte.",
+        "requires_verification": True
     }
 
 @router.post("/login")
 async def login(user_data: UserLogin):
-    # Find user
-    user = await db.users.find_one({"email": user_data.email})
+    # Find user (email normalisé pour cohérence avec l'inscription)
+    email_normalized = user_data.email.lower().strip()
+    user = await db.users.find_one({"email": email_normalized})
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -169,16 +167,27 @@ async def login(user_data: UserLogin):
             detail="Email ou mot de passe incorrect"
         )
     
+    # Exiger la vérification de l'email avant de se connecter
+    if not user.get("email_verified"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Veuillez vérifier votre adresse email avant de vous connecter. Consultez votre boîte mail (et les spams) pour le lien de vérification."
+        )
+    
     # Create access token
     access_token = create_access_token(data={"sub": str(user["_id"])})
-    
+    await db.users.update_one(
+        {"_id": user["_id"]},
+        {"$set": {"last_login": datetime.utcnow(), "updated_at": datetime.utcnow()}}
+    )
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "user": {
             "id": str(user["_id"]),
             "email": user["email"],
-            "full_name": user["full_name"]
+            "full_name": user["full_name"],
+            "photo": user.get("photo")
         }
     }
 
@@ -332,7 +341,10 @@ async def google_login(token: dict = Body(...)):
     
     # Create access token
     access_token = create_access_token(data={"sub": str(user_id)})
-    
+    await db.users.update_one(
+        {"_id": user_id},
+        {"$set": {"last_login": datetime.utcnow(), "updated_at": datetime.utcnow()}}
+    )
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -439,8 +451,13 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         "id": str(current_user["_id"]),
         "email": current_user["email"],
         "full_name": current_user["full_name"],
+        "phone": current_user.get("phone"),
         "photo": current_user.get("photo"),
-        "preferences": current_user.get("preferences", {})
+        "email_verified": current_user.get("email_verified", False),
+        "preferences": current_user.get("preferences", {}),
+        "created_at": current_user.get("created_at"),
+        "last_login": current_user.get("last_login"),
+        "has_password": bool(current_user.get("password_hash")),
     }
 
 @router.put("/me")
@@ -455,21 +472,63 @@ async def update_me(user_update: UserUpdate, current_user: dict = Depends(get_cu
     
     return {"message": "Profile updated successfully"}
 
+UPLOAD_DIR = Path(__file__).resolve().parent.parent / "uploads" / "avatars"
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+
+@router.post("/me/photo")
+async def upload_photo(current_user: dict = Depends(get_current_user), file: UploadFile = File(...)):
+    """Upload profile photo; saved in project uploads/avatars."""
+    suffix = Path(file.filename or "photo").suffix.lower()
+    if suffix not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Format non autorisé. Utilisez: jpg, jpeg, png, gif ou webp."
+        )
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    name = f"{current_user['_id']}_{uuid.uuid4().hex[:8]}{suffix}"
+    path = UPLOAD_DIR / name
+    try:
+        with path.open("wb") as f:
+            shutil.copyfileobj(file.file, f)
+    except Exception as e:
+        logger.error(f"Upload photo error: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur lors de l'enregistrement du fichier.")
+    photo_url = f"/uploads/avatars/{name}"
+    await db.users.update_one(
+        {"_id": current_user["_id"]},
+        {"$set": {"photo": photo_url, "updated_at": datetime.utcnow()}}
+    )
+    return {"photo": photo_url}
+
 @router.put("/password")
 async def update_password(password_data: PasswordUpdate, current_user: dict = Depends(get_current_user)):
     # Verify passwords match
     if password_data.new_password != password_data.confirm_password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Passwords do not match"
+            detail="Les mots de passe ne correspondent pas."
         )
     
-    # Verify old password if user has password
-    if current_user.get("password_hash") and password_data.old_password:
+    has_existing_password = bool(current_user.get("password_hash"))
+    
+    if has_existing_password:
+        # Compte email/mot de passe : exiger et vérifier l'ancien mot de passe
+        if not password_data.old_password or not password_data.old_password.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Veuillez saisir votre mot de passe actuel."
+            )
         if not verify_password(password_data.old_password, current_user["password_hash"]):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Incorrect old password"
+                detail="Ancien mot de passe incorrect."
+            )
+    else:
+        # Compte social (sans mot de passe) : ne pas accepter d'ancien mot de passe
+        if password_data.old_password and password_data.old_password.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Compte connecté via un réseau social. Laissez le champ « Ancien mot de passe » vide pour définir un mot de passe."
             )
     
     # Update password
@@ -481,7 +540,7 @@ async def update_password(password_data: PasswordUpdate, current_user: dict = De
         }}
     )
     
-    return {"message": "Password updated successfully"}
+    return {"message": "Mot de passe modifié avec succès."}
 
 @router.post("/logout")
 async def logout(current_user: dict = Depends(get_current_user)):

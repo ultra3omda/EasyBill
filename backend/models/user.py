@@ -56,6 +56,7 @@ class User(BaseModel):
     email: EmailStr
     password_hash: Optional[str] = None
     full_name: str
+    phone: Optional[str] = None
     photo: Optional[str] = None
     birth_date: Optional[datetime] = None
     gender: Optional[str] = None
@@ -90,6 +91,7 @@ class UserLogin(BaseModel):
 
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
+    phone: Optional[str] = None
     photo: Optional[str] = None
     birth_date: Optional[datetime] = None
     gender: Optional[str] = None
