@@ -42,6 +42,7 @@ import {
   FileBarChart,
   Settings,
   User,
+  Brain,
   UserPlus,
   Shield,
   Lock,
@@ -66,6 +67,7 @@ import {
   Bot,
   Scan,
   Phone
+  FileSpreadsheet
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -362,6 +364,7 @@ const AppLayout = ({ children }) => {
       label: 'Caisse & Cash',
       items: [
         { icon: Wallet, label: 'Tableau de bord caisse', path: '/cash' },
+        { icon: Banknote, label: 'Configurer caisse', path: '/cash-accounts' },
         { icon: Bot, label: 'Assistant chatbot', path: '/chatbot' },
       ]
     },
@@ -376,7 +379,8 @@ const AppLayout = ({ children }) => {
         { icon: Receipt, label: 'Factures fournisseur', path: '/purchases/supplier-invoices' },
         { icon: CreditCard, label: 'Paiements', path: '/purchases/supplier-payments' },
         { icon: Scan, label: 'Scanner une facture', path: '/purchases/invoice-scanner' },
-        { icon: Building2, label: 'Lettrage bancaire', path: '/purchases/bank-reconciliation' }
+        { icon: Building2, label: 'Lettrage bancaire', path: '/purchases/bank-reconciliation' },
+        { icon: FileSpreadsheet, label: 'Import extraits (Document AI)', path: '/purchases/bank-statement-import' }
       ]
     },
     {
@@ -387,6 +391,8 @@ const AppLayout = ({ children }) => {
       items: [
         { icon: PieChart, label: 'Tableau de bord', path: '/accounting-dashboard' },
         { icon: BookOpen, label: 'Plan comptable', path: '/chart-of-accounts' },
+        { icon: Settings, label: 'Mappings fournisseurs', path: '/accounting/supplier-mappings' },
+        { icon: Brain, label: 'Patterns appris', path: '/accounting/learning-patterns' },
         { icon: PenLine, label: 'Écritures Comptables', path: '/journal-entries' },
         { icon: BookMarked, label: 'Grand Livre', path: '/general-ledger' },
         { icon: Scale, label: 'Balance des comptes', path: '/trial-balance' },
@@ -406,6 +412,20 @@ const AppLayout = ({ children }) => {
             { icon: PieChart, label: 'États financiers', path: '/financial-statements' }
           ]
         }
+      ]
+    },
+    {
+      type: 'group',
+      key: 'rh',
+      icon: Briefcase,
+      label: 'Ressources Humaines',
+      items: [
+        { icon: PieChart, label: 'Tableau de bord RH', path: '/hr/dashboard' },
+        { icon: Users, label: 'Employes', path: '/hr/employees' },
+        { icon: Calculator, label: 'Paie', path: '/hr/payroll' },
+        { icon: Calendar, label: 'Conges', path: '/hr/leaves' },
+        { icon: FileBarChart, label: 'Declarations', path: '/hr/declarations' },
+        { icon: Settings, label: 'Configuration RH', path: '/hr/config' },
       ]
     },
     {

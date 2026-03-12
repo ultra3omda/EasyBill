@@ -23,6 +23,7 @@ import {
   ChevronDown, Receipt, DollarSign, Percent, ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
+import { paymentsAPI, customersAPI } from '../services/api';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
@@ -30,9 +31,9 @@ import {
 const PAYMENT_METHODS = [
   { value: 'cash', label: 'Espèces', icon: Banknote, color: '#22c55e' },
   { value: 'check', label: 'Chèque', icon: FileText, color: '#3b82f6' },
-  { value: 'bank_transfer', label: 'Virement', icon: Building2, color: '#8b5cf6' },
+  { value: 'transfer', label: 'Virement', icon: Building2, color: '#8b5cf6' },
   { value: 'card', label: 'Carte', icon: CreditCard, color: '#f59e0b' },
-  { value: 'other', label: 'Autre', icon: Wallet, color: '#6b7280' },
+  { value: 'e_dinar', label: 'e-Dinar', icon: Wallet, color: '#6b7280' },
 ];
 
 const Payments = () => {
@@ -72,10 +73,8 @@ const Payments = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/payments/?company_id=${currentCompany.id}&type=received`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      const data = await res.json();
+      const res = await paymentsAPI.list(currentCompany.id, 'received');
+      const data = res.data || [];
       setPayments(data);
       calculateStats(data);
     } catch (error) {
@@ -124,10 +123,8 @@ const Payments = () => {
 
   const loadCustomers = async () => {
     try {
-      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/customers/?company_id=${currentCompany.id}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      setCustomers(await res.json());
+      const res = await customersAPI.list(currentCompany.id);
+      setCustomers(res.data || []);
     } catch (error) {
       console.error(error);
     }
@@ -135,14 +132,8 @@ const Payments = () => {
 
   const loadPendingInvoices = async (customerId) => {
     try {
-      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/invoices/?company_id=${currentCompany.id}&customer_id=${customerId}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      const invoices = await res.json();
-      // Filter invoices with remaining balance
-      setPendingInvoices(invoices.filter(inv => 
-        inv.status !== 'paid' && (inv.total - (inv.amount_paid || 0)) > 0
-      ));
+      const res = await paymentsAPI.getPendingInvoices(currentCompany.id, customerId);
+      setPendingInvoices(res.data || []);
     } catch (error) {
       console.error(error);
       setPendingInvoices([]);
@@ -156,38 +147,37 @@ const Payments = () => {
     }
 
     try {
-      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/payments/?company_id=${currentCompany.id}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          ...formData,
-          type: 'received'
-        })
-      });
-
-      if (res.ok) {
-        toast({ title: 'Succès', description: 'Paiement enregistré' });
-        setModalOpen(false);
-        resetForm();
-        loadData();
-      } else {
-        throw new Error('Erreur lors de l\'enregistrement');
+      const payload = {
+        type: 'received',
+        customer_id: formData.customer_id,
+        date: formData.date,
+        amount: formData.amount,
+        payment_method: formData.payment_method,
+        reference: formData.reference || undefined,
+        notes: formData.notes || undefined,
+        allocations: []
+      };
+      if (formData.invoice_id) {
+        payload.allocations = [{ invoice_id: formData.invoice_id, amount: formData.amount }];
       }
+      await paymentsAPI.create(currentCompany.id, payload);
+      toast({ title: 'Succès', description: 'Paiement enregistré' });
+      setModalOpen(false);
+      resetForm();
+      loadData();
     } catch (error) {
-      toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
+      toast({
+        title: 'Erreur',
+        description: error.response?.data?.detail || error.message || 'Erreur lors de l\'enregistrement',
+        variant: 'destructive'
+      });
     }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Supprimer ce paiement ?')) return;
     try {
-      await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/payments/${id}?company_id=${currentCompany.id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
+      await paymentsAPI.delete(currentCompany.id, id);
       toast({ title: 'Succès', description: 'Paiement supprimé' });
       loadData();
     } catch (error) {
@@ -231,7 +221,7 @@ const Payments = () => {
   };
 
   const filteredPayments = payments.filter(p =>
-    p.payment_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.number || p.payment_number)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.reference?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -443,12 +433,12 @@ const Payments = () => {
                         />
                       </TableCell>
                       <TableCell>
-                        <span className="font-medium text-violet-600">{payment.payment_number}</span>
+                        <span className="font-medium text-violet-600">{payment.number || payment.payment_number}</span>
                       </TableCell>
                       <TableCell>
-                        {payment.invoice_number ? (
+                        {(payment.allocations?.[0]?.invoice_number || payment.invoice_number) ? (
                           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                            {payment.invoice_number}
+                            {payment.allocations?.[0]?.invoice_number || payment.invoice_number}
                           </Badge>
                         ) : (
                           <span className="text-gray-400">-</span>
@@ -538,7 +528,7 @@ const Payments = () => {
                     </SelectTrigger>
                     <SelectContent>
                       {customers.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        <SelectItem key={c.id} value={c.id}>{c.display_name || c.company_name || c.id}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -575,7 +565,7 @@ const Payments = () => {
                     <SelectContent>
                       {pendingInvoices.map((inv) => (
                         <SelectItem key={inv.id} value={inv.id}>
-                          {inv.invoice_number || inv.number} - Solde: {formatCurrency(inv.total - (inv.amount_paid || 0))}
+                          {inv.number} - Solde: {formatCurrency(inv.balance_due || inv.total - (inv.amount_paid || 0))}
                         </SelectItem>
                       ))}
                     </SelectContent>

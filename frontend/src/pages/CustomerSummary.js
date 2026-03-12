@@ -104,7 +104,7 @@ const CustomerSummary = () => {
               <div>
                 <p className="text-sm text-gray-500">Chiffre d'affaires</p>
                 <h3 className="text-2xl font-bold text-purple-600 mt-1">
-                  {data.invoices.total.toFixed(2)} TND
+                  {data.invoices.total.toFixed(3)} TND
                 </h3>
                 <p className="text-xs text-gray-500 mt-1">{data.invoices.count} factures</p>
               </div>
@@ -117,7 +117,7 @@ const CustomerSummary = () => {
               <div>
                 <p className="text-sm text-gray-500">Payé</p>
                 <h3 className="text-2xl font-bold text-green-600 mt-1">
-                  {data.invoices.paid.toFixed(2)} TND
+                  {data.invoices.paid.toFixed(3)} TND
                 </h3>
                 <p className="text-xs text-gray-500 mt-1">{data.payments.count} paiements</p>
               </div>
@@ -130,7 +130,7 @@ const CustomerSummary = () => {
               <div>
                 <p className="text-sm text-gray-500">Impayé</p>
                 <h3 className="text-2xl font-bold text-red-600 mt-1">
-                  {data.invoices.unpaid.toFixed(2)} TND
+                  {data.invoices.unpaid.toFixed(3)} TND
                 </h3>
                 <p className="text-xs text-gray-500 mt-1">En attente</p>
               </div>
@@ -143,7 +143,7 @@ const CustomerSummary = () => {
               <div>
                 <p className="text-sm text-gray-500">Devis</p>
                 <h3 className="text-2xl font-bold text-blue-600 mt-1">
-                  {data.quotes.total.toFixed(2)} TND
+                  {data.quotes.total.toFixed(3)} TND
                 </h3>
                 <p className="text-xs text-gray-500 mt-1">{data.quotes.count} devis</p>
               </div>
@@ -195,7 +195,7 @@ const CustomerSummary = () => {
                     <TableRow key={inv.id}>
                       <TableCell className="font-medium">{inv.number}</TableCell>
                       <TableCell>{new Date(inv.date).toLocaleDateString('fr-FR')}</TableCell>
-                      <TableCell>{inv.total.toFixed(2)} TND</TableCell>
+                      <TableCell>{inv.total.toFixed(3)} TND</TableCell>
                       <TableCell>
                         <Badge variant={inv.status === 'paid' ? 'success' : 'secondary'}>
                           {inv.status}
@@ -223,7 +223,7 @@ const CustomerSummary = () => {
                     <TableRow key={pay.id}>
                       <TableCell>{new Date(pay.date).toLocaleDateString('fr-FR')}</TableCell>
                       <TableCell>{pay.reference}</TableCell>
-                      <TableCell className="font-medium text-green-600">{pay.amount.toFixed(2)} TND</TableCell>
+                      <TableCell className="font-medium text-green-600">{pay.amount.toFixed(3)} TND</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

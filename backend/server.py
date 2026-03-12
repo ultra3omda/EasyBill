@@ -37,6 +37,11 @@ from routes import fiscal_years            # Exercices comptables
 from routes import financial_statements    # États financiers (Bilan, Résultat, Flux)
 from routes import invoice_scanner         # Scanner de factures fournisseur
 from routes import bank_reconciliation     # Lettrage bancaire
+from routes import bank_statement_import    # Bank statement import (Document AI)
+from routes import accounting_mappings, accounting_learning
+
+# ── Module RH (Ressources Humaines) ──────────────────────────────────────
+from routes import hr_employees, hr_payroll, hr_leave, hr_declarations, hr_config
 
 # PDF routes optionnels (WeasyPrint nécessite Pango/GTK, pas toujours dispo sur Windows)
 try:
@@ -121,6 +126,16 @@ app.include_router(fiscal_years.router)
 app.include_router(financial_statements.router)
 app.include_router(invoice_scanner.router)
 app.include_router(bank_reconciliation.router)
+app.include_router(bank_statement_import.router)
+app.include_router(accounting_mappings.router)
+app.include_router(accounting_learning.router)
+
+# ── Module RH ─────────────────────────────────────────────────────────────
+app.include_router(hr_employees.router)
+app.include_router(hr_payroll.router)
+app.include_router(hr_leave.router)
+app.include_router(hr_declarations.router)
+app.include_router(hr_config.router)
 
 # Fichiers statiques (photos de profil)
 uploads_dir = ROOT_DIR / "uploads"

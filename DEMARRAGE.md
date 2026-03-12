@@ -43,7 +43,9 @@ Ou avec npx : `npx craco start`
 
 L’app est disponible sur **http://localhost:3000**.
 
-Le frontend utilise `REACT_APP_BACKEND_URL=http://localhost:8000` (défini dans `frontend/.env`).
+Le frontend utilise le proxy (`setupProxy.js`) : les requêtes `/api/*` sont relayées vers le backend. Variables dans `frontend/.env` :
+- `REACT_APP_USE_PROXY=true` (requêtes via proxy, pas de CORS)
+- `REACT_APP_GOOGLE_CLIENT_ID` et `REACT_APP_GOOGLE_REDIRECT_URI=http://localhost:3000/login` pour l’auth Google
 
 ## Premier utilisateur
 

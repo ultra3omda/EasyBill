@@ -18,7 +18,7 @@ const Register = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [company, setCompany] = useState('');
   const [loading, setLoading] = useState(false);
-  const { register, loginWithGoogle } = useAuth();
+  const { register } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
 
@@ -98,6 +98,12 @@ const Register = () => {
     },
     flow: 'implicit',
   });
+  
+  const handleGoogleLogin = () => {
+    // Redirection vers la page login pour la connexion Google (flux redirect)
+    navigate('/login');
+  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 to-amber-50 flex items-center justify-center p-4">

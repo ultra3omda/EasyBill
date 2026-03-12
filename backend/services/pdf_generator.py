@@ -133,6 +133,33 @@ def _items_table(s, items):
     tbl.setStyle(style)
     return tbl
 
+def _bank_footer_section(s, bank_accounts):
+    """Build bank details section for invoice footer."""
+    if not bank_accounts:
+        return []
+    rows = []
+    for acc in bank_accounts:
+        name = _str(acc.get("bank_name"))
+        rib = _str(acc.get("rib"))
+        if not name and not rib:
+            continue
+        if name and rib:
+            rows.append(Paragraph(f"<b>{name}</b> — RIB : {rib}", s['small']))
+        elif name:
+            rows.append(Paragraph(f"<b>{name}</b>", s['small']))
+        else:
+            rows.append(Paragraph(f"RIB : {rib}", s['small']))
+    if not rows:
+        return []
+    return [
+        Spacer(1, 14),
+        HRFlowable(width='100%', thickness=0.5, color=GRAY),
+        Spacer(1, 6),
+        Paragraph('<b>Coordonnées bancaires</b>', s['bold']),
+        Spacer(1, 4),
+    ] + rows
+
+
 def _totals_section(s, subtotal, total_discount, total_tax, fiscal_stamp, total):
     """Right-aligned totals block."""
     rows = []
@@ -223,6 +250,8 @@ def generate_invoice_pdf(invoice, company, customer):
         invoice.get('fiscal_stamp', 0),
         invoice.get('total', 0),
     )
+    if invoice.get('show_bank_details', True) and company.get('bank_accounts'):
+        el += _bank_footer_section(s, company['bank_accounts'])
     if invoice.get('notes'):
         el += [Spacer(1, 14), HRFlowable(width='100%', thickness=0.5, color=GRAY),
                Spacer(1, 6), Paragraph('<b>Notes</b>', s['bold']),

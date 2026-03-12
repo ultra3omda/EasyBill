@@ -104,7 +104,7 @@ const SupplierSummary = () => {
               <div>
                 <p className="text-sm text-gray-500">Total achats</p>
                 <h3 className="text-2xl font-bold text-orange-600 mt-1">
-                  {data.invoices.total.toFixed(2)} TND
+                  {data.invoices.total.toFixed(3)} TND
                 </h3>
                 <p className="text-xs text-gray-500 mt-1">{data.invoices.count} factures</p>
               </div>
@@ -117,7 +117,7 @@ const SupplierSummary = () => {
               <div>
                 <p className="text-sm text-gray-500">Payé</p>
                 <h3 className="text-2xl font-bold text-green-600 mt-1">
-                  {data.invoices.paid.toFixed(2)} TND
+                  {data.invoices.paid.toFixed(3)} TND
                 </h3>
                 <p className="text-xs text-gray-500 mt-1">{data.payments.count} paiements</p>
               </div>
@@ -130,7 +130,7 @@ const SupplierSummary = () => {
               <div>
                 <p className="text-sm text-gray-500">Impayé</p>
                 <h3 className="text-2xl font-bold text-red-600 mt-1">
-                  {data.invoices.unpaid.toFixed(2)} TND
+                  {data.invoices.unpaid.toFixed(3)} TND
                 </h3>
               </div>
               <FileText className="w-8 h-8 text-red-600" />
@@ -142,7 +142,7 @@ const SupplierSummary = () => {
               <div>
                 <p className="text-sm text-gray-500">Commandes</p>
                 <h3 className="text-2xl font-bold text-blue-600 mt-1">
-                  {data.purchase_orders.total.toFixed(2)} TND
+                  {data.purchase_orders.total.toFixed(3)} TND
                 </h3>
                 <p className="text-xs text-gray-500 mt-1">{data.purchase_orders.count} commandes</p>
               </div>
@@ -192,7 +192,7 @@ const SupplierSummary = () => {
                     <TableRow key={inv.id}>
                       <TableCell className="font-medium">{inv.number}</TableCell>
                       <TableCell>{new Date(inv.date).toLocaleDateString('fr-FR')}</TableCell>
-                      <TableCell>{inv.total.toFixed(2)} TND</TableCell>
+                      <TableCell>{inv.total.toFixed(3)} TND</TableCell>
                       <TableCell>
                         <Badge>{inv.status}</Badge>
                       </TableCell>
@@ -216,7 +216,7 @@ const SupplierSummary = () => {
                     <TableRow key={pay.id}>
                       <TableCell>{new Date(pay.date).toLocaleDateString('fr-FR')}</TableCell>
                       <TableCell>{pay.reference}</TableCell>
-                      <TableCell className="font-medium text-green-600">{pay.amount.toFixed(2)} TND</TableCell>
+                      <TableCell className="font-medium text-green-600">{pay.amount.toFixed(3)} TND</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

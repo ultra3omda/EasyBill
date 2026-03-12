@@ -77,6 +77,8 @@ class Company(BaseModel):
     owner_id: PyObjectId
     collaborators: List[Collaborator] = []
     subscription: Subscription = Field(default_factory=Subscription)
+    fiscal_settings: Optional[dict] = None
+    accounting_settings: Optional[dict] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -92,6 +94,7 @@ class CompanyCreate(BaseModel):
     logo: Optional[str] = None
     address: Optional[Address] = None
     primary_currency: str = "TND"
+    fiscal_settings: Optional[dict] = None
 
 class CompanyUpdate(BaseModel):
     name: Optional[str] = None
@@ -105,3 +108,5 @@ class CompanyUpdate(BaseModel):
     banks: Optional[List[Bank]] = None
     pdf_settings: Optional[PDFSettings] = None
     fiscal_year: Optional[FiscalYear] = None
+    fiscal_settings: Optional[dict] = None
+    accounting_settings: Optional[dict] = None

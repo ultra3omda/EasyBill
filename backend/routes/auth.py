@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Header, UploadFile, File
+
+from fastapi import APIRouter, HTTPException, status, Depends, Header, UploadFile, File, Body
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
 from datetime import datetime, timedelta, timezone
@@ -15,6 +16,8 @@ from utils.helpers import generate_random_token
 from utils.dependencies import get_current_user
 from models.company import CompanyCreate
 from services.email_service import email_service
+from services.chart_of_accounts_service import ChartOfAccountsService
+from services.supplier_account_suggestion_service import SupplierAccountSuggestionService
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -24,32 +27,11 @@ db = client[os.environ['DB_NAME']]
 
 #test
 async def create_default_chart_of_accounts_for_company(company_id: ObjectId):
-    """Initialize Tunisian chart of accounts for new company"""
-    from data.tunisian_chart_of_accounts import TUNISIAN_CHART_OF_ACCOUNTS
-    
-    now = datetime.now(timezone.utc)
-    accounts_to_insert = []
-    
-    for account in TUNISIAN_CHART_OF_ACCOUNTS:
-        account_doc = {
-            "code": account["code"],
-            "name": account["name"],
-            "type": account["type"],
-            "is_group": account.get("is_group", False),
-            "parent_code": account.get("parent_code"),
-            "company_id": company_id,
-            "is_system": True,
-            "is_active": True,
-            "balance": 0.0,
-            "created_at": now
-        }
-        accounts_to_insert.append(account_doc)
-    
-    # Bulk insert for better performance (490 accounts)
-    if accounts_to_insert:
-        await db.chart_of_accounts.insert_many(accounts_to_insert)
-        return len(accounts_to_insert)
-    return 0
+    """Initialize default chart of accounts for new company."""
+    service = ChartOfAccountsService(db)
+    result = await service.initialize_default_chart(company_id=company_id, created_by=None)
+    await SupplierAccountSuggestionService(db).seed_defaults(company_id)
+    return result.get("count", 0)
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(user_data: UserCreate):
@@ -107,6 +89,7 @@ async def register(user_data: UserCreate):
             "owner_id": user_id,
             "primary_currency": "TND",
             "address": {"country": "Tunisia"},
+            "fiscal_settings": {"country_code": "TN"},
             "taxes": [{"name": "TVA", "rate": 19.0, "default": True}],
             "banks": [],
             "numbering": {
@@ -133,6 +116,17 @@ async def register(user_data: UserCreate):
             "subscription": {
                 "plan": "free",
                 "status": "active"
+            },
+            "accounting_settings": {
+                "processing_controls": {
+                    "softWarningTransactionLines": 120,
+                    "maxTransactionLinesPerImport": 300,
+                    "reconciliationChunkSize": 50,
+                    "maxLLMCallsPerImport": 3,
+                    "candidateSearchDateWindowDays": 21,
+                    "candidateAmountTolerance": 0.01
+                },
+                "configuration_warnings": []
             },
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
@@ -198,7 +192,7 @@ async def login(user_data: UserLogin):
     }
 
 @router.post("/google")
-async def google_login(token: dict):
+async def google_login(token: dict = Body(...)):
     """
     Google OAuth login
     Expects: {"credential": "google_id_token"} — JWT signé par Google
@@ -220,14 +214,14 @@ async def google_login(token: dict):
     picture = None
 
     if access_token_google:
-        # Approche access_token → appel à /userinfo Google (plus simple, sans dépendance SSL)
+        # Approche access_token → appel async à /userinfo Google (évite de bloquer l'event loop)
         try:
-            import requests as req_lib
-            resp = req_lib.get(
-                "https://www.googleapis.com/oauth2/v2/userinfo",
-                headers={"Authorization": f"Bearer {access_token_google}"},
-                timeout=10
-            )
+            import httpx
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(
+                    "https://www.googleapis.com/oauth2/v2/userinfo",
+                    headers={"Authorization": f"Bearer {access_token_google}"},
+                )
             if resp.status_code != 200:
                 logger.error(f"[Google Auth] userinfo failed: {resp.status_code} {resp.text}")
                 raise HTTPException(
@@ -363,7 +357,7 @@ async def google_login(token: dict):
     }
 
 @router.post("/facebook")
-async def facebook_login(token: dict):
+async def facebook_login(token: dict = Body(...)):
     """
     Facebook OAuth login
     Expects: {"accessToken": "facebook_access_token"}

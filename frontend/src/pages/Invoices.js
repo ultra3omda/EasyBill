@@ -39,8 +39,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
-import { Plus, Search, Filter, Download, Send, Eye, Edit, Trash2, MoreVertical, FileText, CreditCard, CheckCircle, Printer, Banknote, Building2, CreditCard as CardIcon } from 'lucide-react';
+import { Plus, Search, Filter, Download, Send, Eye, Edit, Trash2, MoreVertical, FileText, CreditCard, CheckCircle, Printer, Banknote, Building2, CreditCard as CardIcon, Upload } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
+import { importExportAPI } from '../services/api';
 
 const PAYMENT_METHODS = [
   { value: 'cash',     label: 'Espèces',          icon: '💵', account: '531 Caisse' },
@@ -62,6 +63,12 @@ const Invoices = () => {
   const [paymentModal, setPaymentModal] = useState({ open: false, invoiceId: null, invoiceNumber: '' });
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cash');
   const [markingPaid, setMarkingPaid] = useState(false);
+  // Import Odoo
+  const [importOdooOpen, setImportOdooOpen] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importUseOdooNumber, setImportUseOdooNumber] = useState(true);
+  const [importStatus, setImportStatus] = useState('sent');
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     if (currentCompany) {
@@ -214,10 +221,16 @@ const Invoices = () => {
             <h1 className="text-3xl font-bold text-gray-900">{t('invoices.title')}</h1>
             <p className="text-gray-500 mt-1">{filteredInvoices.length} factures au total</p>
           </div>
-          <Button className="bg-violet-600 hover:bg-violet-700 text-white" onClick={openCreateModal} data-testid="create-invoice-btn">
-            <Plus className="w-4 h-4 mr-2" />
-            {t('invoices.createInvoice')}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setImportOdooOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />
+              Importer Odoo
+            </Button>
+            <Button className="bg-violet-600 hover:bg-violet-700 text-white" onClick={openCreateModal} data-testid="create-invoice-btn">
+              <Plus className="w-4 h-4 mr-2" />
+              {t('invoices.createInvoice')}
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -243,6 +256,85 @@ const Invoices = () => {
           </div>
         </Card>
 
+        {/* Import Odoo Dialog */}
+        <Dialog open={importOdooOpen} onOpenChange={setImportOdooOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Importer des factures Odoo</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-gray-600">
+              Importez un export CSV de factures Odoo. Les clients seront créés automatiquement.
+            </p>
+            <div className="space-y-4 py-4">
+              <div>
+                <Label>Fichier CSV</Label>
+                <Input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => setImportFile(e.target.files?.[0])}
+                  className="mt-1"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="useOdooNumber"
+                  checked={importUseOdooNumber}
+                  onChange={(e) => setImportUseOdooNumber(e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                <Label htmlFor="useOdooNumber">Conserver les numéros Odoo</Label>
+              </div>
+              <div>
+                <Label>Statut par défaut</Label>
+                <Select value={importStatus} onValueChange={setImportStatus}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sent">Envoyée</SelectItem>
+                    <SelectItem value="paid">Payée</SelectItem>
+                    <SelectItem value="draft">Brouillon</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setImportOdooOpen(false)}>Annuler</Button>
+              <Button
+                className="bg-violet-600 hover:bg-violet-700"
+                disabled={!importFile || importing}
+                onClick={async () => {
+                  if (!importFile || !currentCompany) return;
+                  setImporting(true);
+                  try {
+                    const formData = new FormData();
+                    formData.append('file', importFile);
+                    const res = await importExportAPI.importOdooInvoices(currentCompany.id, formData, {
+                      use_odoo_number: importUseOdooNumber,
+                      default_status: importStatus
+                    });
+                    toast({ title: 'Succès', description: res.data?.message || 'Import terminé' });
+                    setImportOdooOpen(false);
+                    setImportFile(null);
+                    loadInvoices();
+                  } catch (err) {
+                    toast({
+                      title: 'Erreur',
+                      description: err.response?.data?.detail || err.message || 'Import échoué',
+                      variant: 'destructive'
+                    });
+                  } finally {
+                    setImporting(false);
+                  }
+                }}
+              >
+                {importing ? 'Import en cours...' : 'Importer'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="p-6">
@@ -252,7 +344,7 @@ const Invoices = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Total Facturé</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalInvoiced.toFixed(2)} TND</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalInvoiced.toFixed(3)} TND</p>
                 <p className="text-xs text-gray-500">{filteredInvoices.length} factures</p>
               </div>
             </div>
@@ -264,7 +356,7 @@ const Invoices = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Payées</p>
-                <p className="text-2xl font-bold text-green-600">{stats.totalPaid.toFixed(2)} TND</p>
+                <p className="text-2xl font-bold text-green-600">{stats.totalPaid.toFixed(3)} TND</p>
                 <p className="text-xs text-gray-500">{stats.paidCount} factures</p>
               </div>
             </div>
@@ -276,7 +368,7 @@ const Invoices = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">En attente</p>
-                <p className="text-2xl font-bold text-orange-600">{stats.totalPending.toFixed(2)} TND</p>
+                <p className="text-2xl font-bold text-orange-600">{stats.totalPending.toFixed(3)} TND</p>
                 <p className="text-xs text-gray-500">{stats.pendingCount} factures</p>
               </div>
             </div>
@@ -288,7 +380,7 @@ const Invoices = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">En retard</p>
-                <p className="text-2xl font-bold text-red-600">{stats.totalOverdue.toFixed(2)} TND</p>
+                <p className="text-2xl font-bold text-red-600">{stats.totalOverdue.toFixed(3)} TND</p>
                 <p className="text-xs text-gray-500">{stats.overdueCount} factures</p>
               </div>
             </div>
@@ -342,9 +434,9 @@ const Invoices = () => {
                         <TableCell>{invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('fr-FR') : '-'}</TableCell>
                         <TableCell>
                           <div>
-                            <span className="font-semibold">{(invoice.total || 0).toFixed(2)} TND</span>
+                            <span className="font-semibold">{(invoice.total || 0).toFixed(3)} TND</span>
                             {invoice.balance_due > 0 && invoice.balance_due < invoice.total && (
-                              <p className="text-xs text-orange-600">Reste: {invoice.balance_due.toFixed(2)} TND</p>
+                              <p className="text-xs text-orange-600">Reste: {invoice.balance_due.toFixed(3)} TND</p>
                             )}
                           </div>
                         </TableCell>

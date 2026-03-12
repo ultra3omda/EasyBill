@@ -71,19 +71,19 @@ const Purchases = () => {
           <Card className="p-6">
             <p className="text-sm text-gray-600 mb-2">Total Achats</p>
             <p className="text-2xl font-bold text-gray-900">
-              {purchases.reduce((acc, p) => acc + p.amount, 0).toFixed(2)} TND
+              {purchases.reduce((acc, p) => acc + p.amount, 0).toFixed(3)} TND
             </p>
           </Card>
           <Card className="p-6">
             <p className="text-sm text-gray-600 mb-2">Payés</p>
             <p className="text-2xl font-bold text-green-600">
-              {purchases.filter(p => p.status === 'paid').reduce((acc, p) => acc + p.amount, 0).toFixed(2)} TND
+              {purchases.filter(p => p.status === 'paid').reduce((acc, p) => acc + p.amount, 0).toFixed(3)} TND
             </p>
           </Card>
           <Card className="p-6">
             <p className="text-sm text-gray-600 mb-2">À payer</p>
             <p className="text-2xl font-bold text-red-600">
-              {purchases.filter(p => p.status !== 'paid').reduce((acc, p) => acc + p.amount, 0).toFixed(2)} TND
+              {purchases.filter(p => p.status !== 'paid').reduce((acc, p) => acc + p.amount, 0).toFixed(3)} TND
             </p>
           </Card>
         </div>
@@ -110,7 +110,7 @@ const Purchases = () => {
                       <TableCell>{purchase.supplier}</TableCell>
                       <TableCell>{new Date(purchase.date).toLocaleDateString('fr-FR')}</TableCell>
                       <TableCell>{new Date(purchase.dueDate).toLocaleDateString('fr-FR')}</TableCell>
-                      <TableCell className="font-semibold">{purchase.amount.toFixed(2)} TND</TableCell>
+                      <TableCell className="font-semibold">{purchase.amount.toFixed(3)} TND</TableCell>
                       <TableCell>
                         <Badge className={statusConfig.className}>
                           {statusConfig.label}

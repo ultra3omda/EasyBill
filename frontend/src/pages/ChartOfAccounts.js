@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import { toast } from 'sonner';
-import { accountingAPI, companiesAPI } from '../services/api';
+import { accountingAPI, companiesAPI, accountingMappingsAPI } from '../services/api';
 import {
   BookOpen,
   Search,
@@ -48,6 +48,7 @@ const ChartOfAccounts = () => {
   const [companyId, setCompanyId] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
+  const [chartMeta, setChartMeta] = useState(null);
   const [formData, setFormData] = useState({
     code: '',
     name: '',
@@ -118,6 +119,8 @@ const ChartOfAccounts = () => {
       }
       const response = await accountingAPI.listAccounts(companyId, params);
       setAccounts(response.data);
+      const metaResponse = await accountingMappingsAPI.getChartMetadata(companyId);
+      setChartMeta(metaResponse.data);
     } catch (error) {
       console.error('Error fetching accounts:', error);
       toast.error('Erreur lors du chargement du plan comptable');
@@ -214,13 +217,9 @@ const ChartOfAccounts = () => {
   const handleSeedChartOfAccounts = async () => {
     try {
       setSeeding(true);
-      const response = await accountingAPI.seedChartOfAccounts(companyId);
-      if (response.data.seeded) {
-        toast.success(`${response.data.count} comptes créés avec succès`);
-        fetchAccounts();
-      } else {
-        toast.info(response.data.message);
-      }
+      const response = await accountingMappingsAPI.initializeChart(companyId, false);
+      toast.success(`${response.data.count || 0} comptes initialisés`);
+      fetchAccounts();
     } catch (error) {
       console.error('Error seeding chart of accounts:', error);
       toast.error('Erreur lors de la création du plan comptable');
@@ -419,8 +418,15 @@ const ChartOfAccounts = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Plan Comptable</h1>
             <p className="text-gray-500 mt-1">
-              Plan comptable tunisien - Système Comptable des Entreprises (SCE)
+              Plan comptable configurable par société et pays
             </p>
+            {chartMeta && (
+              <div className="flex gap-2 mt-3 flex-wrap">
+                <Badge variant="outline">Pays {chartMeta.active_chart_country_code || chartMeta.country_code || 'TN'}</Badge>
+                <Badge variant="outline">{chartMeta.active_chart_code_system || 'Template standard'}</Badge>
+                <Badge variant="outline">{chartMeta.semantic_account_count || 0} comptes sémantiques</Badge>
+              </div>
+            )}
           </div>
           <Button
             onClick={() => {

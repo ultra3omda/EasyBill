@@ -10,7 +10,8 @@ import logging
 from typing import List
 from models.company import Company, CompanyCreate, CompanyUpdate
 from utils.dependencies import get_current_user, get_current_company
-from data.tunisian_chart_of_accounts import TUNISIAN_CHART_OF_ACCOUNTS
+from services.chart_of_accounts_service import ChartOfAccountsService
+from services.supplier_account_suggestion_service import SupplierAccountSuggestionService
 
 logger = logging.getLogger(__name__)
 UPLOAD_DIR = Path(__file__).resolve().parent.parent / "uploads" / "logos"
@@ -138,6 +139,27 @@ async def create_default_purchase_categories(company_id: ObjectId):
         await db.purchase_categories.insert_one(category_doc)
 
 
+async def create_default_cash_account(company_id: ObjectId, user_id: ObjectId):
+    """Crée la caisse principale automatiquement à la création de l'entreprise."""
+    now = datetime.now(timezone.utc)
+    await db.cash_accounts.insert_one({
+        "company_id": company_id,
+        "name": "Caisse principale",
+        "currency": "TND",
+        "initial_balance": 0.0,
+        "balance": 0.0,
+        "is_default": True,
+        "account_type": "cash",
+        "description": "Caisse créée automatiquement",
+        "bank_name": None,
+        "rib": None,
+        "show_in_footer": False,
+        "created_at": now,
+        "updated_at": now,
+        "created_by": user_id
+    })
+
+
 async def create_default_warehouse(company_id: ObjectId, user_id: ObjectId, user_name: str):
     """Create default principal warehouse for a new company."""
     now = datetime.now(timezone.utc)
@@ -165,38 +187,23 @@ async def create_default_warehouse(company_id: ObjectId, user_id: ObjectId, user
     })
 
 
-async def create_default_chart_of_accounts(company_id: ObjectId, user_id: ObjectId, user_name: str):
-    """Create default Tunisian chart of accounts for a new company."""
+async def create_default_chart_of_accounts(company_id: ObjectId, user_id: ObjectId, user_name: str, country_code: str | None = None):
+    """Create default chart of accounts for a new company."""
     now = datetime.now(timezone.utc)
-    accounts_to_insert = []
-    
-    for account in TUNISIAN_CHART_OF_ACCOUNTS:
-        account_doc = {
-            "code": account["code"],
-            "name": account["name"],
-            "type": account["type"],
-            "is_group": account.get("is_group", False),
-            "parent_code": account.get("parent_code"),
-            "company_id": company_id,
-            "is_system": True,
-            "is_active": True,
-            "balance": 0.0,
-            "created_at": now
-        }
-        accounts_to_insert.append(account_doc)
-    
-    # Bulk insert for better performance
-    if accounts_to_insert:
-        await db.chart_of_accounts.insert_many(accounts_to_insert)
-    
-    # Log action
+    service = ChartOfAccountsService(db)
+    result = await service.initialize_default_chart(
+        company_id=company_id,
+        country_code=country_code,
+        created_by=user_id,
+        force=False,
+    )
     await db.access_logs.insert_one({
         "company_id": company_id,
         "user_id": user_id,
         "user_name": user_name,
         "category": "Plan comptable",
         "action": "Créer",
-        "element": f"Plan comptable tunisien ({len(accounts_to_insert)} comptes)",
+        "element": f"Plan comptable {result.get('country_code', 'TN')} ({result.get('count', 0)} comptes)",
         "created_at": now
     })
 
@@ -245,6 +252,20 @@ async def create_company(company_data: CompanyCreate, current_user: dict = Depen
             "plan": "free",
             "status": "active"
         },
+        "fiscal_settings": {
+            "country_code": "FR" if ((company_data.address.country if company_data.address else "") or "").strip().lower() == "france" else "TN"
+        },
+        "accounting_settings": {
+            "processing_controls": {
+                "softWarningTransactionLines": 120,
+                "maxTransactionLinesPerImport": 300,
+                "reconciliationChunkSize": 50,
+                "maxLLMCallsPerImport": 3,
+                "candidateSearchDateWindowDays": 21,
+                "candidateAmountTolerance": 0.01,
+            },
+            "configuration_warnings": [],
+        },
         "created_at": now,
         "updated_at": now
     })
@@ -258,8 +279,15 @@ async def create_company(company_data: CompanyCreate, current_user: dict = Depen
     await create_default_additional_entries(company_id, current_user["_id"], user_name)
     await create_default_payment_methods(company_id)
     await create_default_purchase_categories(company_id)
-    await create_default_chart_of_accounts(company_id, current_user["_id"], user_name)
+    await create_default_chart_of_accounts(
+        company_id,
+        current_user["_id"],
+        user_name,
+        company_dict.get("fiscal_settings", {}).get("country_code"),
+    )
+    await create_default_cash_account(company_id, current_user["_id"])
     await create_default_warehouse(company_id, current_user["_id"], user_name)
+    await SupplierAccountSuggestionService(db).seed_defaults(company_id)
     
     # Log company creation
     await db.access_logs.insert_one({

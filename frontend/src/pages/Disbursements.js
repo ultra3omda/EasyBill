@@ -145,7 +145,7 @@ const Disbursements = () => {
                     <TableCell className="font-medium">{disb.number}</TableCell>
                     <TableCell>{new Date(disb.date).toLocaleDateString('fr-FR')}</TableCell>
                     <TableCell>{disb.customer_name || '-'}</TableCell>
-                    <TableCell>{disb.total?.toFixed(2)} TND</TableCell>
+                    <TableCell>{disb.total?.toFixed(3)} TND</TableCell>
                     <TableCell>{getStatusBadge(disb.status)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">

@@ -34,6 +34,9 @@ import PlaceholderPage from './pages/PlaceholderPage';
 import TaxesPage from './pages/TaxesPage';
 import AdditionalEntriesPage from './pages/AdditionalEntriesPage';
 import AccessLogsPage from './pages/AccessLogsPage';
+import CollaboratorsPage from './pages/CollaboratorsPage';
+import RolesPermissionsPage from './pages/RolesPermissionsPage';
+import BanksPage from './pages/BanksPage';
 import DeliveryNotes from './pages/DeliveryNotes';
 import DeliveryNoteForm from './pages/DeliveryNoteForm';
 import CreditNotes from './pages/CreditNotes';
@@ -58,6 +61,7 @@ import GeneralLedger from './pages/GeneralLedger';
 import TrialBalance from './pages/TrialBalance';
 import AuxiliaryLedgers from './pages/AuxiliaryLedgers';
 import CashDashboard from './pages/CashDashboard';
+import CashAccountsPage from './pages/CashAccountsPage';
 import ChatbotPage from './pages/ChatbotPage';
 import LegalJournals from './pages/LegalJournals';
 import FiscalYears from './pages/FiscalYears';
@@ -67,6 +71,16 @@ import CashFlow from './pages/CashFlow';
 import FinancialStatements from './pages/FinancialStatements';
 import InvoiceScanner from './pages/InvoiceScanner';
 import BankReconciliation from './pages/BankReconciliation';
+import BankStatementImportPage from './pages/BankStatementImportPage';
+import SupplierAccountMappingsPage from './pages/SupplierAccountMappingsPage';
+import LearningPatternsPage from './pages/LearningPatternsPage';
+import HRDashboard from './pages/HRDashboard';
+import Employees from './pages/Employees';
+import EmployeeDetail from './pages/EmployeeDetail';
+import Payroll from './pages/Payroll';
+import LeaveManagement from './pages/LeaveManagement';
+import HRDeclarations from './pages/HRDeclarations';
+import HRConfig from './pages/HRConfig';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -367,6 +381,7 @@ const AppRoutes = () => {
       <Route path="/purchases/invoice-scanner" element={<ProtectedRoute><InvoiceScanner /></ProtectedRoute>} />
       <Route path="/bank-reconciliation" element={<ProtectedRoute><BankReconciliation /></ProtectedRoute>} />
       <Route path="/purchases/bank-reconciliation" element={<ProtectedRoute><BankReconciliation /></ProtectedRoute>} />
+      <Route path="/purchases/bank-statement-import" element={<ProtectedRoute><BankStatementImportPage /></ProtectedRoute>} />
 
       
       {/* Stock Routes with /stock prefix */}
@@ -379,6 +394,8 @@ const AppRoutes = () => {
       
       {/* Comptabilité Routes */}
       <Route path="/chart-of-accounts" element={<ProtectedRoute><ChartOfAccounts /></ProtectedRoute>} />
+      <Route path="/accounting/supplier-mappings" element={<ProtectedRoute><SupplierAccountMappingsPage /></ProtectedRoute>} />
+      <Route path="/accounting/learning-patterns" element={<ProtectedRoute><LearningPatternsPage /></ProtectedRoute>} />
       <Route path="/accounting-dashboard" element={<ProtectedRoute><AccountingDashboard /></ProtectedRoute>} />
       <Route path="/journal-entries" element={<ProtectedRoute><JournalEntries /></ProtectedRoute>} />
       <Route path="/general-ledger" element={<ProtectedRoute><GeneralLedger /></ProtectedRoute>} />
@@ -401,8 +418,8 @@ const AppRoutes = () => {
       <Route path="/chatbot" element={<ProtectedRoute><ChatbotPage /></ProtectedRoute>} />
 
       {/* Paramètres Routes */}
-      <Route path="/collaborators" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
-      <Route path="/roles-permissions" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/collaborators" element={<ProtectedRoute><CollaboratorsPage /></ProtectedRoute>} />
+      <Route path="/roles-permissions" element={<ProtectedRoute><RolesPermissionsPage /></ProtectedRoute>} />
       <Route path="/additional-entries" element={<ProtectedRoute><AdditionalEntriesPage /></ProtectedRoute>} />
       <Route path="/taxes" element={<ProtectedRoute><TaxesPage /></ProtectedRoute>} />
       <Route path="/banks" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
@@ -411,8 +428,23 @@ const AppRoutes = () => {
       <Route path="/files" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/integrations" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/workflows" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+
+      <Route path="/cash-accounts" element={<ProtectedRoute><CashAccountsPage /></ProtectedRoute>} />
+
       <Route path="/access-logs" element={<ProtectedRoute><AccessLogsPage /></ProtectedRoute>} />
+      <Route path="/files" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/integrations" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/workflows" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       
+      {/* Module RH */}
+      <Route path="/hr/dashboard" element={<ProtectedRoute><HRDashboard /></ProtectedRoute>} />
+      <Route path="/hr/employees" element={<ProtectedRoute><Employees /></ProtectedRoute>} />
+      <Route path="/hr/employees/:id" element={<ProtectedRoute><EmployeeDetail /></ProtectedRoute>} />
+      <Route path="/hr/payroll" element={<ProtectedRoute><Payroll /></ProtectedRoute>} />
+      <Route path="/hr/leaves" element={<ProtectedRoute><LeaveManagement /></ProtectedRoute>} />
+      <Route path="/hr/declarations" element={<ProtectedRoute><HRDeclarations /></ProtectedRoute>} />
+      <Route path="/hr/config" element={<ProtectedRoute><HRConfig /></ProtectedRoute>} />
+
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
