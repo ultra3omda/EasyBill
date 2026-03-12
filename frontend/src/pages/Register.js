@@ -7,7 +7,9 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card } from '../components/ui/card';
 import { toast } from '../hooks/use-toast';
+import { toast as sonnerToast } from '../components/ui/sonner';
 import { Mail, Lock, User, Building, Chrome } from 'lucide-react';
+import { useGoogleLogin } from '@react-oauth/google';
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -36,16 +38,33 @@ const Register = () => {
     try {
       const result = await register(name, email, password, company);
       if (result.success) {
-        toast({
-          title: 'Inscription réussie',
-          description: 'Bienvenue sur EasyBill!',
+        if (result.requiresVerification) {
+          toast({
+            title: 'Inscription réussie',
+            description: result.message || 'Consultez votre email pour vérifier votre compte avant de vous connecter.',
+          });
+          navigate('/login');
+        } else {
+          toast({
+            title: 'Inscription réussie',
+            description: 'Bienvenue sur EasyBill!',
+          });
+          navigate('/dashboard');
+        }
+      } else if (result.alreadyRegistered) {
+        navigate('/login', {
+          state: {
+            fromRegister: true,
+            message: result.message || 'Un compte existe déjà avec cet email. Vous pouvez vous connecter directement.',
+          },
         });
-        navigate('/dashboard');
       }
     } catch (error) {
+      const detail = error.response?.data?.detail;
+      const detailStr = typeof detail === 'string' ? detail : (Array.isArray(detail) ? detail[0]?.msg || '' : '');
       toast({
         title: 'Erreur',
-        description: 'Une erreur est survenue lors de l\'inscription',
+        description: detailStr || 'Une erreur est survenue lors de l\'inscription',
         variant: 'destructive',
       });
     } finally {
@@ -53,27 +72,32 @@ const Register = () => {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    try {
-      const result = await loginWithGoogle();
-      if (result.success) {
-        toast({
-          title: 'Connexion réussie',
-          description: 'Bienvenue sur EasyBill!',
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setLoading(true);
+      try {
+        const result = await loginWithGoogle({ access_token: tokenResponse.access_token });
+        if (result.success) {
+          sonnerToast.success('Inscription réussie', { description: 'Bienvenue sur EasyBill!' });
+          navigate('/dashboard');
+        }
+      } catch (error) {
+        sonnerToast.error('Erreur Google', {
+          description: error.response?.data?.detail || 'Erreur lors de la connexion avec Google',
         });
-        navigate('/dashboard');
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: 'Erreur lors de la connexion avec Google',
-        variant: 'destructive',
+    },
+    onError: (error) => {
+      console.error('Google OAuth error:', error);
+      sonnerToast.error('Connexion Google annulée', {
+        description: 'La connexion Google a été annulée ou a échoué.',
       });
-    } finally {
       setLoading(false);
-    }
-  };
+    },
+    flow: 'implicit',
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 to-amber-50 flex items-center justify-center p-4">
@@ -200,7 +224,7 @@ const Register = () => {
           type="button"
           variant="outline"
           className="w-full py-6 border-2 hover:bg-violet-50"
-          onClick={handleGoogleLogin}
+          onClick={() => googleLogin()}
           disabled={loading}
           data-testid="register-google-button"
         >

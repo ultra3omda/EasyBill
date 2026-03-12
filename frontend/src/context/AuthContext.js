@@ -95,12 +95,20 @@ export const AuthProvider = ({ children }) => {
         company_name: company
       });
       
-      const { access_token, user: userData } = response.data;
+      const data = response.data;
+      if (data.alreadyRegistered) {
+        return { success: false, alreadyRegistered: true, message: data.message };
+      }
+      if (data.requires_verification && !data.access_token) {
+        return { success: true, requiresVerification: true, message: data.message };
+      }
       
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('token', access_token);
-      
+      const { access_token, user: userData } = data;
+      if (access_token && userData) {
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('token', access_token);
+      }
       return { success: true, user: userData };
     } catch (error) {
       console.error('Registration error:', error);
@@ -114,8 +122,17 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
   };
 
+  const updateUser = (updates) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const next = { ...prev, ...updates };
+      localStorage.setItem('user', JSON.stringify(next));
+      return next;
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, loginWithFacebook, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, loginWithFacebook, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

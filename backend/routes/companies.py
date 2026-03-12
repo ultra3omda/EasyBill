@@ -1,12 +1,20 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
 from datetime import datetime, timezone
+from pathlib import Path
 import os
+import shutil
+import uuid
+import logging
 from typing import List
 from models.company import Company, CompanyCreate, CompanyUpdate
 from utils.dependencies import get_current_user, get_current_company
 from data.tunisian_chart_of_accounts import TUNISIAN_CHART_OF_ACCOUNTS
+
+logger = logging.getLogger(__name__)
+UPLOAD_DIR = Path(__file__).resolve().parent.parent / "uploads" / "logos"
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 
 router = APIRouter(prefix="/api/companies", tags=["Companies"])
 
@@ -338,6 +346,44 @@ async def update_company(company_id: str, company_update: CompanyUpdate, current
     )
     
     return {"message": "Company updated successfully"}
+
+@router.post("/{company_id}/logo")
+async def upload_company_logo(
+    company_id: str,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """Upload company logo; saved in uploads/logos."""
+    company = await get_current_company(current_user, company_id)
+    if str(company["owner_id"]) != str(current_user["_id"]):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only company owner can update company logo"
+        )
+    suffix = Path(file.filename or "logo").suffix.lower()
+    if suffix not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Format non autorisé. Utilisez: jpg, jpeg, png, gif ou webp."
+        )
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    name = f"{company_id}_{uuid.uuid4().hex[:8]}{suffix}"
+    path = UPLOAD_DIR / name
+    try:
+        with path.open("wb") as f:
+            shutil.copyfileobj(file.file, f)
+    except Exception as e:
+        logger.error(f"Upload logo error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erreur lors de l'enregistrement du fichier."
+        )
+    logo_url = f"/uploads/logos/{name}"
+    await db.companies.update_one(
+        {"_id": ObjectId(company_id)},
+        {"$set": {"logo": logo_url, "updated_at": datetime.now(timezone.utc)}}
+    )
+    return {"logo": logo_url}
 
 @router.delete("/{company_id}")
 async def delete_company(company_id: str, current_user: dict = Depends(get_current_user)):

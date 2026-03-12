@@ -18,7 +18,19 @@ uvicorn server:app --host 0.0.0.0 --port 8000
 
 L’API est disponible sur **http://localhost:8000**.
 
-Fichier de config : `backend/.env` (MONGO_URL, DB_NAME, JWT_SECRET déjà renseignés).
+Fichier de config : `backend/.env`. Pour l’envoi d’emails (vérification de compte, reset mot de passe), ajouter par exemple :
+
+```env
+FRONTEND_URL=http://localhost:3000
+MAIL_HOST=ssl0.ovh.net
+MAIL_PORT=465
+MAIL_USERNAME=votre-email@domain.com
+MAIL_PASSWORD=votre-mot-de-passe
+MAIL_ENCRYPTION=ssl
+MAIL_FROM_ADDRESS=hello@votredomaine.app
+```
+
+Voir `backend/.env.example` pour la liste complète.
 
 ## 3. Frontend (React)
 
@@ -37,7 +49,10 @@ Le frontend utilise `REACT_APP_BACKEND_URL=http://localhost:8000` (défini dans 
 
 1. Ouvrir http://localhost:3000
 2. Cliquer sur **S’inscrire** et créer un compte
-3. Après connexion, créer une **entreprise** pour accéder au tableau de bord
+3. Consulter l’email de vérification (lien dans le mail), puis se connecter
+4. Créer une **entreprise** pour accéder au tableau de bord
+
+Si un compte existe déjà avec cet email, un message invite à se connecter directement.
 
 ## Note
 

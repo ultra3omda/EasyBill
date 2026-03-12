@@ -121,3 +121,17 @@ code {
         border-bottom-color: inherit;
     }
 }
+
+/* Toasts Sonner : texte lisible (fond clair, texte sombre) */
+[data-sonner-toast] {
+    background: #fff !important;
+    color: #171717 !important;
+    border-color: #e5e5e5 !important;
+}
+[data-sonner-toast] [data-title],
+[data-sonner-toast] [data-description] {
+    color: #171717 !important;
+}
+[data-sonner-toast] [data-description] {
+    color: #404040 !important;
+}

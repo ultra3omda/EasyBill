@@ -7,13 +7,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Email configuration from environment variables
-SMTP_HOST = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
-SMTP_PORT = int(os.environ.get('SMTP_PORT', '587'))
-SMTP_USER = os.environ.get('SMTP_USER', '')
-SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
-SMTP_FROM_EMAIL = os.environ.get('SMTP_FROM_EMAIL', 'noreply@easybill.com')
-SMTP_FROM_NAME = os.environ.get('SMTP_FROM_NAME', 'EasyBill')
+# Email configuration: support MAIL_* (Laravel-style) and SMTP_*
+SMTP_HOST = os.environ.get('MAIL_HOST') or os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+SMTP_PORT = int(os.environ.get('MAIL_PORT') or os.environ.get('SMTP_PORT', '587'))
+SMTP_USER = os.environ.get('MAIL_USERNAME') or os.environ.get('SMTP_USER', '')
+SMTP_PASSWORD = os.environ.get('MAIL_PASSWORD') or os.environ.get('SMTP_PASSWORD', '')
+SMTP_FROM_EMAIL = os.environ.get('MAIL_FROM_ADDRESS') or os.environ.get('SMTP_FROM_EMAIL', 'noreply@easybill.com')
+SMTP_FROM_NAME = os.environ.get('MAIL_FROM_NAME') or os.environ.get('SMTP_FROM_NAME', 'EasyBill')
+MAIL_ENCRYPTION = (os.environ.get('MAIL_ENCRYPTION') or '').lower()
 # Frontend URL for email links - must be set in production
 FRONTEND_URL = os.environ.get('FRONTEND_URL')
 if not FRONTEND_URL:
@@ -32,6 +33,7 @@ class EmailService:
         self.from_email = SMTP_FROM_EMAIL
         self.from_name = SMTP_FROM_NAME
         self.frontend_url = FRONTEND_URL
+        self.use_ssl = MAIL_ENCRYPTION == 'ssl' or SMTP_PORT == 465
     
     def _send_email(
         self,
@@ -73,10 +75,15 @@ class EmailService:
                 logger.info(f"Would send email to {to_email}: {subject}")
                 return True  # Return True in dev mode
             
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.starttls()
-                server.login(self.smtp_user, self.smtp_password)
-                server.send_message(msg)
+            if self.use_ssl:
+                with smtplib.SMTP_SSL(self.smtp_host, self.smtp_port) as server:
+                    server.login(self.smtp_user, self.smtp_password)
+                    server.send_message(msg)
+            else:
+                with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+                    server.starttls()
+                    server.login(self.smtp_user, self.smtp_password)
+                    server.send_message(msg)
             
             logger.info(f"Email sent successfully to {to_email}")
             return True

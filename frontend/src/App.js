@@ -124,14 +124,35 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+const GuestOnlyRoute = ({ children, fallback = '/dashboard' }) => {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 to-amber-50">
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-violet-600 border-t-transparent"></div>
+      </div>
+    );
+  }
+  if (user) return <Navigate to={fallback} replace />;
+  return children;
+};
+
 const AppRoutes = () => {
   const { user } = useAuth();
 
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/login" element={
+        <GuestOnlyRoute>
+          <Login />
+        </GuestOnlyRoute>
+      } />
+      <Route path="/register" element={
+        <GuestOnlyRoute>
+          <Register />
+        </GuestOnlyRoute>
+      } />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
@@ -297,6 +318,16 @@ const AppRoutes = () => {
           <Settings />
         </ProtectedRoute>
       } />
+      <Route path="/settings/notifications" element={
+        <ProtectedRoute>
+          <Settings />
+        </ProtectedRoute>
+      } />
+      <Route path="/settings/security" element={
+        <ProtectedRoute>
+          <Settings />
+        </ProtectedRoute>
+      } />
 
       
       {/* Sales Routes with /sales prefix */}
@@ -374,6 +405,12 @@ const AppRoutes = () => {
       <Route path="/roles-permissions" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/additional-entries" element={<ProtectedRoute><AdditionalEntriesPage /></ProtectedRoute>} />
       <Route path="/taxes" element={<ProtectedRoute><TaxesPage /></ProtectedRoute>} />
+      <Route path="/banks" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/customization" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/calendar" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/files" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/integrations" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
+      <Route path="/workflows" element={<ProtectedRoute><PlaceholderPage /></ProtectedRoute>} />
       <Route path="/access-logs" element={<ProtectedRoute><AccessLogsPage /></ProtectedRoute>} />
       
       {/* Fallback */}

@@ -51,6 +51,11 @@ export const authAPI = {
   resendVerification: (data) => apiClient.post('/auth/resend-verification', data),
   getMe: () => apiClient.get('/auth/me'),
   updateProfile: (data) => apiClient.put('/auth/me', data),
+  uploadPhoto: (file) => {
+    const form = new FormData();
+    form.append('file', file);
+    return apiClient.post('/auth/me/photo', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
   updatePassword: (data) => apiClient.put('/auth/password', data),
   logout: () => apiClient.post('/auth/logout'),
 };
@@ -63,6 +68,13 @@ export const companiesAPI = {
   update: (id, data) => apiClient.put(`/companies/${id}/`, data),
   delete: (id) => apiClient.delete(`/companies/${id}/`),
   getDashboard: (id) => apiClient.get(`/companies/${id}/dashboard`),
+  uploadLogo: (id, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient.post(`/companies/${id}/logo`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 };
 
 // Customers API - Note: trailing slash required to avoid 307 redirect losing auth header
