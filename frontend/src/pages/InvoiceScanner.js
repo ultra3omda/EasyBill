@@ -24,7 +24,13 @@ const ACTION_ICONS = {
   create_supplier: <UserPlus className="w-4 h-4 text-blue-500" />,
   use_existing_supplier: <User className="w-4 h-4 text-green-500" />,
   create_supplier_invoice: <FileText className="w-4 h-4 text-violet-500" />,
-  create_journal_entry: <BookOpen className="w-4 h-4 text-indigo-500" />,
+  create_purchase_order: <Receipt className="w-4 h-4 text-amber-500" />,
+  use_existing_purchase_order: <Receipt className="w-4 h-4 text-green-500" />,
+  create_receipt: <Receipt className="w-4 h-4 text-amber-500" />,
+  use_existing_receipt: <Receipt className="w-4 h-4 text-green-500" />,
+  create_stock_movement: <Receipt className="w-4 h-4 text-cyan-500" />,
+  review_stock_decisions: <AlertTriangle className="w-4 h-4 text-amber-500" />,
+  create_draft_journal_entry: <BookOpen className="w-4 h-4 text-indigo-500" />,
 };
 const ACTION_COLORS = {
   info: 'bg-blue-50 border-blue-200 text-blue-800',
@@ -53,6 +59,26 @@ export default function InvoiceScanner() {
   const [editedSupplier, setEditedSupplier] = useState(null);
   const [editedInvoice, setEditedInvoice] = useState(null);
   const [editedJournalEntries, setEditedJournalEntries] = useState(null);
+  const [editedWorkflow, setEditedWorkflow] = useState(null);
+
+  const recalcInvoice = useCallback((invoice) => {
+    const items = invoice?.items || [];
+    const subtotal = Number(items.reduce((sum, item) => {
+      const quantity = parseFloat(item.quantity || 0);
+      const unitPrice = parseFloat(item.unit_price || 0);
+      const discount = parseFloat(item.discount || 0);
+      return sum + (quantity * unitPrice * (1 - discount / 100));
+    }, 0).toFixed(3));
+    const fodec = parseFloat(invoice?.fodec || 0);
+    const totalTax = parseFloat(invoice?.total_tax || 0);
+    const timbre = parseFloat(invoice?.timbre || 0);
+    return {
+      ...invoice,
+      subtotal,
+      assiette_tva: Number((subtotal + fodec).toFixed(3)),
+      total: Number((subtotal + fodec + totalTax + timbre).toFixed(3))
+    };
+  }, []);
 
   const handleFileSelect = useCallback((selectedFile) => {
     if (!selectedFile) return;
@@ -104,6 +130,7 @@ export default function InvoiceScanner() {
       setEditedSupplier(data.supplier);
       setEditedInvoice(data.invoice);
       setEditedJournalEntries(data.journal_entries);
+      setEditedWorkflow(data.workflow);
       setShowConfirmModal(true);
     } catch (e) {
       toast.error(e.message || "Erreur lors de l'analyse du document");
@@ -120,6 +147,7 @@ export default function InvoiceScanner() {
         supplier: editedSupplier,
         invoice: editedInvoice,
         journal_entries: editedJournalEntries,
+        workflow: editedWorkflow,
         company_id: currentCompany.id
       };
       const res = await fetch(`${API}/api/invoice-scanner/confirm`, {
@@ -140,14 +168,14 @@ export default function InvoiceScanner() {
   };
 
   const addItem = () => {
-    setEditedInvoice(prev => ({
+    setEditedInvoice(prev => recalcInvoice({
       ...prev,
-      items: [...(prev?.items || []), { description: '', quantity: 1, unit_price: 0, tax_rate: 19, discount: 0, total: 0 }]
+      items: [...(prev?.items || []), { description: '', quantity: 1, unit_price: 0, tax_rate: 19, discount: 0, total: 0, stock_decision: 'non_stock', should_create_stock_movement: false }]
     }));
   };
 
   const removeItem = (idx) => {
-    setEditedInvoice(prev => ({
+    setEditedInvoice(prev => recalcInvoice({
       ...prev,
       items: prev.items.filter((_, i) => i !== idx)
     }));
@@ -157,11 +185,26 @@ export default function InvoiceScanner() {
     setEditedInvoice(prev => {
       const items = [...(prev?.items || [])];
       items[idx] = { ...items[idx], [field]: value };
-      // Recalc total
       const it = items[idx];
       const ht = parseFloat(it.quantity || 0) * parseFloat(it.unit_price || 0) * (1 - parseFloat(it.discount || 0) / 100);
       items[idx].total = parseFloat((ht * (1 + parseFloat(it.tax_rate || 0) / 100)).toFixed(3));
-      return { ...prev, items };
+      return recalcInvoice({ ...prev, items });
+    });
+  };
+
+  const updateStockDecision = (idx, checked) => {
+    setEditedInvoice(prev => {
+      const items = [...(prev?.items || [])];
+      items[idx] = {
+        ...items[idx],
+        stock_decision: checked ? 'stock' : 'non_stock',
+        should_create_stock_movement: checked && !!items[idx]?.warehouse_id,
+        review_required: checked && !items[idx]?.product_id,
+        stock_reason: checked && !items[idx]?.product_id
+          ? 'Ajout au stock demandé par l’utilisateur. L’article sera créé automatiquement à la confirmation.'
+          : items[idx]?.stock_reason
+      };
+      return recalcInvoice({ ...prev, items });
     });
   };
 
@@ -299,10 +342,10 @@ export default function InvoiceScanner() {
                 <CheckCircle className="w-7 h-7 text-green-600" />
                 <div>
                   <p className="font-bold text-green-800 text-lg">{confirmed.message}</p>
-                  <p className="text-sm text-green-600">Toutes les données ont été enregistrées avec succès</p>
+                  <p className="text-sm text-green-600">Chaîne achat créée et écritures comptables préparées avec succès</p>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {confirmed.results?.supplier?.created && (
                   <div className="bg-white rounded-lg p-3 border border-green-200">
                     <p className="text-xs text-gray-500">Fournisseur créé</p>
@@ -315,8 +358,17 @@ export default function InvoiceScanner() {
                   <p className="text-xs text-violet-600">{fmt(confirmed.results?.supplier_invoice?.total)} TND</p>
                 </div>
                 <div className="bg-white rounded-lg p-3 border border-green-200">
+                  <p className="text-xs text-gray-500">Bon de commande</p>
+                  <p className="font-semibold text-sm">{confirmed.results?.purchase_order?.number || 'Existant / non créé'}</p>
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-green-200">
+                  <p className="text-xs text-gray-500">Bon de réception</p>
+                  <p className="font-semibold text-sm">{confirmed.results?.receipt?.number || 'Existant / non créé'}</p>
+                  <p className="text-xs text-cyan-600">{confirmed.results?.stock_movements?.created || 0} mouvement(s) de stock</p>
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-green-200">
                   <p className="text-xs text-gray-500">Écritures comptables</p>
-                  <p className="font-semibold text-sm">{confirmed.results?.journal_entries?.created} écriture(s)</p>
+                  <p className="font-semibold text-sm">{confirmed.results?.journal_entries?.created} brouillon(s)</p>
                 </div>
               </div>
               <div className="mt-4 flex gap-2">
@@ -369,6 +421,17 @@ export default function InvoiceScanner() {
                 <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                   {parseResult.error}
+                </div>
+              )}
+
+              {!!parseResult.warnings?.length && (
+                <div className="space-y-2">
+                  {parseResult.warnings.map((warning, index) => (
+                    <div key={index} className="flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                      {warning}
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -475,6 +538,31 @@ export default function InvoiceScanner() {
                     </div>
                   </div>
 
+                  {editedWorkflow && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="rounded-lg border bg-amber-50 border-amber-200 p-3">
+                        <p className="text-xs text-amber-700">Bon de commande</p>
+                        <p className="font-semibold text-sm text-amber-900">
+                          {editedWorkflow.purchase_order?.create
+                            ? 'Création automatique prévue'
+                            : `Existant: ${editedWorkflow.purchase_order?.existing_number || '-'}`}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border bg-amber-50 border-amber-200 p-3">
+                        <p className="text-xs text-amber-700">Bon de réception</p>
+                        <p className="font-semibold text-sm text-amber-900">
+                          {editedWorkflow.receipt?.create
+                            ? 'Création automatique prévue'
+                            : `Existant: ${editedWorkflow.receipt?.existing_number || '-'}`}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border bg-cyan-50 border-cyan-200 p-3">
+                        <p className="text-xs text-cyan-700">Entrepôt stock</p>
+                        <p className="font-semibold text-sm text-cyan-900">{editedWorkflow.warehouse_name || 'Aucun entrepôt par défaut'}</p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Items */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
@@ -491,6 +579,8 @@ export default function InvoiceScanner() {
                             <th className="px-2 py-2 text-center font-medium text-gray-600 w-16">Qté</th>
                             <th className="px-2 py-2 text-center font-medium text-gray-600 w-24">P.U. HT</th>
                             <th className="px-2 py-2 text-center font-medium text-gray-600 w-16">TVA%</th>
+                            <th className="px-2 py-2 text-left font-medium text-gray-600 w-40">Produit lié</th>
+                            <th className="px-2 py-2 text-center font-medium text-gray-600 w-24">Entrée stock</th>
                             <th className="px-2 py-2 text-right font-medium text-gray-600 w-24">Total TTC</th>
                             <th className="w-8" />
                           </tr>
@@ -528,6 +618,22 @@ export default function InvoiceScanner() {
                                   onChange={e => updateItem(idx, 'tax_rate', parseFloat(e.target.value) || 0)}
                                   className="h-7 text-xs text-center"
                                 />
+                              </td>
+                              <td className="px-2 py-1.5">
+                                <div className="text-[11px] leading-4">
+                                  <div className="font-medium text-gray-700">{item.product_name || 'Aucun produit trouvé'}</div>
+                                  <div className="text-gray-500">{Math.round((item.product_match_confidence || 0) * 100)}% • {item.stock_reason}</div>
+                                </div>
+                              </td>
+                              <td className="px-2 py-1.5 text-center">
+                                <label className="inline-flex items-center justify-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={!!item.should_create_stock_movement}
+                                    disabled={!item.warehouse_id}
+                                    onChange={e => updateStockDecision(idx, e.target.checked)}
+                                  />
+                                </label>
                               </td>
                               <td className="px-2 py-1.5 text-right font-medium">{fmt(item.total)}</td>
                               <td className="px-1 py-1.5">
@@ -591,7 +697,7 @@ export default function InvoiceScanner() {
                 <TabsContent value="accounting" className="mt-4 space-y-3">
                   <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-sm text-indigo-700 flex items-start gap-2">
                     <BookOpen className="w-4 h-4 shrink-0 mt-0.5" />
-                    <span>Les écritures suivantes seront créées et directement validées dans le journal des achats.</span>
+                    <span>Les écritures suivantes seront créées en brouillon pour validation explicite après revue.</span>
                   </div>
 
                   {editedJournalEntries?.map((je, i) => (

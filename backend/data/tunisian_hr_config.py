@@ -640,6 +640,91 @@ PAYROLL_RUBRICS = {
 }
 
 # =============================================================================
+# 12. CONVENTIONS COLLECTIVES TUNISIENNES (profils sectoriels de départ)
+# =============================================================================
+
+DEFAULT_TUNISIAN_CONVENTION_CODE = "services_administratifs"
+
+TUNISIAN_COLLECTIVE_CONVENTIONS = {
+    "services_administratifs": {
+        "code": "services_administratifs",
+        "name": "Services administratifs et tertiaire",
+        "country": "TN",
+        "accident_sector": "services_administratifs",
+        "tfp_category": "autres",
+        "notes": "Profil générique tertiaire. Les primes minimales peuvent être ajustées par société.",
+        "mandatory_primes": [],
+        "source": "Paramétrage RH interne EasyBill",
+    },
+    "commerce_gros_detail": {
+        "code": "commerce_gros_detail",
+        "name": "Commerce de gros, demi-gros et détail",
+        "country": "TN",
+        "accident_sector": "commerce",
+        "tfp_category": "autres",
+        "notes": "Prime transport et présence issues de la convention collective sectorielle.",
+        "mandatory_primes": [
+            {
+                "code": "PRIM_TRANSPORT",
+                "name": "Prime de transport",
+                "amounts_by_category": {
+                    "default": 75.012,
+                    "cadre": 82.746,
+                    "cadre_superieur": 82.746,
+                },
+                "calculation": "fixed_monthly_by_category",
+                "cnss_applicable": False,
+                "irpp_applicable": True,
+                "editable": True,
+                "source": "Convention collective commerce 2024",
+            },
+            {
+                "code": "PRIM_PRESENCE",
+                "name": "Prime de présence",
+                "amount": 14.130,
+                "calculation": "fixed_monthly",
+                "cnss_applicable": True,
+                "irpp_applicable": True,
+                "editable": True,
+                "source": "Convention collective commerce 2024",
+            },
+        ],
+        "source": "Convention collective commerce 2024",
+    },
+    "btp": {
+        "code": "btp",
+        "name": "Bâtiment et travaux publics",
+        "country": "TN",
+        "accident_sector": "btp",
+        "tfp_category": "industrie",
+        "notes": "Prime panier calculée sur une base mensuelle de 26 jours ouvrés.",
+        "mandatory_primes": [
+            {
+                "code": "PRIM_PANIER",
+                "name": "Prime de panier",
+                "amount": 20.800,
+                "calculation": "fixed_monthly",
+                "cnss_applicable": False,
+                "irpp_applicable": True,
+                "editable": True,
+                "source": "Convention collective BTP (0,800 TND/jour x 26 jours)",
+            },
+        ],
+        "source": "Convention collective BTP",
+    },
+    "industrie_generique": {
+        "code": "industrie_generique",
+        "name": "Industrie (profil générique)",
+        "country": "TN",
+        "accident_sector": "mecanique_metallurgie",
+        "tfp_category": "industrie",
+        "notes": "Profil industriel générique. Compléter les primes selon la convention d'entreprise.",
+        "mandatory_primes": [],
+        "source": "Paramétrage RH interne EasyBill",
+    },
+}
+
+# =============================================================================
 # 12. CATÉGORIES PROFESSIONNELLES
 # =============================================================================
 
@@ -835,6 +920,8 @@ DEFAULT_HR_CONFIG = {
         "smag_daily": MINIMUM_WAGES["SMAG"]["daily"],
         "enforce_minimum": True,
     },
+    "convention_collective_code": DEFAULT_TUNISIAN_CONVENTION_CODE,
+    "payroll_convention_profile": TUNISIAN_COLLECTIVE_CONVENTIONS[DEFAULT_TUNISIAN_CONVENTION_CODE],
     "contract_types_config": {
         ct["code"]: {"active": True, "customizable": ct["code"] not in ("CDI", "CDD"), "order": i + 1}
         for i, ct in enumerate(CONTRACT_TYPES)

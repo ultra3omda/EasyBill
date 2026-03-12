@@ -423,4 +423,18 @@ export const accountingMappingsAPI = {
   initializeChart: (companyId, force = false) => apiClient.post(`/accounting/chart/initialize?company_id=${companyId}&force=${force}`),
 };
 
+export const hrConfigAPI = {
+  getFullConfig: (companyId) => apiClient.get(`/hr/config?company_id=${companyId}`),
+  getConventionConfig: (companyId) => apiClient.get(`/hr/config/convention?company_id=${companyId}`),
+  updateConventionConfig: (companyId, data) => apiClient.put(`/hr/config/convention?company_id=${companyId}`, data),
+};
+
+export const hrEmployeesAPI = {
+  list: (companyId) => apiClient.get(`/hr/employees?company_id=${companyId}`),
+  create: (companyId, data) => apiClient.post(`/hr/employees?company_id=${companyId}`, data),
+  update: (companyId, employeeId, data) => apiClient.put(`/hr/employees/${employeeId}?company_id=${companyId}`, data),
+  remove: (companyId, employeeId) => apiClient.delete(`/hr/employees/${employeeId}?company_id=${companyId}`),
+  previewSalary: (companyId, data) => apiClient.post(`/hr/employees/salary-preview?company_id=${companyId}`, data),
+};
+
 export default apiClient;
