@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
-import { Globe, Sun, Moon } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { Globe, Sun, Moon, LayoutDashboard } from 'lucide-react';
 import { Button } from '../ui/button';
 import {
   DropdownMenu,
@@ -12,6 +13,7 @@ import {
 
 const Navbar = () => {
   const { language, changeLanguage, t } = useLanguage();
+  const { user } = useAuth();
   const [theme, setTheme] = React.useState('light');
 
   const toggleTheme = () => {
@@ -79,16 +81,27 @@ const Navbar = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Link to="/login">
-              <Button variant="ghost" className="text-gray-700">
-                {t('nav.login')}
-              </Button>
-            </Link>
-            <Link to="/register">
-              <Button className="bg-violet-600 hover:bg-violet-700 text-white">
-                {t('nav.register')}
-              </Button>
-            </Link>
+            {user ? (
+              <Link to="/dashboard">
+                <Button className="bg-violet-600 hover:bg-violet-700 text-white gap-2">
+                  <LayoutDashboard className="w-4 h-4" />
+                  Tableau de bord
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link to="/login">
+                  <Button variant="ghost" className="text-gray-700">
+                    {t('nav.login')}
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button className="bg-violet-600 hover:bg-violet-700 text-white">
+                    {t('nav.register')}
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>

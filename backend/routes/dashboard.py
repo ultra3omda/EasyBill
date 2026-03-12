@@ -88,6 +88,9 @@ async def get_dashboard_stats(
     )
     gross_margin = ((total_revenue - total_cost) / total_revenue * 100) if total_revenue > 0 else 0
     net_margin = ((total_paid - total_cost) / total_paid * 100) if total_paid > 0 else 0
+    gross_margin_amount = round(total_revenue - total_cost, 3)
+    total_payments_sent_all = total_payments_sent + total_supplier_payments
+    net_profit = round(total_paid - total_payments_sent_all, 3)
     
     # DSO (Days Sales Outstanding)
     dso = 0
@@ -100,9 +103,9 @@ async def get_dashboard_stats(
             ) / len(unpaid_invoices)
             dso = int(avg_invoice_age)
     
-    # Monthly revenue chart data
+    # Monthly revenue chart data (last 12 months)
     monthly_data = []
-    for i in range(6):
+    for i in range(12):
         month_start = (now - timedelta(days=30*i)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(seconds=1)
         
@@ -128,8 +131,11 @@ async def get_dashboard_stats(
             "total_revenue": round(total_invoiced, 3),
             "total_paid": round(total_paid, 3),
             "total_unpaid": round(total_unpaid, 3),
+            "total_cost": round(total_cost, 3),
             "gross_margin": round(gross_margin, 1),
+            "gross_margin_amount": gross_margin_amount,
             "net_margin": round(net_margin, 1),
+            "net_profit": net_profit,
             "dso": dso,
             "renewal_rate": 89.2  # Placeholder
         },

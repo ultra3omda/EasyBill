@@ -11,6 +11,7 @@ load_dotenv(ROOT_DIR / '.env')
 # Kubernetes will inject the proper values
 
 from starlette.middleware.cors import CORSMiddleware
+from starlette.staticfiles import StaticFiles
 from motor.motor_asyncio import AsyncIOMotorClient
 import logging
 
@@ -135,6 +136,11 @@ app.include_router(hr_payroll.router)
 app.include_router(hr_leave.router)
 app.include_router(hr_declarations.router)
 app.include_router(hr_config.router)
+
+# Fichiers statiques (photos de profil)
+uploads_dir = ROOT_DIR / "uploads"
+uploads_dir.mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
 # Root endpoint
 @app.get("/")
