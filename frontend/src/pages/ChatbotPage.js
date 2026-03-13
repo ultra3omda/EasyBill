@@ -10,8 +10,12 @@ import { Send, Bot, User, Zap, HelpCircle } from 'lucide-react';
 import { chatbotAPI } from '../services/api';
 
 const EXAMPLES = [
+  { text: 'Nouveau client Ahmed ben ali', intent: 'Créer un client' },
+  { text: 'Nouveau fournisseur Pathé, particulier devise dinars', intent: 'Créer un fournisseur' },
   { text: 'facture 250 dt pour Ali réparation moteur', intent: 'Créer une facture' },
   { text: 'devis 500 dt pour Ahmed installation clim', intent: 'Créer un devis' },
+  { text: 'j\'ai vendue 10 chaise à 120 dt pour Sami', intent: 'Enregistrer une vente' },
+  { text: 'Achat 50 Article 2 à 80 dt chez CLIO', intent: 'Enregistrer un achat' },
   { text: 'client Ahmed', intent: 'Consulter un client' },
   { text: 'factures impayées', intent: 'Voir les impayés' },
   { text: 'Ali a payé 200', intent: 'Enregistrer paiement' },
@@ -19,7 +23,7 @@ const EXAMPLES = [
   { text: 'rapport aujourd\'hui', intent: 'Rapport journalier' },
 ];
 
-function MessageBubble({ msg, onNavigate, onSuggestClick }) {
+function MessageBubble({ msg, onNavigate, onSuggestInsert, onConfirmClient, onConfirmAction, onCancelAction }) {
   const isBot = msg.role === 'bot';
   return (
     <div className={`flex ${isBot ? 'justify-start' : 'justify-end'} mb-4`}>
@@ -63,8 +67,8 @@ function MessageBubble({ msg, onNavigate, onSuggestClick }) {
               </div>
             )}
 
-            {/* Document créé (facture, devis, paiement) */}
-            {['create_invoice', 'create_quote', 'register_payment'].includes(msg.action_result.action) && msg.action_result.id && (
+            {/* Document créé (facture, devis, paiement, client, fournisseur) */}
+            {['create_invoice', 'create_quote', 'register_payment', 'create_client', 'create_supplier', 'register_purchase'].includes(msg.action_result.action) && msg.action_result.id && (
               <div className="mt-2">
                 <Badge className="text-xs bg-green-100 text-green-800 border-green-200">✓ Document créé</Badge>
                 <div className="text-xs mt-1 text-gray-600">
@@ -100,8 +104,59 @@ function MessageBubble({ msg, onNavigate, onSuggestClick }) {
               </div>
             )}
 
+            {/* Confirmation d'exécution : liste des actions + boutons Confirmer / Annuler (masqués après confirmation/annulation) */}
+            {msg.action_result?.action === 'confirm_execution' && msg.action_result?.action_summary?.length > 0 && !msg.action_result?._resolved && (
+              <div className="mt-3 pt-3 border-t border-dashed">
+                <ul className="text-xs space-y-1 mb-3">
+                  {msg.action_result.action_summary.map((item, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-blue-600">•</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onConfirmAction && onConfirmAction()}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-green-600 text-white hover:bg-green-700"
+                  >
+                    Confirmer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onCancelAction && onCancelAction()}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Confirmation client : plusieurs correspondances — cartes cliquables (masquées après sélection) */}
+            {msg.action_result?.action === 'confirm_client' && msg.action_result?.client_suggestions?.length > 0 && !msg.action_result?._resolved && (
+              <div className="mt-3 pt-3 border-t border-dashed">
+                <p className="text-xs text-gray-600 font-medium mb-2">Sélectionnez le client :</p>
+                <div className="flex flex-col gap-2">
+                  {msg.action_result.client_suggestions.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => onConfirmClient && onConfirmClient(c.id, c.display_name)}
+                      className="text-left px-3 py-2 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-200 text-sm font-medium text-blue-900 transition-colors"
+                    >
+                      <span>{c.display_name}</span>
+                      {c.company_name && <span className="text-xs text-gray-500 ml-1">— {c.company_name}</span>}
+                      {c.email && <span className="block text-xs text-gray-500 mt-0.5">{c.email}</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Suggestions intelligentes (client non trouvé, etc.) */}
-            {msg.action_result?.suggestions && msg.action_result.suggestions.length > 0 && (
+            {msg.action_result?.suggestions && msg.action_result.suggestions.length > 0 && msg.action_result?.action !== 'confirm_client' && (
               <div className="mt-2 pt-2 border-t border-dashed">
                 <p className="text-xs text-amber-700 font-medium mb-1">💡 Essayez :</p>
                 <div className="flex flex-wrap gap-1">
@@ -109,8 +164,9 @@ function MessageBubble({ msg, onNavigate, onSuggestClick }) {
                     <button
                       key={i}
                       type="button"
-                      onClick={() => onSuggestClick && onSuggestClick(s)}
+                      onClick={() => onSuggestInsert && onSuggestInsert(s)}
                       className="text-xs px-2 py-1 rounded bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
+                      title="Cliquer pour insérer dans le champ de saisie"
                     >
                       « {s} »
                     </button>
@@ -130,8 +186,9 @@ function MessageBubble({ msg, onNavigate, onSuggestClick }) {
                 <button
                   key={i}
                   type="button"
-                  onClick={() => onSuggestClick && onSuggestClick(h)}
+                  onClick={() => onSuggestInsert && onSuggestInsert(h)}
                   className="text-xs px-2 py-1 rounded bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
+                  title="Cliquer pour insérer dans le champ de saisie"
                 >
                   « {h} »
                 </button>
@@ -173,10 +230,23 @@ function MessageBubble({ msg, onNavigate, onSuggestClick }) {
   );
 }
 
+const WELCOME_SUGGESTIONS = [
+  'Nouveau client Ahmed ben ali',
+  'Nouveau fournisseur Pathé, particulier devise dinars',
+  'facture 250 dt pour Ali réparation moteur',
+  'devis 500 dt pour Ahmed installation clim',
+  'client Ahmed',
+  'factures impayées',
+  'Ali a payé 200',
+  'rappeler Ahmed',
+  "rapport aujourd'hui",
+];
+
 const WELCOME_MSG = {
   role: 'bot',
-  text: '👋 Bonjour ! Je suis votre assistant financier. Tapez une commande en langage naturel.',
-  id: 'welcome'
+  text: '👋 Bonjour ! Je suis votre assistant financier. Tapez une commande ou cliquez sur une suggestion ci-dessous.',
+  id: 'welcome',
+  hints: WELCOME_SUGGESTIONS,
 };
 
 const MAX_MESSAGES = 20;
@@ -210,10 +280,12 @@ export default function ChatbotPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const sendMessage = async (text) => {
-    if (!text.trim() || !currentCompany) return;
+  const sendMessage = async (text, selectedClientId = null, confirmAction = false, cancelAction = false) => {
+    const displayText = typeof text === 'string' ? text : (text?.display_name || '');
+    if (!displayText.trim() && !selectedClientId && !confirmAction && !cancelAction) return;
+    if (!currentCompany) return;
 
-    const userMsg = { role: 'user', text, id: Date.now() };
+    const userMsg = { role: 'user', text: confirmAction ? 'Confirmer' : (cancelAction ? 'Annuler' : (displayText || 'Confirmation client')), id: Date.now() };
     setMessages(prev => {
       const next = [...prev, userMsg];
       return next.length > MAX_MESSAGES ? next.slice(-MAX_MESSAGES) : next;
@@ -222,7 +294,13 @@ export default function ChatbotPage() {
     setLoading(true);
 
     try {
-      const res = await chatbotAPI.sendMessage(currentCompany.id, { text });
+      const payload = {
+        text: displayText || (confirmAction ? 'Confirmer' : (cancelAction ? 'Annuler' : 'Confirmation')),
+        ...(selectedClientId && { selected_client_id: selectedClientId }),
+        ...(confirmAction && { confirm_action: true }),
+        ...(cancelAction && { cancel_action: true }),
+      };
+      const res = await chatbotAPI.sendMessage(currentCompany.id, payload);
       const data = res.data;
       const botMsg = {
         role: 'bot',
@@ -237,7 +315,16 @@ export default function ChatbotPage() {
       };
       setMessages(prev => {
         const next = [...prev, botMsg];
-        return next.length > MAX_MESSAGES ? next.slice(-MAX_MESSAGES) : next;
+        const out = next.length > MAX_MESSAGES ? next.slice(-MAX_MESSAGES) : next;
+        if (confirmAction || cancelAction || selectedClientId) {
+          return out.map(m => {
+            if (m.role === 'bot' && m.action_result && (m.action_result.action === 'confirm_execution' || m.action_result.action === 'confirm_client') && m.id !== botMsg.id) {
+              return { ...m, action_result: { ...m.action_result, _resolved: true } };
+            }
+            return m;
+          });
+        }
+        return out;
       });
     } catch (e) {
       setMessages(prev => {
@@ -270,7 +357,17 @@ export default function ChatbotPage() {
             {loadingHistory ? (
               <div className="flex items-center justify-center h-32 text-gray-400 text-sm">Chargement de l'historique…</div>
             ) : (
-              messages.map(msg => <MessageBubble key={msg.id} msg={msg} onNavigate={navigate} onSuggestClick={sendMessage} />)
+              messages.map(msg => (
+                <MessageBubble
+                  key={msg.id}
+                  msg={msg}
+                  onNavigate={navigate}
+                  onSuggestInsert={setInput}
+                  onConfirmClient={(clientId, displayName) => sendMessage(displayName, clientId)}
+                  onConfirmAction={() => sendMessage('', null, true)}
+                  onCancelAction={() => sendMessage('', null, false, true)}
+                />
+              ))
             )}
             {loading && (
               <div className="flex justify-start mb-4">
@@ -296,7 +393,7 @@ export default function ChatbotPage() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage(input)}
-              placeholder="Ex: facture 250 dt pour Ali réparation moteur…"
+              placeholder="Ex: facture 250 dt pour Ali, vente 10 chaise à 120 dt, achat 50 Article 2…"
               disabled={loading}
               className="flex-1"
             />
@@ -316,8 +413,9 @@ export default function ChatbotPage() {
               {EXAMPLES.map((ex, i) => (
                 <button
                   key={i}
-                  onClick={() => sendMessage(ex.text)}
+                  onClick={() => setInput(ex.text)}
                   className="w-full text-left p-2 rounded-lg border hover:bg-blue-50 hover:border-blue-200 transition-colors"
+                  title="Cliquer pour insérer dans le champ de saisie"
                 >
                   <div className="text-xs font-medium text-blue-600">{ex.intent}</div>
                   <div className="text-xs text-gray-500 mt-0.5 italic">"{ex.text}"</div>
@@ -327,10 +425,13 @@ export default function ChatbotPage() {
 
             <div className="mt-4 pt-4 border-t">
               <h3 className="text-xs font-medium text-gray-500 mb-2">Variables supportées</h3>
-              <div className="text-xs text-gray-400 space-y-1">
-                <div>• <code className="bg-gray-100 px-1 rounded">dt</code> ou <code className="bg-gray-100 px-1 rounded">dinar</code> pour TND</div>
-                <div>• Nom du client après <code className="bg-gray-100 px-1 rounded">pour</code></div>
-                <div>• Description après le client</div>
+              <div className="text-xs text-gray-400 space-y-1.5">
+                <div>• <code className="bg-gray-100 px-1 rounded">dt</code>, <code className="bg-gray-100 px-1 rounded">dinar</code>, <code className="bg-gray-100 px-1 rounded">TND</code> pour le montant</div>
+                <div>• Client : <code className="bg-gray-100 px-1 rounded">pour Ahmed</code> ou <code className="bg-gray-100 px-1 rounded">Ahmed a payé</code> / <code className="bg-gray-100 px-1 rounded">a réglé</code></div>
+                <div>• Vente : <code className="bg-gray-100 px-1 rounded">j'ai vendue 10 chaise à 120 dt pour X</code></div>
+                <div>• Achat : <code className="bg-gray-100 px-1 rounded">Achat 50 Article 2 à 80 dt chez fournisseur</code></div>
+                <div>• Paiement : <code className="bg-gray-100 px-1 rounded">X a payé 200</code>, <code className="bg-gray-100 px-1 rounded">X a réglé</code></div>
+                <div>• Toutes les actions : confirmation avant exécution</div>
               </div>
             </div>
           </Card>

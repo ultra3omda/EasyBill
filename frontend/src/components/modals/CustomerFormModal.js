@@ -9,7 +9,38 @@ import { Checkbox } from '../ui/checkbox';
 import { customersAPI } from '../../services/api';
 import { toast } from '../../hooks/use-toast';
 import { useCompany } from '../../hooks/useCompany';
-import { User, Building2, MapPin, Truck, ChevronRight, ChevronLeft, Check } from 'lucide-react';
+import { User, Building2, MapPin, Truck, ChevronRight, ChevronLeft, Check, Phone } from 'lucide-react';
+
+const PHONE_PREFIXES = [
+  { value: '+216', label: '🇹🇳 +216' },
+  { value: '+33', label: '🇫🇷 +33' },
+  { value: '+213', label: '🇩🇿 +213' },
+  { value: '+212', label: '🇲🇦 +212' },
+  { value: '+218', label: '🇱🇾 +218' },
+  { value: '+20', label: '🇪🇬 +20' },
+  { value: '+32', label: '🇧🇪 +32' },
+  { value: '+41', label: '🇨🇭 +41' },
+  { value: '+39', label: '🇮🇹 +39' },
+  { value: '+34', label: '🇪🇸 +34' },
+  { value: '+1', label: '🇺🇸 +1' },
+  { value: '+44', label: '🇬🇧 +44' },
+  { value: '+49', label: '🇩🇪 +49' },
+  { value: '+90', label: '🇹🇷 +90' },
+  { value: '+971', label: '🇦🇪 +971' },
+];
+
+function parsePhone(full) {
+  if (!full || !String(full).trim()) return { prefix: '+216', number: '' };
+  const s = String(full).trim();
+  const match = s.match(/^(\+\d{1,4})\s*(.*)$/);
+  if (match) return { prefix: match[1], number: match[2].trim() };
+  if (/^\+\d+/.test(s)) {
+    const prefixMatch = s.match(/^(\+\d{1,4})/);
+    const prefix = prefixMatch ? prefixMatch[1] : '+216';
+    return { prefix, number: s.replace(/^\+\d{1,4}\s*/, '').trim() };
+  }
+  return { prefix: '+216', number: s };
+}
 
 // Tunisian Governorates
 const GOVERNORATES = [
@@ -81,6 +112,8 @@ const CustomerFormModal = ({ open, onClose, onSuccess, customer = null }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [sameAddress, setSameAddress] = useState(true);
   const [clientType, setClientType] = useState('entreprise');
+  const [phonePrefix, setPhonePrefix] = useState('+216');
+  const [phoneNumber, setPhoneNumber] = useState('');
   
   const [formData, setFormData] = useState({
     title: 'mr',
@@ -118,6 +151,9 @@ const CustomerFormModal = ({ open, onClose, onSuccess, customer = null }) => {
     if (open) {
       if (customer) {
         setClientType(customer.client_type || 'entreprise');
+        const phoneParsed = parsePhone(customer.phone || '');
+        setPhonePrefix(phoneParsed.prefix);
+        setPhoneNumber(phoneParsed.number);
         setFormData({
           title: customer.title || 'mr',
           first_name: customer.first_name || '',
@@ -157,6 +193,8 @@ const CustomerFormModal = ({ open, onClose, onSuccess, customer = null }) => {
   const resetForm = () => {
     setClientType('entreprise');
     setSameAddress(true);
+    setPhonePrefix('+216');
+    setPhoneNumber('');
     setFormData({
       title: 'mr',
       first_name: '',
@@ -606,13 +644,42 @@ const CustomerFormModal = ({ open, onClose, onSuccess, customer = null }) => {
         </div>
         <div>
           <Label>Téléphone</Label>
-          <Input
-            value={formData.phone}
-            onChange={(e) => handleChange('phone', e.target.value)}
-            placeholder="+216 XX XXX XXX"
-            className="mt-1"
-            data-testid="customer-phone"
-          />
+          <div className="flex rounded-lg border border-input bg-background shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 mt-1">
+            <div className="flex items-center pl-3 bg-muted/50 border-r border-input">
+              <Phone className="h-4 w-4 text-muted-foreground mr-2 shrink-0" />
+              <Select
+                value={phonePrefix}
+                onValueChange={(v) => {
+                  setPhonePrefix(v);
+                  handleChange('phone', (v + ' ' + phoneNumber).trim());
+                }}
+              >
+                <SelectTrigger className="w-[7rem] h-10 border-0 bg-transparent shadow-none focus:ring-0 focus-visible:ring-0">
+                  <span className="truncate text-sm">
+                    {PHONE_PREFIXES.find((p) => p.value === phonePrefix)?.label ?? '+216'}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  {PHONE_PREFIXES.map((p) => (
+                    <SelectItem key={p.value} value={p.value}>
+                      {p.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Input
+              className="rounded-none border-0 focus-visible:ring-0 flex-1 min-w-0"
+              value={phoneNumber}
+              onChange={(e) => {
+                const v = e.target.value;
+                setPhoneNumber(v);
+                handleChange('phone', (phonePrefix + ' ' + v).trim());
+              }}
+              placeholder="12 345 678"
+              data-testid="customer-phone"
+            />
+          </div>
         </div>
       </div>
 

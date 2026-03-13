@@ -37,6 +37,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
 } from '../components/ui/dropdown-menu';
 import { 
   Plus, Search, Edit, Trash2, MoreVertical, Eye,
@@ -48,6 +49,13 @@ import {
 import { toast } from '../hooks/use-toast';
 import { useCompany } from '../hooks/useCompany';
 import { productsAPI, warehousesAPI } from '../services/api';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+function getProductImageUrl(path) {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return `${BACKEND_URL.replace(/\/$/, '')}${path.startsWith('/') ? '' : '/'}${path}`;
+}
 
 // Units
 const UNITS = [
@@ -152,6 +160,25 @@ const Products = () => {
     is_composite: false,
     components: []
   });
+  const [newComponentProductId, setNewComponentProductId] = useState('');
+  const [newComponentQuantity, setNewComponentQuantity] = useState(1);
+  const [productImageFile, setProductImageFile] = useState(null);
+  const [productImagePreview, setProductImagePreview] = useState(null);
+  const [productImageRemoveRequested, setProductImageRemoveRequested] = useState(false);
+
+  const [visibleColumns, setVisibleColumns] = useState({
+    ref: true,
+    titre: true,
+    categorie: true,
+    marque: true,
+    prix_vente: true,
+    prix_achat: true,
+    stock: true,
+    action: true
+  });
+  const toggleProductColumn = (key) => {
+    setVisibleColumns(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   useEffect(() => {
     if (currentCompany?.id) {
@@ -211,10 +238,37 @@ const Products = () => {
       is_composite: false,
       components: []
     });
+    setNewComponentProductId('');
+    setNewComponentQuantity(1);
+    setProductImageFile(null);
+    setProductImagePreview(null);
+    setProductImageRemoveRequested(false);
   };
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const addComponent = () => {
+    if (!newComponentProductId || Number(newComponentQuantity) <= 0) {
+      toast({ title: 'Erreur', description: 'Sélectionnez un article et une quantité supérieure à 0', variant: 'destructive' });
+      return;
+    }
+    const product = products.find(p => p.id === newComponentProductId);
+    const name = product?.name || '';
+    setFormData(prev => ({
+      ...prev,
+      components: [...(prev.components || []), { product_id: newComponentProductId, quantity: Number(newComponentQuantity), product_name: name }]
+    }));
+    setNewComponentProductId('');
+    setNewComponentQuantity(1);
+  };
+
+  const removeComponent = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      components: prev.components.filter((_, i) => i !== index)
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -239,20 +293,40 @@ const Products = () => {
         tax_rate: formData.tax_rate,
         quantity_in_stock: parseInt(formData.quantity_in_stock) || 0,
         min_stock_level: formData.stock_alert_enabled ? formData.stock_alert_threshold : 0,
+        warehouse_id: formData.warehouse_id || null,
         destination: formData.destination,
         reference_type: formData.reference_type,
         quantity_type: formData.quantity_type,
+        composite_field_name: formData.composite_field_name || '',
+        composite_operation: formData.composite_operation || 'multiply',
         barcode: formData.barcode,
-        is_composite: formData.is_composite,
-        components: formData.components
+        is_composite: !!(formData.is_composite || (formData.components && formData.components.length > 0)),
+        components: (formData.components || []).map(c => ({ product_id: c.product_id, quantity: Math.max(1, Number(c.quantity) || 1) }))
       };
 
+      let productId = editingProduct?.id;
       if (editingProduct) {
         await productsAPI.update(currentCompany.id, editingProduct.id, payload);
+        productId = editingProduct.id;
         toast({ title: 'Succès', description: 'Article modifié avec succès' });
       } else {
-        await productsAPI.create(currentCompany.id, payload);
+        const createRes = await productsAPI.create(currentCompany.id, payload);
+        productId = createRes.data?.id;
         toast({ title: 'Succès', description: 'Article créé avec succès' });
+      }
+      if (productId && productImageFile) {
+        try {
+          await productsAPI.uploadImage(currentCompany.id, productId, productImageFile);
+        } catch (err) {
+          toast({ title: 'Attention', description: 'Article enregistré mais l\'image n\'a pas pu être téléversée.', variant: 'destructive' });
+        }
+      }
+      if (productId && productImageRemoveRequested && editingProduct) {
+        try {
+          await productsAPI.deleteImage(currentCompany.id, productId);
+        } catch (err) {
+          toast({ title: 'Attention', description: 'Image non supprimée du serveur.', variant: 'destructive' });
+        }
       }
       setIsDialogOpen(false);
       setEditingProduct(null);
@@ -283,8 +357,8 @@ const Products = () => {
       reference_type: product.reference_type || 'disabled',
       article_type: product.type || 'product',
       quantity_type: product.quantity_type || 'simple',
-      composite_field_name: '',
-      composite_operation: 'multiply',
+      composite_field_name: product.composite_field_name || '',
+      composite_operation: product.composite_operation || 'multiply',
       barcode: product.barcode || '',
       qr_code: '',
       stock_alert_enabled: (product.min_stock_level || 0) > 0,
@@ -293,10 +367,15 @@ const Products = () => {
       purchase_price: product.purchase_price?.toString() || '',
       tax_rate: product.tax_rate || 19,
       quantity_in_stock: product.quantity_in_stock || 0,
-      warehouse_id: '',
+      warehouse_id: product.warehouse_id || '',
       is_composite: product.is_composite || false,
-      components: product.components || []
+      components: (product.components || []).map(c => ({ ...c, product_name: c.product_name || '' }))
     });
+    setNewComponentProductId('');
+    setNewComponentQuantity(1);
+    setProductImageFile(null);
+    setProductImagePreview(product.images?.[0] ? getProductImageUrl(product.images[0]) : null);
+    setProductImageRemoveRequested(false);
     setIsDialogOpen(true);
   };
 
@@ -319,7 +398,28 @@ const Products = () => {
   const openNewDialog = () => {
     setEditingProduct(null);
     resetForm();
+    setProductImageFile(null);
+    setProductImagePreview(null);
+    setProductImageRemoveRequested(false);
     setIsDialogOpen(true);
+  };
+
+  const handleProductImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!/^image\/(jpeg|png|gif|webp)$/i.test(file.type)) {
+      toast({ title: 'Format non autorisé', description: 'Utilisez JPG, PNG, GIF ou WebP', variant: 'destructive' });
+      return;
+    }
+    setProductImageFile(file);
+    setProductImagePreview(URL.createObjectURL(file));
+    setProductImageRemoveRequested(false);
+  };
+
+  const removeProductImage = () => {
+    setProductImageFile(null);
+    setProductImagePreview(null);
+    setProductImageRemoveRequested(true);
   };
 
   // Selection handlers
@@ -696,10 +796,40 @@ const Products = () => {
 
           {/* Table Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between p-4 border-b bg-gray-50">
-            <Button variant="outline" className="flex items-center gap-2 text-violet-600 border-violet-200 bg-violet-50 hover:bg-violet-100">
-              Affichage des colonnes
-              <ChevronDown className="w-4 h-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2 text-violet-600 border-violet-200 bg-violet-50 hover:bg-violet-100">
+                  Affichage des colonnes
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuCheckboxItem checked={visibleColumns.ref} onCheckedChange={() => toggleProductColumn('ref')}>
+                  REF
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.titre} onCheckedChange={() => toggleProductColumn('titre')}>
+                  Titre
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.categorie} onCheckedChange={() => toggleProductColumn('categorie')}>
+                  Catégorie
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.marque} onCheckedChange={() => toggleProductColumn('marque')}>
+                  Marque
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.prix_vente} onCheckedChange={() => toggleProductColumn('prix_vente')}>
+                  Prix de vente
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.prix_achat} onCheckedChange={() => toggleProductColumn('prix_achat')}>
+                  Prix d'achat
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.stock} onCheckedChange={() => toggleProductColumn('stock')}>
+                  Stock
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.action} onCheckedChange={() => toggleProductColumn('action')}>
+                  Action
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <div className="flex items-center gap-4 mt-4 md:mt-0">
               <span className="text-sm text-gray-500">Rechercher:</span>
               <Input
@@ -740,14 +870,14 @@ const Products = () => {
                         data-testid="select-all-checkbox"
                       />
                     </TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">REF</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">TITRE</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">CATÉGORIE</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">MARQUE</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">PRIX DE VENTE PAR DÉFAUT</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">PRIX D'ACHAT PAR DÉFAUT</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">STOCK</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase text-right">ACTION</TableHead>
+                    {visibleColumns.ref && <TableHead className="text-xs font-semibold text-gray-600 uppercase">REF</TableHead>}
+                    {visibleColumns.titre && <TableHead className="text-xs font-semibold text-gray-600 uppercase">TITRE</TableHead>}
+                    {visibleColumns.categorie && <TableHead className="text-xs font-semibold text-gray-600 uppercase">CATÉGORIE</TableHead>}
+                    {visibleColumns.marque && <TableHead className="text-xs font-semibold text-gray-600 uppercase">MARQUE</TableHead>}
+                    {visibleColumns.prix_vente && <TableHead className="text-xs font-semibold text-gray-600 uppercase">PRIX DE VENTE PAR DÉFAUT</TableHead>}
+                    {visibleColumns.prix_achat && <TableHead className="text-xs font-semibold text-gray-600 uppercase">PRIX D'ACHAT PAR DÉFAUT</TableHead>}
+                    {visibleColumns.stock && <TableHead className="text-xs font-semibold text-gray-600 uppercase">STOCK</TableHead>}
+                    {visibleColumns.action && <TableHead className="text-xs font-semibold text-gray-600 uppercase text-right">ACTION</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -762,32 +892,45 @@ const Products = () => {
                           data-testid={`select-product-${product.id}`}
                         />
                       </TableCell>
-                      <TableCell className="text-sm text-gray-600 font-mono">{product.sku || '-'}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                            <Package className="w-5 h-5 text-gray-400" />
+                      {visibleColumns.ref && <TableCell className="text-sm text-gray-600 font-mono">{product.sku || '-'}</TableCell>}
+                      {visibleColumns.titre && (
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden shrink-0">
+                              {product.images?.[0] ? (
+                                <img src={getProductImageUrl(product.images[0])} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <Package className="w-5 h-5 text-gray-400" />
+                              )}
+                            </div>
+                            <span className="font-medium text-gray-900">{product.name}</span>
                           </div>
-                          <span className="font-medium text-gray-900">{product.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-600">{product.category || '-'}</TableCell>
-                      <TableCell className="text-sm text-gray-600">{product.brand || '-'}</TableCell>
-                      <TableCell className="text-sm font-semibold text-green-600">
-                        {(product.selling_price || 0).toFixed(3)} TND
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-600">
-                        {(product.purchase_price || 0).toFixed(3)} TND
-                      </TableCell>
-                      <TableCell>
-                        <span className={`font-semibold ${
-                          product.quantity_in_stock <= (product.min_stock_level || 0) && product.min_stock_level > 0
-                            ? 'text-red-600' 
-                            : 'text-gray-900'
-                        }`}>
-                          {product.quantity_in_stock || 0}
-                        </span>
-                      </TableCell>
+                        </TableCell>
+                      )}
+                      {visibleColumns.categorie && <TableCell className="text-sm text-gray-600">{product.category || '-'}</TableCell>}
+                      {visibleColumns.marque && <TableCell className="text-sm text-gray-600">{product.brand || '-'}</TableCell>}
+                      {visibleColumns.prix_vente && (
+                        <TableCell className="text-sm font-semibold text-green-600">
+                          {(product.selling_price || 0).toFixed(3)} TND
+                        </TableCell>
+                      )}
+                      {visibleColumns.prix_achat && (
+                        <TableCell className="text-sm text-gray-600">
+                          {(product.purchase_price || 0).toFixed(3)} TND
+                        </TableCell>
+                      )}
+                      {visibleColumns.stock && (
+                        <TableCell>
+                          <span className={`font-semibold ${
+                            product.quantity_in_stock <= (product.min_stock_level || 0) && product.min_stock_level > 0
+                              ? 'text-red-600' 
+                              : 'text-gray-900'
+                          }`}>
+                            {product.quantity_in_stock || 0}
+                          </span>
+                        </TableCell>
+                      )}
+                      {visibleColumns.action && (
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -807,6 +950,7 @@ const Products = () => {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -852,15 +996,50 @@ const Products = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Main Grid - Image + Info */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Image Upload */}
+                {/* Image Upload - zone à gauche (clic ou glisser-déposer) */}
                 <div className="space-y-4">
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-violet-400 transition-colors cursor-pointer">
-                    <div className="w-24 h-24 bg-gray-100 rounded-lg mx-auto flex items-center justify-center mb-3">
-                      <Image className="w-12 h-12 text-gray-300" />
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    onChange={handleProductImageChange}
+                    className="hidden"
+                    id="product-image-input"
+                  />
+                  <div
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-violet-400 transition-colors cursor-pointer"
+                    onClick={() => document.getElementById('product-image-input')?.click()}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const file = e.dataTransfer?.files?.[0];
+                      if (!file) return;
+                      if (!/^image\/(jpeg|png|gif|webp)$/i.test(file.type)) {
+                        toast({ title: 'Format non autorisé', description: 'Utilisez JPG, PNG, GIF ou WebP', variant: 'destructive' });
+                        return;
+                      }
+                      setProductImageFile(file);
+                      setProductImagePreview(URL.createObjectURL(file));
+                      setProductImageRemoveRequested(false);
+                    }}
+                  >
+                    <div className="w-24 h-24 bg-gray-100 rounded-lg mx-auto flex items-center justify-center mb-3 overflow-hidden">
+                      {productImagePreview ? (
+                        <img src={productImagePreview} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <Image className="w-12 h-12 text-gray-300" />
+                      )}
                     </div>
                     <p className="text-sm text-gray-500">Glissez une image ici</p>
                     <p className="text-xs text-gray-400 mt-1">ou cliquez pour parcourir</p>
                   </div>
+                  {(productImagePreview || productImageFile) && (
+                    <Button type="button" variant="ghost" size="sm" className="text-red-600 w-full" onClick={(e) => { e.preventDefault(); removeProductImage(); }}>
+                      <Trash className="w-4 h-4 mr-2" />
+                      Supprimer l'image
+                    </Button>
+                  )}
+                  <p className="text-xs text-gray-500">JPG, PNG, GIF ou WebP. Enregistrée à la validation.</p>
                 </div>
 
                 {/* General Info */}
@@ -1239,13 +1418,69 @@ const Products = () => {
                     <Layers className="w-4 h-4" />
                     <span>Composition de l'article</span>
                   </div>
-                  <p className="text-sm text-amber-600">
+                  <p className="text-sm text-amber-600 mb-4">
                     Ajoutez les articles qui composent ce produit. Cette fonctionnalité permet de gérer les produits assemblés.
                   </p>
-                  <Button variant="outline" className="mt-3" type="button">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Ajouter un composant
-                  </Button>
+                  {(formData.components || []).length > 0 && (
+                    <div className="mb-4">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Article</TableHead>
+                            <TableHead className="w-24">Quantité</TableHead>
+                            <TableHead className="w-12"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {(formData.components || []).map((comp, index) => (
+                            <TableRow key={`${comp.product_id}-${index}`}>
+                              <TableCell className="font-medium">
+                                {products.find(p => p.id === comp.product_id)?.name || comp.product_name || comp.product_id || '—'}
+                              </TableCell>
+                              <TableCell>{Number(comp.quantity)}</TableCell>
+                              <TableCell>
+                                <Button type="button" variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => removeComponent(index)}>
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div className="flex-1 min-w-[200px]">
+                      <Label className="text-xs text-gray-500">Article</Label>
+                      <Select value={newComponentProductId} onValueChange={setNewComponentProductId}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Choisir un article" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {products
+                            .filter(p => p.id !== editingProduct?.id)
+                            .map(p => (
+                              <SelectItem key={p.id} value={p.id}>{p.name} {p.sku ? `(${p.sku})` : ''}</SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="w-28">
+                      <Label className="text-xs text-gray-500">Quantité</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={newComponentQuantity}
+                        onChange={(e) => setNewComponentQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                        className="mt-1"
+                      />
+                    </div>
+                    <Button type="button" variant="outline" onClick={addComponent}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Ajouter un composant
+                    </Button>
+                  </div>
                 </div>
               )}
 
