@@ -258,7 +258,7 @@ async def handle_chat_message(
     response_text = (action_result.get("message") or parsed.response_text) if action_result else parsed.response_text
     suggested_actions = _build_quick_replies(parsed.intent, action_result)
 
-    # Sauvegarde de la conversation (20 derniers messages conservés par company)
+    # Sauvegarde de la conversation (100 derniers messages conservés par company)
     await db.chatbot_logs.insert_one({
         "company_id": ObjectId(company_id),
         "user_id": current_user["_id"],
@@ -274,7 +274,7 @@ async def handle_chat_message(
         "hints": hints,
         "created_at": datetime.now(timezone.utc)
     })
-    await _prune_chatbot_logs(company_id, keep_last=20)
+    await _prune_chatbot_logs(company_id, keep_last=50)
     return ChatResponse(
         intent=parsed.intent,
         confidence=parsed.confidence,
@@ -319,7 +319,7 @@ async def handle_chat_command(
         "hints": hints,
         "created_at": datetime.now(timezone.utc)
     })
-    await _prune_chatbot_logs(company_id, keep_last=20)
+    await _prune_chatbot_logs(company_id, keep_last=50)
     return ChatResponse(
         intent=parsed.intent,
         confidence=parsed.confidence,
@@ -332,7 +332,7 @@ async def handle_chat_command(
     )
 
 
-async def _prune_chatbot_logs(company_id: str, keep_last: int = 20):
+async def _prune_chatbot_logs(company_id: str, keep_last: int = 50):
     """Garde seulement les keep_last derniers messages par entreprise."""
     cursor = db.chatbot_logs.find(
         {"company_id": ObjectId(company_id)}

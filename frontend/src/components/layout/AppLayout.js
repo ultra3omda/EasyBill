@@ -89,6 +89,7 @@ import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { companiesAPI } from '../../services/api';
 import { toast } from '../../hooks/use-toast';
+import ChatbotModal from '../ChatbotModal';
 
 // Legal Forms for Tunisia
 const LEGAL_FORMS = [
@@ -217,6 +218,7 @@ const AppLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState({});
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [chatModalOpen, setChatModalOpen] = useState(false);
   const [newCompanyModalOpen, setNewCompanyModalOpen] = useState(false);
   const [creatingCompany, setCreatingCompany] = useState(false);
   const [newCompanyData, setNewCompanyData] = useState({
@@ -878,6 +880,21 @@ const AppLayout = ({ children }) => {
           onClick={() => setSidebarOpen(false)}
         />
       )}
+
+      {/* Floating chatbot button */}
+      {currentCompany && (
+        <button
+          onClick={() => setChatModalOpen(true)}
+          className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-violet-500 via-violet-600 to-blue-600 shadow-lg shadow-violet-500/30 hover:shadow-xl hover:shadow-violet-500/40 hover:scale-110 active:scale-95 transition-all duration-200 flex items-center justify-center text-white"
+          title="Assistant Financier"
+          aria-label="Ouvrir l'assistant chatbot"
+        >
+          <Bot className="w-7 h-7" />
+        </button>
+      )}
+
+      {/* Chatbot modal */}
+      <ChatbotModal open={chatModalOpen} onOpenChange={setChatModalOpen} />
 
       {/* New Company Modal - Iberis Style */}
       <Dialog open={newCompanyModalOpen} onOpenChange={setNewCompanyModalOpen}>
