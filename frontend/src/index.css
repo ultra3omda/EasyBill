@@ -157,6 +157,15 @@ code {
     ::selection {
         background: rgba(124, 58, 237, 0.22);
     }
+
+    /* Style bouton import IA (sans animation) */
+    .btn-ai-import {
+        border-color: rgb(139 92 246) !important;
+    }
+    .btn-ai-import:hover {
+        border-color: rgb(124 58 247) !important;
+        background-color: rgb(245 243 255) !important;
+    }
 }
 
 @layer components {

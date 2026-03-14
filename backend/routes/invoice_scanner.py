@@ -102,6 +102,8 @@ class ConfirmScanRequest(BaseModel):
     workflow: Optional[Dict[str, Any]] = None
     company_id: str
     source_file_path: Optional[str] = None
+    # Pièces justificatives pour fournisseurs non assujettis à la TVA
+    supplier_vat_exempt_doc_path: Optional[str] = None  # carte/RNE ou attestation d'exonération
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -357,6 +359,389 @@ def _guess_stock_decision(description: str, product: Optional[dict]) -> tuple[bo
     if any(keyword in normalized for keyword in stock_keywords):
         return True, "Libellé assimilé à un article stockable", 0.45
     return False, "Aucun produit fiable trouvé, revue manuelle recommandée", 0.2
+
+
+NOISE_ITEM_PATTERNS = [
+    r"^facture\s*n",
+    r"^invoice\s*(no|number|n)",
+    r"^date\s*:?",
+    r"^designation\b",
+    r"^desig",
+    r"^echeance\s*:?",
+    r"^client\s*:?",
+    r"^fournisseur\s*:?",
+    r"^adresse\s*:?",
+    r"^matricule",
+    r"^mf\s*:?",
+    r"^rib\b",
+    r"^iban\b",
+    r"^swift\b",
+    r"^base\b",
+    r"^a\s+somme\b",
+    r"^total\b",
+    r"^net\s+a\s+payer",
+    r"^montant\b",
+    r"^timbre\b",
+    r"^fodec\b",
+    r"^tva\b",
+    r"^page\b",
+]
+
+
+def _sanitize_item_description(description: Optional[str]) -> str:
+    return re.sub(r"\s+", " ", (description or "")).strip(" -:\n\r\t")
+
+
+def _looks_like_noise_item(description: str, supplier_number: Optional[str], invoice_date: Optional[str]) -> tuple[bool, Optional[str]]:
+    desc = _sanitize_item_description(description)
+    if not desc:
+        return True, "Description vide"
+    normalized = _normalize_text(desc)
+    if len(normalized) < 3:
+        return True, "Description trop courte"
+    for pattern in NOISE_ITEM_PATTERNS:
+        if re.search(pattern, normalized, re.IGNORECASE):
+            return True, f"Ligne d'en-tête détectée: {desc}"
+    if supplier_number and supplier_number.lower() in desc.lower():
+        return True, "La ligne ressemble au numéro de facture"
+    if invoice_date and invoice_date in desc:
+        return True, "La ligne ressemble à une métadonnée de date"
+    if re.fullmatch(r"[\d\s:./-]+", desc):
+        return True, "La ligne ressemble à une valeur brute sans libellé produit"
+    return False, None
+
+
+def _normalize_and_filter_items(raw_items: List[Dict[str, Any]], supplier_number: Optional[str], invoice_date: Optional[str]) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    normalized_items = []
+    rejected_items = []
+
+    for item in raw_items:
+        qty = float(item.get("quantity") or 1)
+        price = float(item.get("unit_price") or 0)
+        total_ht_raw = item.get("total_ht")
+        total_ttc_raw = item.get("total_ttc") or item.get("total")
+        tva_raw = item.get("tax_rate")
+        tva = float(tva_raw) if tva_raw is not None else 19
+        disc = float(item.get("discount") or 0)
+        desc = _sanitize_item_description(item.get("description"))
+        is_noise, reason = _looks_like_noise_item(desc, supplier_number, invoice_date)
+        if is_noise:
+            rejected_items.append({
+                "description": desc or "(vide)",
+                "reason": reason,
+                "raw": item,
+            })
+            continue
+
+        if qty <= 0:
+            qty = 1
+        if price < 0:
+            price = 0
+
+        # Priorité : total_ht (HT explicite) > déduction depuis total_ttc > unit_price supposé HT
+        total_ht_val = float(total_ht_raw) if total_ht_raw is not None else None
+        total_ttc_val = float(total_ttc_raw) if total_ttc_raw is not None else None
+        if total_ht_val is not None and total_ht_val > 0:
+            ht = total_ht_val
+            price = ht / (qty * (1 - disc / 100)) if qty and (1 - disc / 100) > 0 else price
+        elif total_ttc_val is not None and total_ttc_val > 0 and tva > 0:
+            ht = round(total_ttc_val / (1 + tva / 100), 3)
+            price = ht / (qty * (1 - disc / 100)) if qty and (1 - disc / 100) > 0 else price
+        else:
+            ht = qty * price * (1 - disc / 100)
+        ttc = round(ht * (1 + tva / 100), 3) if tva > 0 else round(ht, 3)
+        normalized_items.append({
+            "description": desc,
+            "quantity": qty,
+            "unit_price": round(price, 6),
+            "tax_rate": tva,
+            "discount": disc,
+            "total": ttc,
+            "ocr_description": desc,
+            "line_status": "accepted",
+        })
+
+    return normalized_items, rejected_items
+
+
+def _compute_invoice_item_quality(items: List[Dict[str, Any]]) -> float:
+    if not items:
+        return 0.0
+    score = 0.0
+    for item in items:
+        desc = _sanitize_item_description(item.get("description"))
+        qty = float(item.get("quantity") or 0)
+        unit_price = float(item.get("unit_price") or 0)
+        total = float(item.get("total") or 0)
+        desc_words = _words(desc)
+        item_score = 0.0
+        if len(desc_words) >= 2:
+            item_score += 0.35
+        elif len(desc_words) == 1:
+            item_score += 0.15
+        if qty > 0:
+            item_score += 0.15
+        if unit_price > 0:
+            item_score += 0.25
+        if total > 0:
+            item_score += 0.25
+        score += min(item_score, 1.0)
+    return round(score / max(len(items), 1), 3)
+
+
+async def _find_supplier_candidates(company_id: str, supplier_name: Optional[str]) -> List[Dict[str, Any]]:
+    if not supplier_name:
+        return []
+    target_words = _words(supplier_name)
+    if not target_words:
+        return []
+    suppliers = await db.suppliers.find({"company_id": ObjectId(company_id)}).to_list(100)
+    ranked = []
+    for supplier in suppliers:
+        candidate_name = supplier.get("display_name") or supplier.get("company_name") or ""
+        candidate_words = _words(candidate_name)
+        if not candidate_words:
+            continue
+        union = target_words | candidate_words
+        score = len(target_words & candidate_words) / len(union) if union else 0
+        if _normalize_text(candidate_name) in _normalize_text(supplier_name) or _normalize_text(supplier_name) in _normalize_text(candidate_name):
+            score = max(score, 0.9)
+        if score >= 0.25:
+            ranked.append({
+                "id": str(supplier["_id"]),
+                "name": candidate_name,
+                "fiscal_id": supplier.get("fiscal_id"),
+                "score": round(score, 3),
+            })
+    ranked.sort(key=lambda x: x["score"], reverse=True)
+    return ranked[:5]
+
+
+async def _build_invoice_parse_payload(
+    company_id: str,
+    file_name: str,
+    source_file_path: str,
+    extracted: Dict[str, Any],
+    requested_provider: str,
+) -> Dict[str, Any]:
+    supplier_raw = extracted.get("supplier", {})
+    invoice_raw = extracted.get("invoice", {})
+
+    existing_supplier = await _find_existing_supplier(
+        company_id,
+        supplier_raw.get("name"),
+        supplier_raw.get("fiscal_id")
+    )
+
+    supplier_data = {
+        "id": str(existing_supplier["_id"]) if existing_supplier else None,
+        "name": existing_supplier.get("display_name") if existing_supplier else supplier_raw.get("name"),
+        "fiscal_id": existing_supplier.get("fiscal_id") if existing_supplier else supplier_raw.get("fiscal_id"),
+        "phone": existing_supplier.get("phone") if existing_supplier else supplier_raw.get("phone"),
+        "email": existing_supplier.get("email") if existing_supplier else supplier_raw.get("email"),
+        "address": supplier_raw.get("address"),
+        "is_new": existing_supplier is None,
+    }
+    supplier_candidates = await _find_supplier_candidates(company_id, supplier_raw.get("name"))
+
+    raw_items = invoice_raw.get("items") or []
+    items, rejected_items = _normalize_and_filter_items(
+        raw_items,
+        invoice_raw.get("supplier_number"),
+        invoice_raw.get("date"),
+    )
+
+    subtotal = float(invoice_raw.get("subtotal_ht") or invoice_raw.get("subtotal") or 0)
+    fodec = float(invoice_raw.get("fodec") or 0)
+    total_tax = float(invoice_raw.get("total_tax") or 0)
+    timbre = float(invoice_raw.get("timbre_fiscal") or invoice_raw.get("timbre") or 0)
+    total_ttc = float(invoice_raw.get("total_ttc") or 0)
+    net_a_payer = float(invoice_raw.get("net_a_payer") or 0)
+
+    if subtotal == 0:
+        # Fallback 1 : HT = total_ttc - total_tax - timbre (cohérent avec le document)
+        if total_ttc > 0 and (total_tax > 0 or timbre > 0):
+            subtotal = round(total_ttc - total_tax - timbre, 3)
+        # Fallback 2 : somme total_ht des lignes
+        elif items:
+            ht_from_raw = sum(float(it.get("total_ht") or 0) for it in raw_items)
+            if ht_from_raw > 0:
+                subtotal = round(ht_from_raw, 3)
+            else:
+                tva_rate_fb = float(items[0].get("tax_rate", 19)) if items else 19
+                ttc_from_raw = sum(float(it.get("total_ttc") or it.get("total") or 0) for it in raw_items)
+                if ttc_from_raw > 0 and tva_rate_fb > 0:
+                    subtotal = round(ttc_from_raw / (1 + tva_rate_fb / 100), 3)
+                else:
+                    subtotal = round(sum(
+                        float(i["quantity"]) * float(i["unit_price"]) * (1 - float(i["discount"]) / 100)
+                        for i in items
+                    ), 3)
+
+    assiette_tva = round(subtotal + fodec, 3)
+    # Ne jamais ajouter de TVA si le document indique 0% (auto-entrepreneur, exonéré)
+    # Recalculer uniquement si total_ttc > subtotal (TVA possible mais mal extraite)
+    if total_tax == 0 and assiette_tva > 0 and total_ttc > subtotal + 0.01:
+        tva_rate_main = items[0]["tax_rate"] if items else 19
+        total_tax = round(assiette_tva * tva_rate_main / 100, 3)
+
+    if net_a_payer == 0:
+        if total_ttc > 0:
+            net_a_payer = round(total_ttc + timbre, 3)
+        else:
+            net_a_payer = round(subtotal + fodec + total_tax + timbre, 3)
+
+    tva_rate_main = items[0]["tax_rate"] if items else 19
+
+    date_str = invoice_raw.get("date")
+    if not date_str:
+        date_str = datetime.now().strftime("%Y-%m-%d")
+
+    due_date_str = invoice_raw.get("due_date")
+    if not due_date_str:
+        try:
+            d = datetime.fromisoformat(date_str)
+            due_date_str = (d + timedelta(days=30)).strftime("%Y-%m-%d")
+        except Exception:
+            due_date_str = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+
+    items = await _build_intelligent_items(company_id, items)
+
+    invoice_data = {
+        "supplier_number": invoice_raw.get("supplier_number"),
+        "date": date_str,
+        "due_date": due_date_str,
+        "items": items,
+        "subtotal": round(subtotal, 3),
+        "fodec": round(fodec, 3),
+        "assiette_tva": round(assiette_tva, 3),
+        "total_tax": round(total_tax, 3),
+        "timbre": round(timbre, 3),
+        "total": round(subtotal + fodec + total_tax + timbre, 3),
+        "notes": None,
+    }
+
+    computed_total = round(subtotal + fodec + total_tax + timbre, 3)
+    invoice_data["total"] = computed_total
+
+    workflow = await _find_matching_purchase_process(
+        company_id,
+        supplier_data.get("id"),
+        items,
+    )
+    default_warehouse = await _get_default_warehouse(company_id)
+    workflow.update({
+        "warehouse_id": str(default_warehouse["_id"]) if default_warehouse else None,
+        "warehouse_name": default_warehouse.get("name") if default_warehouse else None,
+        "draft_accounting_only": True,
+    })
+
+    duplicate_invoice = await _find_existing_supplier_invoice(
+        company_id,
+        supplier_data.get("id"),
+        invoice_data.get("supplier_number"),
+        computed_total,
+    )
+
+    inv_ref = invoice_raw.get("supplier_number") or "N/A"
+    journal_entries = _build_journal_entries(
+        supplier_name=supplier_data.get("name") or "Fournisseur",
+        subtotal=subtotal,
+        fodec=fodec,
+        total_tax=total_tax,
+        timbre=timbre,
+        net_a_payer=computed_total,
+        invoice_ref=inv_ref,
+        tva_rate=tva_rate_main
+    )
+
+    planned_actions = _build_planned_actions(
+        supplier_data,
+        computed_total,
+        workflow,
+        journal_entries,
+        items,
+    )
+
+    warnings = []
+    if duplicate_invoice:
+        warnings.append(
+            f"Une facture fournisseur similaire existe déjà ({duplicate_invoice.get('number') or duplicate_invoice.get('supplier_number')})."
+        )
+    if not default_warehouse:
+        warnings.append("Aucun entrepôt par défaut trouvé : les mouvements de stock seront désactivés.")
+    if any(item.get("review_required") for item in items):
+        warnings.append("Certaines lignes semblent stockables mais ne sont pas reliées à un produit connu. Vérifie les décisions de stock avant confirmation.")
+    if rejected_items:
+        warnings.append(f"{len(rejected_items)} ligne(s) ont été rejetées car elles ressemblent à des en-têtes ou métadonnées de facture.")
+
+    return {
+        "supplier": supplier_data,
+        "supplier_candidates": supplier_candidates,
+        "invoice": invoice_data,
+        "journal_entries": journal_entries,
+        "workflow": workflow,
+        "planned_actions": planned_actions,
+        "confidence": extracted.get("confidence", 0),
+        "extraction_method": extracted.get("extraction_method", "unknown"),
+        "provider_requested": requested_provider,
+        "warnings": warnings,
+        "error": extracted.get("error"),
+        "raw_text_preview": extracted.get("raw_text_preview", "")[:300],
+        "supplier_vat_exempt": total_tax == 0 and assiette_tva > 0,
+        "item_diagnostics": {
+            "raw_count": len(raw_items),
+            "accepted_count": len(items),
+            "rejected_count": len(rejected_items),
+            "rejected_items": rejected_items[:10],
+            "item_quality_score": _compute_invoice_item_quality(items),
+        },
+        "filename": file_name,
+        "source_file_path": source_file_path,
+        "duplicate_invoice": {
+            "id": str(duplicate_invoice["_id"]),
+            "number": duplicate_invoice.get("number"),
+            "supplier_number": duplicate_invoice.get("supplier_number"),
+        } if duplicate_invoice else None,
+    }
+
+
+def _score_invoice_parse_payload(payload: Dict[str, Any]) -> float:
+    supplier = payload.get("supplier") or {}
+    invoice = payload.get("invoice") or {}
+    diagnostics = payload.get("item_diagnostics") or {}
+    warnings = payload.get("warnings") or []
+    items = invoice.get("items") or []
+
+    score = 0.0
+    if supplier.get("name"):
+        score += 18
+    if invoice.get("supplier_number"):
+        score += 14
+    if invoice.get("date"):
+        score += 10
+    if invoice.get("total"):
+        score += 14
+    if invoice.get("total_tax") is not None:
+        score += 6
+
+    score += min(len(items) * 5, 25)
+    score += float(diagnostics.get("item_quality_score") or 0) * 25
+
+    rejected = diagnostics.get("rejected_count") or 0
+    raw_count = diagnostics.get("raw_count") or 0
+    if raw_count > 0:
+        rejection_ratio = rejected / raw_count
+        score -= rejection_ratio * 12
+
+    review_count = sum(1 for item in items if item.get("review_required"))
+    if items:
+        score -= (review_count / len(items)) * 10
+
+    score -= min(len(warnings) * 3, 12)
+    score += min(float(payload.get("confidence") or 0) * 10, 10)
+
+    return round(score, 2)
 
 
 async def _build_intelligent_items(company_id: str, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -674,188 +1059,21 @@ async def parse_invoice_document(
 
     source_file_path = _store_source_file(company_id, file.filename or "document", content_type, file_bytes)
 
-    # Extract data
     try:
-        extracted = await extract_invoice_data(file_bytes, file.filename or "", content_type)
+        extracted = await extract_invoice_data(file_bytes, file.filename or "", content_type, provider="gemini")
+        payload = await _build_invoice_parse_payload(
+            company_id=company_id,
+            file_name=file.filename or "",
+            source_file_path=source_file_path,
+            extracted=extracted,
+            requested_provider="gemini",
+        )
+        return payload
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Extraction error: {e}")
         raise HTTPException(status_code=500, detail=f"Erreur d'extraction: {str(e)}")
-
-    supplier_raw = extracted.get("supplier", {})
-    invoice_raw = extracted.get("invoice", {})
-
-    # Check if supplier exists
-    existing_supplier = await _find_existing_supplier(
-        company_id,
-        supplier_raw.get("name"),
-        supplier_raw.get("fiscal_id")
-    )
-
-    supplier_data = {
-        "id": str(existing_supplier["_id"]) if existing_supplier else None,
-        "name": existing_supplier.get("display_name") if existing_supplier else supplier_raw.get("name"),
-        "fiscal_id": existing_supplier.get("fiscal_id") if existing_supplier else supplier_raw.get("fiscal_id"),
-        "phone": existing_supplier.get("phone") if existing_supplier else supplier_raw.get("phone"),
-        "email": existing_supplier.get("email") if existing_supplier else supplier_raw.get("email"),
-        "address": supplier_raw.get("address"),
-        "is_new": existing_supplier is None,
-    }
-
-    # Normalize items
-    raw_items = invoice_raw.get("items") or []
-    items = []
-    for item in raw_items:
-        qty = float(item.get("quantity") or 1)
-        price = float(item.get("unit_price") or 0)
-        tva = float(item.get("tax_rate") or 19)
-        disc = float(item.get("discount") or 0)
-        ht = qty * price * (1 - disc / 100)
-        ttc = round(ht * (1 + tva / 100), 3)
-        items.append({
-            "description": str(item.get("description") or ""),
-            "quantity": qty,
-            "unit_price": price,
-            "tax_rate": tva,
-            "discount": disc,
-            "total": ttc
-        })
-
-    # Totaux extraits par Gemini — RÈGLE : ne recalculer QUE ce qui est absent
-    # FODEC et Timbre = 0 si absents de la facture (jamais inventés)
-    subtotal  = float(invoice_raw.get("subtotal_ht") or invoice_raw.get("subtotal") or 0)
-    fodec     = float(invoice_raw.get("fodec") or 0)          # 0 si facture sans FODEC
-    total_tax = float(invoice_raw.get("total_tax") or 0)
-    timbre    = float(invoice_raw.get("timbre_fiscal") or invoice_raw.get("timbre") or 0)  # 0 si sans timbre
-    total_ttc = float(invoice_raw.get("total_ttc") or 0)
-    net_a_payer = float(invoice_raw.get("net_a_payer") or 0)
-
-    # HT depuis les items si Gemini ne l'a pas retourné
-    if items and subtotal == 0:
-        subtotal = round(sum(
-            float(i["quantity"]) * float(i["unit_price"]) * (1 - float(i["discount"]) / 100)
-            for i in items
-        ), 3)
-
-    # Assiette TVA = HT + FODEC (FODEC peut être 0 — c'est normal)
-    assiette_tva = round(subtotal + fodec, 3)
-
-    # TVA : recalcul uniquement si absente de la facture
-    if total_tax == 0 and assiette_tva > 0:
-        tva_rate_main = items[0]["tax_rate"] if items else 19
-        total_tax = round(assiette_tva * tva_rate_main / 100, 3)
-
-    # Net à payer : priorité au champ extrait par Gemini
-    if net_a_payer == 0:
-        if total_ttc > 0:
-            net_a_payer = round(total_ttc + timbre, 3)
-        else:
-            net_a_payer = round(subtotal + fodec + total_tax + timbre, 3)
-
-    tva_rate_main = items[0]["tax_rate"] if items else 19
-
-    # Invoice date & due date
-    date_str = invoice_raw.get("date")
-    if not date_str:
-        date_str = datetime.now().strftime("%Y-%m-%d")
-
-    due_date_str = invoice_raw.get("due_date")
-    if not due_date_str:
-        try:
-            d = datetime.fromisoformat(date_str)
-            due_date_str = (d + timedelta(days=30)).strftime("%Y-%m-%d")
-        except Exception:
-            due_date_str = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
-
-    items = await _build_intelligent_items(company_id, items)
-
-    invoice_data = {
-        "supplier_number": invoice_raw.get("supplier_number"),
-        "date": date_str,
-        "due_date": due_date_str,
-        "items": items,
-        "subtotal": round(subtotal, 3),
-        "fodec": round(fodec, 3),
-        "assiette_tva": round(assiette_tva, 3),
-        "total_tax": round(total_tax, 3),
-        "timbre": round(timbre, 3),
-        "total": round(subtotal + fodec + total_tax + timbre, 3),   # calculé, pas Gemini
-        "notes": None,
-    }
-
-    # Total réel = somme des composants (source de vérité, identique à l'endpoint confirm)
-    computed_total = round(subtotal + fodec + total_tax + timbre, 3)
-
-    # Mettre à jour invoice_data.total avec le total calculé (pas celui de Gemini)
-    invoice_data["total"] = computed_total
-
-    workflow = await _find_matching_purchase_process(
-        company_id,
-        supplier_data.get("id"),
-        items,
-    )
-    default_warehouse = await _get_default_warehouse(company_id)
-    workflow.update({
-        "warehouse_id": str(default_warehouse["_id"]) if default_warehouse else None,
-        "warehouse_name": default_warehouse.get("name") if default_warehouse else None,
-        "draft_accounting_only": True,
-    })
-
-    duplicate_invoice = await _find_existing_supplier_invoice(
-        company_id,
-        supplier_data.get("id"),
-        invoice_data.get("supplier_number"),
-        computed_total,
-    )
-
-    # Build journal entries preview
-    inv_ref = invoice_raw.get("supplier_number") or "N/A"
-    journal_entries = _build_journal_entries(
-        supplier_name=supplier_data.get("name") or "Fournisseur",
-        subtotal=subtotal,
-        fodec=fodec,
-        total_tax=total_tax,
-        timbre=timbre,
-        net_a_payer=computed_total,
-        invoice_ref=inv_ref,
-        tva_rate=tva_rate_main
-    )
-
-    planned_actions = _build_planned_actions(
-        supplier_data,
-        computed_total,
-        workflow,
-        journal_entries,
-        items,
-    )
-
-    warnings = []
-    if duplicate_invoice:
-        warnings.append(
-            f"Une facture fournisseur similaire existe déjà ({duplicate_invoice.get('number') or duplicate_invoice.get('supplier_number')})."
-        )
-    if not default_warehouse:
-        warnings.append("Aucun entrepôt par défaut trouvé : les mouvements de stock seront désactivés.")
-    if any(item.get("review_required") for item in items):
-        warnings.append("Certaines lignes semblent stockables mais ne sont pas reliées à un produit connu. Vérifie les décisions de stock avant confirmation.")
-
-    return {
-        "supplier": supplier_data,
-        "invoice": invoice_data,
-        "journal_entries": journal_entries,
-        "workflow": workflow,
-        "planned_actions": planned_actions,
-        "confidence": extracted.get("confidence", 0),
-        "extraction_method": extracted.get("extraction_method", "unknown"),
-        "warnings": warnings,
-        "error": extracted.get("error"),
-        "raw_text_preview": extracted.get("raw_text_preview", "")[:300],
-        "filename": file.filename,
-        "source_file_path": source_file_path,
-        "duplicate_invoice": {
-            "id": str(duplicate_invoice["_id"]),
-            "number": duplicate_invoice.get("number"),
-        } if duplicate_invoice else None,
-    }
 
 
 @router.post("/confirm")
