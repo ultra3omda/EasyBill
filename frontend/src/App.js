@@ -94,21 +94,23 @@ const ProtectedRoute = ({ children }) => {
     setCheckingCompany(true);
 
     const checkCompany = async () => {
-      if (user) {
-        try {
-          const response = await companiesAPI.list();
-          setHasCompany(response.data && response.data.length > 0);
-        } catch (error) {
-          console.error('Erreur vérification entreprise:', error);
-          if (error.response?.status === 401) {
-            // Token invalide → retour login
-            setHasCompany(null);
-          } else {
-            setHasCompany(false);
-          }
-        }
+      if (!user) {
+        setCheckingCompany(false);
+        return;
       }
-      setCheckingCompany(false);
+      try {
+        const response = await companiesAPI.list();
+        setHasCompany(response.data && response.data.length > 0);
+      } catch (error) {
+        console.error('Erreur vérification entreprise:', error);
+        if (error.response?.status === 401) {
+          setHasCompany(null);
+        } else {
+          setHasCompany(false);
+        }
+      } finally {
+        setCheckingCompany(false);
+      }
     };
 
     if (!loading) {

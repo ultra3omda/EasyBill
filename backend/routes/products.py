@@ -1,8 +1,11 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Query, Request
+from fastapi import APIRouter, HTTPException, status, Depends, Query, Request, Body, UploadFile, File
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
 from datetime import datetime, timezone
+from pathlib import Path
 import os
+import shutil
+import uuid
 from typing import Optional
 from models.product import Product, ProductCreate, ProductUpdate
 from utils.dependencies import get_current_user, get_current_company
@@ -12,6 +15,9 @@ router = APIRouter(prefix="/api/products", tags=["Products"])
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
+
+UPLOAD_DIR_PRODUCTS = Path(__file__).resolve().parent.parent / "uploads" / "products"
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 
 
 def serialize_product(p: dict) -> dict:
@@ -35,9 +41,12 @@ def serialize_product(p: dict) -> dict:
         "destination": p.get("destination", "both"),
         "reference_type": p.get("reference_type", "disabled"),
         "quantity_type": p.get("quantity_type", "simple"),
+        "composite_field_name": p.get("composite_field_name"),
+        "composite_operation": p.get("composite_operation", "multiply"),
         "barcode": p.get("barcode"),
         "is_composite": p.get("is_composite", False),
         "components": p.get("components", []),
+        "images": p.get("images", []),
         "total_sold": p.get("total_sold", 0),
         "is_active": p.get("is_active", True),
         "created_at": p["created_at"].isoformat() if p.get("created_at") else None,
@@ -68,7 +77,7 @@ async def create_product(
 ):
     company = await get_current_company(current_user, company_id)
     
-    product_dict = product_data.dict(exclude_unset=True)
+    product_dict = product_data.model_dump(exclude_unset=True)
 
     # Normalisation : unit_price (ancien) → selling_price
     if product_dict.get("unit_price") is not None and not product_dict.get("selling_price"):
@@ -92,6 +101,7 @@ async def create_product(
         "company_id": ObjectId(company_id),
         "quantity_in_stock": product_dict.get("quantity_in_stock", 0),
         "is_active": True,
+        "images": product_dict.get("images", []),
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc)
     })
@@ -192,28 +202,72 @@ async def get_product(
     return serialize_product(product)
 
 
+# Champs autorisés pour la mise à jour produit (évite 422 et champs inconnus)
+PRODUCT_UPDATE_KEYS = {
+    "name", "sku", "description", "category", "brand", "type",
+    "selling_price", "purchase_price", "tax_rate", "unit",
+    "quantity_in_stock", "min_stock_level", "warehouse_id",
+    "destination", "reference_type", "quantity_type",
+    "composite_field_name", "composite_operation",
+    "barcode", "is_composite", "components", "images", "is_active"
+}
+
+
 @router.put("/{product_id}")
 async def update_product(
     product_id: str,
-    product_update: ProductUpdate,
     request: Request,
     company_id: str = Query(...),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    body: dict = Body(...)
 ):
     company = await get_current_company(current_user, company_id)
     
-    product = await db.products.find_one({"_id": ObjectId(product_id)})
+    product = await db.products.find_one({
+        "_id": ObjectId(product_id),
+        "company_id": ObjectId(company_id)
+    })
+    if not product:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     
-    update_data = {k: v for k, v in product_update.dict(exclude_unset=True).items()}
+    update_data = {}
+    for key in PRODUCT_UPDATE_KEYS:
+        if key not in body:
+            continue
+        val = body[key]
+        if key in ("selling_price", "purchase_price", "tax_rate") and val is not None:
+            try:
+                val = float(val)
+            except (TypeError, ValueError):
+                pass
+        if key in ("quantity_in_stock", "min_stock_level") and val is not None:
+            try:
+                val = int(val)
+            except (TypeError, ValueError):
+                pass
+        if key == "is_composite":
+            val = bool(val) if val is not None else False
+        if key == "components":
+            if isinstance(val, list):
+                val = [{"product_id": str(c.get("product_id", "")), "quantity": float(c.get("quantity", 0)) if c.get("quantity") not in (None, "") else 1.0} for c in val if c.get("product_id")]
+            else:
+                val = []
+        if key == "warehouse_id":
+            if val and str(val).strip():
+                try:
+                    val = ObjectId(val)
+                except Exception:
+                    val = None
+            else:
+                val = None
+        update_data[key] = val
+    
     update_data["updated_at"] = datetime.now(timezone.utc)
     
-    result = await db.products.update_one(
+    await db.products.update_one(
         {"_id": ObjectId(product_id), "company_id": ObjectId(company_id)},
         {"$set": update_data}
     )
-    
-    if result.matched_count == 0:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     
     await log_product_action(
         company_id, str(current_user["_id"]), current_user.get("full_name", ""),
@@ -221,6 +275,65 @@ async def update_product(
     )
     
     return {"message": "Product updated successfully"}
+
+
+@router.post("/{product_id}/image")
+async def upload_product_image(
+    product_id: str,
+    file: UploadFile = File(...),
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """Upload une image pour un article. Enregistrée dans uploads/products/."""
+    company = await get_current_company(current_user, company_id)
+    product = await db.products.find_one({
+        "_id": ObjectId(product_id),
+        "company_id": ObjectId(company_id)
+    })
+    if not product:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    suffix = Path(file.filename or "image").suffix.lower()
+    if suffix not in ALLOWED_IMAGE_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Format non autorisé. Utilisez: jpg, jpeg, png, gif ou webp."
+        )
+    UPLOAD_DIR_PRODUCTS.mkdir(parents=True, exist_ok=True)
+    name = f"{product_id}_{uuid.uuid4().hex[:8]}{suffix}"
+    path = UPLOAD_DIR_PRODUCTS / name
+    try:
+        content = await file.read()
+        path.write_bytes(content)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erreur lors de l'enregistrement du fichier."
+        )
+    image_url = f"/uploads/products/{name}"
+    images = list(product.get("images") or [])
+    images = [image_url]
+    await db.products.update_one(
+        {"_id": ObjectId(product_id), "company_id": ObjectId(company_id)},
+        {"$set": {"images": images, "updated_at": datetime.now(timezone.utc)}}
+    )
+    return {"image": image_url, "images": images}
+
+
+@router.delete("/{product_id}/image")
+async def delete_product_image(
+    product_id: str,
+    company_id: str = Query(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """Supprime l'image d'un article."""
+    company = await get_current_company(current_user, company_id)
+    result = await db.products.update_one(
+        {"_id": ObjectId(product_id), "company_id": ObjectId(company_id)},
+        {"$set": {"images": [], "updated_at": datetime.now(timezone.utc)}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    return {"message": "Image supprimée"}
 
 
 @router.delete("/{product_id}")

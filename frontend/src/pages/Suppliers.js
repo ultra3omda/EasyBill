@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
 import SupplierFormModal from '../components/modals/SupplierFormModal';
 import { Card } from '../components/ui/card';
@@ -18,6 +19,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
 } from '../components/ui/dropdown-menu';
 import {
   Select,
@@ -32,6 +34,7 @@ import { useCompany } from '../hooks/useCompany';
 import { suppliersAPI } from '../services/api';
 
 const Suppliers = () => {
+  const navigate = useNavigate();
   const { currentCompany } = useCompany();
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,6 +42,20 @@ const Suppliers = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [visibleColumns, setVisibleColumns] = useState({
+    ref: true,
+    nom: true,
+    type: true,
+    entreprise: true,
+    email: true,
+    telephone: true,
+    solde: true,
+    chiffre_affaire: true,
+    action: true
+  });
+  const toggleSupplierColumn = (key) => {
+    setVisibleColumns(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   useEffect(() => {
     if (currentCompany?.id) {
@@ -114,13 +131,6 @@ const Suppliers = () => {
             <p className="text-gray-500 text-sm">Fournisseurs • {currentCompany?.name || 'Mycompany'}</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" className="text-gray-600">
-              Action
-              <ChevronDown className="w-4 h-4 ml-2" />
-            </Button>
-            <Button variant="outline" className="text-gray-600">
-              Importer
-            </Button>
             <Button 
               onClick={openNewDialog}
               className="bg-amber-600 hover:bg-amber-700 text-white"
@@ -203,10 +213,43 @@ const Suppliers = () => {
         <Card className="p-0 overflow-hidden">
           {/* Table Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between p-4 border-b bg-gray-50">
-            <Button variant="outline" className="flex items-center gap-2 text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100">
-              Affichage des colonnes
-              <ChevronDown className="w-4 h-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2 text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100">
+                  Affichage des colonnes
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuCheckboxItem checked={visibleColumns.ref} onCheckedChange={() => toggleSupplierColumn('ref')}>
+                  REF
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.nom} onCheckedChange={() => toggleSupplierColumn('nom')}>
+                  Nom affiché
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.type} onCheckedChange={() => toggleSupplierColumn('type')}>
+                  Type
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.entreprise} onCheckedChange={() => toggleSupplierColumn('entreprise')}>
+                  Entreprise
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.email} onCheckedChange={() => toggleSupplierColumn('email')}>
+                  Email
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.telephone} onCheckedChange={() => toggleSupplierColumn('telephone')}>
+                  Téléphone
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.solde} onCheckedChange={() => toggleSupplierColumn('solde')}>
+                  Solde
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.chiffre_affaire} onCheckedChange={() => toggleSupplierColumn('chiffre_affaire')}>
+                  Chiffre d'affaire
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.action} onCheckedChange={() => toggleSupplierColumn('action')}>
+                  Action
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <div className="flex items-center gap-4 mt-4 md:mt-0">
               <span className="text-sm text-gray-500">Rechercher:</span>
               <Input
@@ -241,17 +284,19 @@ const Suppliers = () => {
                     <TableHead className="w-12">
                       <input type="checkbox" className="rounded border-gray-300" />
                     </TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">REF</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">NOM AFFICHÉ</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">TYPE</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">ENTREPRISE</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">EMAIL</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">TÉLÉPHONE</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">
-                      SOLDE <ChevronDown className="w-3 h-3 inline" />
-                    </TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">CHIFFRE D'AFFAIRE</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase text-right">ACTION</TableHead>
+                    {visibleColumns.ref && <TableHead className="text-xs font-semibold text-gray-600 uppercase">REF</TableHead>}
+                    {visibleColumns.nom && <TableHead className="text-xs font-semibold text-gray-600 uppercase">NOM AFFICHÉ</TableHead>}
+                    {visibleColumns.type && <TableHead className="text-xs font-semibold text-gray-600 uppercase">TYPE</TableHead>}
+                    {visibleColumns.entreprise && <TableHead className="text-xs font-semibold text-gray-600 uppercase">ENTREPRISE</TableHead>}
+                    {visibleColumns.email && <TableHead className="text-xs font-semibold text-gray-600 uppercase">EMAIL</TableHead>}
+                    {visibleColumns.telephone && <TableHead className="text-xs font-semibold text-gray-600 uppercase">TÉLÉPHONE</TableHead>}
+                    {visibleColumns.solde && (
+                      <TableHead className="text-xs font-semibold text-gray-600 uppercase">
+                        SOLDE <ChevronDown className="w-3 h-3 inline" />
+                      </TableHead>
+                    )}
+                    {visibleColumns.chiffre_affaire && <TableHead className="text-xs font-semibold text-gray-600 uppercase">CHIFFRE D'AFFAIRE</TableHead>}
+                    {visibleColumns.action && <TableHead className="text-xs font-semibold text-gray-600 uppercase text-right">ACTION</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -260,61 +305,71 @@ const Suppliers = () => {
                       <TableCell>
                         <input type="checkbox" className="rounded border-gray-300" />
                       </TableCell>
-                      <TableCell className="text-sm text-gray-600">{supplier.reference || '-'}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 font-semibold text-sm">
-                            {(supplier.display_name || 'F').charAt(0)}
+                      {visibleColumns.ref && <TableCell className="text-sm text-gray-600">{supplier.reference || '-'}</TableCell>}
+                      {visibleColumns.nom && (
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 font-semibold text-sm">
+                              {(supplier.display_name || 'F').charAt(0)}
+                            </div>
+                            <span className="font-medium text-gray-900">{supplier.display_name}</span>
                           </div>
-                          <span className="font-medium text-gray-900">{supplier.display_name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant="outline" 
-                          className={supplier.supplier_type === 'entreprise' 
-                            ? 'bg-amber-50 text-amber-700 border-amber-200' 
-                            : 'bg-blue-50 text-blue-700 border-blue-200'}
-                        >
-                          {supplier.supplier_type === 'entreprise' ? 'Entreprise' : 'Particulier'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-600">{supplier.company_name || '-'}</TableCell>
-                      <TableCell className="text-sm text-gray-600">{supplier.email || '-'}</TableCell>
-                      <TableCell className="text-sm text-gray-600">{supplier.phone || '-'}</TableCell>
-                      <TableCell>
-                        <span className={`font-semibold ${
-                          (supplier.balance || 0) > 0 ? 'text-red-600' : 'text-green-600'
-                        }`}>
-                          {(supplier.balance || 0).toFixed(3)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-900 font-medium">
-                        {(supplier.total_purchases || 0).toFixed(3)} TND
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => navigate(`/contacts/suppliers/${supplier.id}/summary`)}>
-                              <TrendingUp className="w-4 h-4 mr-2" />
-                              Voir synthèse
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(supplier)}>
-                              <Eye className="w-4 h-4 mr-2" />
-                              Voir / Modifier
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(supplier.id)}>
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Supprimer
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+                        </TableCell>
+                      )}
+                      {visibleColumns.type && (
+                        <TableCell>
+                          <Badge 
+                            variant="outline" 
+                            className={supplier.supplier_type === 'entreprise' 
+                              ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                              : 'bg-blue-50 text-blue-700 border-blue-200'}
+                          >
+                            {supplier.supplier_type === 'entreprise' ? 'Entreprise' : 'Particulier'}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      {visibleColumns.entreprise && <TableCell className="text-sm text-gray-600">{supplier.company_name || '-'}</TableCell>}
+                      {visibleColumns.email && <TableCell className="text-sm text-gray-600">{supplier.email || '-'}</TableCell>}
+                      {visibleColumns.telephone && <TableCell className="text-sm text-gray-600">{supplier.phone || '-'}</TableCell>}
+                      {visibleColumns.solde && (
+                        <TableCell>
+                          <span className={`font-semibold ${
+                            (supplier.balance || 0) > 0 ? 'text-red-600' : 'text-green-600'
+                          }`}>
+                            {(supplier.balance || 0).toFixed(3)}
+                          </span>
+                        </TableCell>
+                      )}
+                      {visibleColumns.chiffre_affaire && (
+                        <TableCell className="text-sm text-gray-900 font-medium">
+                          {(supplier.total_purchases || 0).toFixed(3)} TND
+                        </TableCell>
+                      )}
+                      {visibleColumns.action && (
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => navigate(`/contacts/suppliers/${supplier.id}/summary`)}>
+                                <TrendingUp className="w-4 h-4 mr-2" />
+                                Voir synthèse
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEdit(supplier)}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                Voir / Modifier
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(supplier.id)}>
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Supprimer
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>

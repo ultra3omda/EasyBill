@@ -5,6 +5,9 @@ const USE_PROXY = process.env.REACT_APP_USE_PROXY === 'true';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
 const API = USE_PROXY ? '/api' : `${BACKEND_URL}/api`;
 
+// Base URL pour les appels API (portail client, etc.) - même que apiClient
+export const apiBaseUrl = API;
+
 // Create axios instance with default config
 const apiClient = axios.create({
   baseURL: API,
@@ -48,7 +51,7 @@ apiClient.interceptors.response.use(
 export const authAPI = {
   register: (data) => apiClient.post('/auth/register', data),
   login: (data) => apiClient.post('/auth/login', data),
-  googleLogin: (data) => apiClient.post('/auth/google', data, { timeout: 20000 }),
+  googleLogin: (data) => apiClient.post('/auth/google', data, { timeout: 45000 }),
   facebookLogin: (data) => apiClient.post('/auth/facebook', data),
   forgotPassword: (data) => apiClient.post('/auth/forgot-password', data),
   resetPassword: (data) => apiClient.post('/auth/reset-password', data),
@@ -92,11 +95,18 @@ export const customersAPI = {
   getStats: (companyId, id) => apiClient.get(`/customers/${id}/stats?company_id=${companyId}`),
 };
 
+// Client portal API (création accès / envoi lien)
+export const clientPortalAPI = {
+  createAccess: (companyId, customerId, sendEmail = true) =>
+    apiClient.post(`/client-portal/create-access?company_id=${companyId}&customer_id=${customerId}&send_email=${sendEmail}`),
+};
+
 // Suppliers API - Note: trailing slash required to avoid 307 redirect losing auth header
 export const suppliersAPI = {
   create: (companyId, data) => apiClient.post(`/suppliers/?company_id=${companyId}`, data),
   list: (companyId, search = '') => apiClient.get(`/suppliers/?company_id=${companyId}${search ? `&search=${search}` : ''}`),
   get: (companyId, id) => apiClient.get(`/suppliers/${id}?company_id=${companyId}`),
+  getStats: (companyId, supplierId) => apiClient.get(`/suppliers/${supplierId}/stats?company_id=${companyId}`),
   update: (companyId, id, data) => apiClient.put(`/suppliers/${id}?company_id=${companyId}`, data),
   delete: (companyId, id) => apiClient.delete(`/suppliers/${id}?company_id=${companyId}`),
 };
@@ -111,6 +121,12 @@ export const productsAPI = {
   get: (companyId, id) => apiClient.get(`/products/${id}?company_id=${companyId}`),
   update: (companyId, id, data) => apiClient.put(`/products/${id}?company_id=${companyId}`, data),
   delete: (companyId, id) => apiClient.delete(`/products/${id}?company_id=${companyId}`),
+  uploadImage: (companyId, productId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient.post(`/products/${productId}/image?company_id=${companyId}`, formData);
+  },
+  deleteImage: (companyId, productId) => apiClient.delete(`/products/${productId}/image?company_id=${companyId}`),
   // Import/Export
   downloadTemplate: (companyId) => `${API}/products/export/template?company_id=${companyId}`,
   importProducts: (companyId, formData) => apiClient.post(`/products/import?company_id=${companyId}`, formData, {

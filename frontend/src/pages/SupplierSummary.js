@@ -10,9 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { ArrowLeft, FileText, CreditCard, TrendingDown, DollarSign, ShoppingCart, Mail, Phone } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import axios from 'axios';
-
-const API_URL = process.env.REACT_APP_BACKEND_URL;
+import { suppliersAPI } from '../services/api';
 
 const SupplierSummary = () => {
   const { supplierId } = useParams();
@@ -20,28 +18,29 @@ const SupplierSummary = () => {
   const { currentCompany } = useCompany();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (currentCompany && supplierId) {
       loadData();
+    } else {
+      setLoading(false);
     }
   }, [currentCompany, supplierId]);
 
   const loadData = async () => {
     if (!currentCompany || !supplierId) return;
     setLoading(true);
+    setError(null);
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get(
-        `${API_URL}/api/suppliers/${supplierId}/stats?company_id=${currentCompany.id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await suppliersAPI.getStats(currentCompany.id, supplierId);
       setData(res.data);
-    } catch (error) {
-      console.error('Error loading supplier stats:', error);
+    } catch (err) {
+      console.error('Error loading supplier stats:', err);
+      setError(err.response?.data?.detail || 'Fournisseur non trouvé');
       toast({
         title: "Erreur",
-        description: "Impossible de charger les statistiques fournisseur",
+        description: typeof (err.response?.data?.detail) === 'string' ? err.response.data.detail : "Impossible de charger les statistiques fournisseur",
         variant: "destructive"
       });
     } finally {
@@ -60,7 +59,12 @@ const SupplierSummary = () => {
   if (!data) {
     return (
       <AppLayout>
-        <div className="text-center py-20">Fournisseur non trouvé</div>
+        <div className="text-center py-20 space-y-4">
+          <p className="text-gray-600">{error || 'Fournisseur non trouvé'}</p>
+          <Button variant="outline" onClick={() => navigate('/contacts/suppliers')}>
+            Retour aux fournisseurs
+          </Button>
+        </div>
       </AppLayout>
     );
   }

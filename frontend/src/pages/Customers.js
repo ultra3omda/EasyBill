@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import { customersAPI } from '../services/api';
+import { customersAPI, clientPortalAPI } from '../services/api';
 import { useCompany } from '../hooks/useCompany';
 import AppLayout from '../components/layout/AppLayout';
 import CustomerFormModal from '../components/modals/CustomerFormModal';
@@ -22,6 +22,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
 } from '../components/ui/dropdown-menu';
 import {
   Select,
@@ -43,6 +44,20 @@ const Customers = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [visibleColumns, setVisibleColumns] = useState({
+    ref: true,
+    nom: true,
+    type: true,
+    entreprise: true,
+    email: true,
+    telephone: true,
+    solde: true,
+    chiffre_affaire: true,
+    action: true
+  });
+  const toggleCustomerColumn = (key) => {
+    setVisibleColumns(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   useEffect(() => {
     if (currentCompany) {
@@ -76,31 +91,29 @@ const Customers = () => {
   };
 
   const handleSendPortalLink = async (customerId) => {
+    if (!currentCompany?.id) {
+      toast({ title: 'Erreur', description: 'Aucune entreprise sélectionnée', variant: 'destructive' });
+      return;
+    }
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${API_URL}/api/client-portal/create-access?customer_id=${customerId}&company_id=${currentCompany.id}&send_email=true`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        toast({ 
-          title: 'Succès', 
-          description: data.email_sent ? 'Lien du portail envoyé par email' : 'Lien du portail créé (email non envoyé)' 
-        });
-      } else {
-        throw new Error('Erreur lors de l\'envoi');
+      const res = await clientPortalAPI.createAccess(currentCompany.id, customerId, true);
+      const data = res.data;
+      const portalUrl = data.portal_url;
+      if (portalUrl && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(portalUrl);
       }
+      const emailMsg = data.email_sent ? ' Lien envoyé par email.' : ' (Email non configuré : envoyez le lien manuellement.)';
+      toast({
+        title: 'Succès',
+        description: (portalUrl ? 'Lien copié dans le presse-papier.' : 'Lien créé.') + emailMsg
+      });
     } catch (error) {
       console.error('Error sending portal link:', error);
-      toast({ 
-        title: 'Erreur', 
-        description: 'Impossible d\'envoyer le lien du portail', 
-        variant: 'destructive' 
+      const detail = error.response?.data?.detail;
+      toast({
+        title: 'Erreur',
+        description: typeof detail === 'string' ? detail : 'Impossible d\'envoyer le lien du portail',
+        variant: 'destructive'
       });
     }
   };
@@ -145,22 +158,13 @@ const Customers = () => {
             <h1 className="text-2xl font-semibold text-gray-900">Synthèse des clients</h1>
             <p className="text-gray-500 text-sm">Clients • {currentCompany?.name || 'Mycompany'}</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" className="text-gray-600">
-              Action
-              <ChevronDown className="w-4 h-4 ml-2" />
-            </Button>
-            <Button variant="outline" className="text-gray-600">
-              Importer
-            </Button>
-            <Button 
-              className="bg-violet-600 hover:bg-violet-700 text-white" 
-              onClick={openCreateModal}
-              data-testid="add-customer-btn"
-            >
-              Nouveau client
-            </Button>
-          </div>
+          <Button
+            className="bg-violet-600 hover:bg-violet-700 text-white"
+            onClick={openCreateModal}
+            data-testid="add-customer-btn"
+          >
+            Nouveau client
+          </Button>
         </div>
 
         {/* KPI Cards - Iberis Style */}
@@ -235,10 +239,43 @@ const Customers = () => {
         <Card className="p-0 overflow-hidden">
           {/* Table Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between p-4 border-b bg-gray-50">
-            <Button variant="outline" className="flex items-center gap-2 text-violet-600 border-violet-200 bg-violet-50 hover:bg-violet-100">
-              Affichage des colonnes
-              <ChevronDown className="w-4 h-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2 text-violet-600 border-violet-200 bg-violet-50 hover:bg-violet-100">
+                  Affichage des colonnes
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuCheckboxItem checked={visibleColumns.ref} onCheckedChange={() => toggleCustomerColumn('ref')}>
+                  REF
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.nom} onCheckedChange={() => toggleCustomerColumn('nom')}>
+                  Nom affiché
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.type} onCheckedChange={() => toggleCustomerColumn('type')}>
+                  Type
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.entreprise} onCheckedChange={() => toggleCustomerColumn('entreprise')}>
+                  Entreprise
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.email} onCheckedChange={() => toggleCustomerColumn('email')}>
+                  Email
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.telephone} onCheckedChange={() => toggleCustomerColumn('telephone')}>
+                  Téléphone
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.solde} onCheckedChange={() => toggleCustomerColumn('solde')}>
+                  Solde
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.chiffre_affaire} onCheckedChange={() => toggleCustomerColumn('chiffre_affaire')}>
+                  Chiffre d'affaire
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={visibleColumns.action} onCheckedChange={() => toggleCustomerColumn('action')}>
+                  Action
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <div className="flex items-center gap-4 mt-4 md:mt-0">
               <span className="text-sm text-gray-500">Rechercher:</span>
               <Input
@@ -273,17 +310,19 @@ const Customers = () => {
                     <TableHead className="w-12">
                       <input type="checkbox" className="rounded border-gray-300" />
                     </TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">REF</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">NOM AFFICHÉ</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">TYPE</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">ENTREPRISE</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">EMAIL</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">TÉLÉPHONE</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">
-                      SOLDE <ChevronDown className="w-3 h-3 inline" />
-                    </TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">CHIFFRE D'AFFAIRE</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase text-right">ACTION</TableHead>
+                    {visibleColumns.ref && <TableHead className="text-xs font-semibold text-gray-600 uppercase">REF</TableHead>}
+                    {visibleColumns.nom && <TableHead className="text-xs font-semibold text-gray-600 uppercase">NOM AFFICHÉ</TableHead>}
+                    {visibleColumns.type && <TableHead className="text-xs font-semibold text-gray-600 uppercase">TYPE</TableHead>}
+                    {visibleColumns.entreprise && <TableHead className="text-xs font-semibold text-gray-600 uppercase">ENTREPRISE</TableHead>}
+                    {visibleColumns.email && <TableHead className="text-xs font-semibold text-gray-600 uppercase">EMAIL</TableHead>}
+                    {visibleColumns.telephone && <TableHead className="text-xs font-semibold text-gray-600 uppercase">TÉLÉPHONE</TableHead>}
+                    {visibleColumns.solde && (
+                      <TableHead className="text-xs font-semibold text-gray-600 uppercase">
+                        SOLDE <ChevronDown className="w-3 h-3 inline" />
+                      </TableHead>
+                    )}
+                    {visibleColumns.chiffre_affaire && <TableHead className="text-xs font-semibold text-gray-600 uppercase">CHIFFRE D'AFFAIRE</TableHead>}
+                    {visibleColumns.action && <TableHead className="text-xs font-semibold text-gray-600 uppercase text-right">ACTION</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -292,65 +331,75 @@ const Customers = () => {
                       <TableCell>
                         <input type="checkbox" className="rounded border-gray-300" />
                       </TableCell>
-                      <TableCell className="text-sm text-gray-600">{customer.reference || '-'}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 font-semibold text-sm">
-                            {customer.display_name?.charAt(0)}
+                      {visibleColumns.ref && <TableCell className="text-sm text-gray-600">{customer.reference || '-'}</TableCell>}
+                      {visibleColumns.nom && (
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 font-semibold text-sm">
+                              {customer.display_name?.charAt(0)}
+                            </div>
+                            <span className="font-medium text-gray-900">{customer.display_name}</span>
                           </div>
-                          <span className="font-medium text-gray-900">{customer.display_name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant="outline" 
-                          className={customer.client_type === 'entreprise' 
-                            ? 'bg-violet-50 text-violet-700 border-violet-200' 
-                            : 'bg-blue-50 text-blue-700 border-blue-200'}
-                        >
-                          {customer.client_type === 'entreprise' ? 'Entreprise' : 'Particulier'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-600">{customer.company_name || '-'}</TableCell>
-                      <TableCell className="text-sm text-gray-600">{customer.email || '-'}</TableCell>
-                      <TableCell className="text-sm text-gray-600">{customer.phone || '-'}</TableCell>
-                      <TableCell>
-                        <span className={`font-semibold ${
-                          (customer.balance || 0) > 0 ? 'text-red-600' : 'text-green-600'
-                        }`}>
-                          {(customer.balance || 0).toFixed(3)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-900 font-medium">
-                        {(customer.total_invoiced || 0).toFixed(3)} TND
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => navigate(`/contacts/customers/${customer.id}/summary`)}>
-                              <TrendingUp className="w-4 h-4 mr-2" />
-                              Voir synthèse
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openEditModal(customer)}>
-                              <Eye className="w-4 h-4 mr-2" />
-                              Voir / Modifier
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleSendPortalLink(customer.id)}>
-                              <ExternalLink className="w-4 h-4 mr-2" />
-                              Envoyer lien portail
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(customer.id)}>
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Supprimer
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+                        </TableCell>
+                      )}
+                      {visibleColumns.type && (
+                        <TableCell>
+                          <Badge 
+                            variant="outline" 
+                            className={customer.client_type === 'entreprise' 
+                              ? 'bg-violet-50 text-violet-700 border-violet-200' 
+                              : 'bg-blue-50 text-blue-700 border-blue-200'}
+                          >
+                            {customer.client_type === 'entreprise' ? 'Entreprise' : 'Particulier'}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      {visibleColumns.entreprise && <TableCell className="text-sm text-gray-600">{customer.company_name || '-'}</TableCell>}
+                      {visibleColumns.email && <TableCell className="text-sm text-gray-600">{customer.email || '-'}</TableCell>}
+                      {visibleColumns.telephone && <TableCell className="text-sm text-gray-600">{customer.phone || '-'}</TableCell>}
+                      {visibleColumns.solde && (
+                        <TableCell>
+                          <span className={`font-semibold ${
+                            (customer.balance || 0) > 0 ? 'text-red-600' : 'text-green-600'
+                          }`}>
+                            {(customer.balance || 0).toFixed(3)}
+                          </span>
+                        </TableCell>
+                      )}
+                      {visibleColumns.chiffre_affaire && (
+                        <TableCell className="text-sm text-gray-900 font-medium">
+                          {(customer.total_invoiced || 0).toFixed(3)} TND
+                        </TableCell>
+                      )}
+                      {visibleColumns.action && (
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => navigate(`/contacts/customers/${customer.id}/summary`)}>
+                                <TrendingUp className="w-4 h-4 mr-2" />
+                                Voir synthèse
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openEditModal(customer)}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                Voir / Modifier
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleSendPortalLink(customer.id)}>
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                                Envoyer lien portail
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(customer.id)}>
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Supprimer
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>

@@ -53,6 +53,8 @@ class ProductCreate(BaseModel):
     destination: str = "both"
     reference_type: str = "disabled"
     quantity_type: str = "simple"
+    composite_field_name: Optional[str] = None
+    composite_operation: str = "multiply"
     barcode: Optional[str] = None
     is_composite: bool = False
     components: List = []
@@ -78,6 +80,8 @@ class ProductUpdate(BaseModel):
     max_stock: Optional[int] = None
     warehouse_id: Optional[str] = None
     destination: Optional[str] = None
+    reference_type: Optional[str] = None
+    quantity_type: Optional[str] = None
     barcode: Optional[str] = None
     is_composite: Optional[bool] = None
     components: Optional[List] = None
