@@ -106,7 +106,7 @@ const Suppliers = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6" data-testid="suppliers-page">
+      <div className="space-y-4" data-testid="suppliers-page">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>

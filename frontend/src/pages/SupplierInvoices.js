@@ -9,6 +9,7 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
+import { TableSkeleton } from '../components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
@@ -293,7 +294,12 @@ const SupplierInvoices = () => {
   };
 
   const getStatusBadge = (status) => {
-    const config = { draft: { label: 'Brouillon', className: 'bg-gray-100 text-gray-800' }, received: { label: 'Reçue', className: 'bg-blue-100 text-blue-800' }, partial: { label: 'Partiel', className: 'bg-orange-100 text-orange-800' }, paid: { label: 'Payée', className: 'bg-green-100 text-green-800' } };
+    const config = {
+      draft: { label: 'Brouillon', variant: 'secondary', tone: 'bg-slate-100 text-slate-700' },
+      received: { label: 'Reçue', variant: 'info', tone: 'bg-blue-50 text-blue-700' },
+      partial: { label: 'Partiel', variant: 'warning', tone: 'bg-amber-50 text-amber-700' },
+      paid: { label: 'Payée', variant: 'success', tone: 'bg-emerald-50 text-emerald-700' }
+    };
     return config[status] || config.received;
   };
 
@@ -344,14 +350,14 @@ const SupplierInvoices = () => {
     }
   }, [filteredDocs, selectedPreviewId]);
 
-  if (!currentCompany) return <AppLayout><div className="text-center py-20">Aucune entreprise sélectionnée</div></AppLayout>;
+  if (!currentCompany) return <AppLayout><div className="page-shell"><div className="rounded-[24px] border border-dashed border-slate-300 bg-slate-50 px-6 py-16 text-center text-slate-500">Aucune entreprise sélectionnée</div></div></AppLayout>;
 
   return (
     <AppLayout>
-      <div className="space-y-6" data-testid="supplier-invoices-page">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div><h1 className="page-header-title">Factures fournisseur</h1><p className="page-header-subtitle">{filteredDocs.length} factures</p></div>
-          <div className="flex flex-wrap gap-2">
+      <div className="page-shell section-stack" data-testid="supplier-invoices-page">
+        <div className="page-header">
+          <div><h1 className="page-header-title">Factures fournisseur</h1><p className="page-header-subtitle">{filteredDocs.length} facture(s) sur le périmètre courant</p></div>
+          <div className="page-actions">
             <Button variant="outline" onClick={() => navigate('/invoice-scanner')}>
               <Upload className="w-4 h-4 mr-2" /> Importer des factures
             </Button>
@@ -359,17 +365,17 @@ const SupplierInvoices = () => {
           </div>
         </div>
 
-        <Card className="p-4"><div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" /><Input placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-11" /></div></Card>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="stat-surface p-6"><div className="flex items-center gap-3"><div className="rounded-2xl bg-violet-100 p-3"><Receipt className="w-5 h-5 text-violet-700" /></div><div><p className="text-sm text-slate-600">Total facturé</p><p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.total.toFixed(3)} TND</p></div></div></Card>
-          <Card className="stat-surface p-6"><div className="flex items-center gap-3"><div className="rounded-2xl bg-green-100 p-3"><CreditCard className="w-5 h-5 text-green-700" /></div><div><p className="text-sm text-slate-600">Payé</p><p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.paid.toFixed(3)} TND</p></div></div></Card>
-          <Card className="stat-surface p-6"><div className="flex items-center gap-3"><div className="rounded-2xl bg-rose-100 p-3"><Receipt className="w-5 h-5 text-rose-700" /></div><div><p className="text-sm text-slate-600">À payer</p><p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.pending.toFixed(3)} TND</p></div></div></Card>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="interactive-lift p-5"><p className="text-xs uppercase tracking-[0.12em] text-slate-400">Total facturé</p><p className="metric-value mt-2">{stats.total.toFixed(3)} TND</p><p className="mt-1 text-sm text-slate-500">{filteredDocs.length} facture(s)</p></Card>
+          <Card className="interactive-lift p-5"><p className="text-xs uppercase tracking-[0.12em] text-slate-400">Payé</p><p className="metric-value mt-2">{stats.paid.toFixed(3)} TND</p><p className="mt-1 text-sm text-slate-500">Décaissements confirmés</p></Card>
+          <Card className="interactive-lift p-5"><p className="text-xs uppercase tracking-[0.12em] text-slate-400">À payer</p><p className="metric-value mt-2">{stats.pending.toFixed(3)} TND</p><p className="mt-1 text-sm text-slate-500">Reste dû aux fournisseurs</p></Card>
         </div>
 
+        <Card className="p-4 md:p-5"><div className="flex flex-col gap-4 md:flex-row md:items-center"><div className="relative flex-1"><Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" /><Input placeholder="Rechercher par fournisseur, numéro ou référence..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-11" /></div><div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">Cliquez une facture pour ouvrir le panneau document</div></div></Card>
+
         <Card>
-          {loading ? (<div className="p-8 text-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div></div>
-          ) : filteredDocs.length === 0 ? (<div className="p-8 text-center"><Receipt className="w-12 h-12 text-slate-300 mx-auto mb-4" /><p className="text-slate-500">Aucune facture fournisseur</p><div className="mt-4 flex justify-center gap-2"><Button variant="outline" onClick={() => navigate('/invoice-scanner')}><Upload className="w-4 h-4 mr-2" /> Importer</Button><Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" /> Créer</Button></div></div>
+          {loading ? (<div className="p-4 md:p-5"><TableSkeleton rows={7} columns={6} /></div>
+          ) : filteredDocs.length === 0 ? (<div className="p-8 text-center"><Receipt className="w-12 h-12 text-slate-300 mx-auto mb-4" /><p className="text-base font-semibold text-slate-900">Aucune facture fournisseur</p><p className="mt-2 text-sm text-slate-500">Importez un document fournisseur ou créez une facture manuelle pour lancer le flux achat.</p><div className="mt-4 flex justify-center gap-2"><Button variant="outline" onClick={() => navigate('/invoice-scanner')}><Upload className="w-4 h-4 mr-2" /> Importer</Button><Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" /> Créer</Button></div></div>
           ) : selectedPreviewDoc ? (
             <div className="grid gap-4 p-4 lg:grid-cols-[320px_minmax(0,1fr)_340px]">
               <Card className="overflow-hidden border-slate-200">
@@ -409,7 +415,7 @@ const SupplierInvoices = () => {
                               <p className="truncate text-xs text-slate-500">{doc.supplier_name || 'Fournisseur non renseigné'}</p>
                             </div>
                           </div>
-                          <Badge className={statusConfig.className}>{statusConfig.label}</Badge>
+                          <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
                         </div>
                         <div className="space-y-1 text-xs text-slate-500">
                           <div className="flex items-center justify-between gap-2">
@@ -538,7 +544,7 @@ const SupplierInvoices = () => {
                       </div>
                       <div className="flex items-start justify-between gap-3">
                         <span className="text-slate-500">Statut</span>
-                        <Badge className={getStatusBadge(selectedPreviewDoc.status).className}>{getStatusBadge(selectedPreviewDoc.status).label}</Badge>
+                        <Badge variant={getStatusBadge(selectedPreviewDoc.status).variant}>{getStatusBadge(selectedPreviewDoc.status).label}</Badge>
                       </div>
                     </div>
                   </div>
@@ -623,9 +629,9 @@ const SupplierInvoices = () => {
                   </div>
                 </div>
                 <div className="max-h-[calc(100vh-18rem)] space-y-2 overflow-y-auto p-3">
-                  {filteredDocs.map((doc) => {
-                    const statusConfig = getStatusBadge(doc.status);
-                    return (
+                {filteredDocs.map((doc) => {
+                  const statusConfig = getStatusBadge(doc.status);
+                  return (
                       <button
                         key={doc.id}
                         type="button"
@@ -642,7 +648,7 @@ const SupplierInvoices = () => {
                               <p className="truncate text-xs text-slate-500">{doc.supplier_name || 'Fournisseur non renseigné'}</p>
                             </div>
                           </div>
-                          <Badge className={statusConfig.className}>{statusConfig.label}</Badge>
+                          <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
                         </div>
                         <div className="space-y-1 text-xs text-slate-500">
                           <div className="flex items-center justify-between gap-2">
@@ -660,8 +666,8 @@ const SupplierInvoices = () => {
                           )}
                         </div>
                       </button>
-                    );
-                  })}
+                  );
+                })}
                 </div>
               </Card>
             </div>
@@ -669,7 +675,7 @@ const SupplierInvoices = () => {
         </Card>
       </div>
 
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{selectedDoc ? 'Modifier' : 'Nouvelle'} facture fournisseur</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">

@@ -7,7 +7,7 @@ import { Calculator, FileText, BookOpen } from 'lucide-react';
 const Accounting = () => {
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div>
           <h1 className="page-header-title">Comptabilité</h1>
           <p className="page-header-subtitle">Gestion comptable automatisée et synchronisée</p>

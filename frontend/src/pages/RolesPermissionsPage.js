@@ -76,7 +76,7 @@ const RolesPermissionsPage = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div>
           <h1 className="page-header-title">Rôles & permissions</h1>
           <p className="page-header-subtitle">Vue d'ensemble des rôles et droits d'accès par module</p>

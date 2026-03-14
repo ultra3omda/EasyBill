@@ -3,9 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useCompany } from '../hooks/useCompany';
 import AppLayout from '../components/layout/AppLayout';
 import SalesDocumentForm from '../components/forms/SalesDocumentForm';
+import { FormSkeleton } from '../components/ui/skeleton';
 import { quotesAPI } from '../services/api';
 import { toast } from '../hooks/use-toast';
-import { Loader2 } from 'lucide-react';
 
 const QuoteForm = () => {
   const navigate = useNavigate();
@@ -65,18 +65,16 @@ const QuoteForm = () => {
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-96">
-          <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
-        </div>
+        <FormSkeleton />
       </AppLayout>
     );
   }
 
   return (
     <AppLayout>
-      <div className="h-[calc(100vh-80px)] overflow-hidden">
-        <div className="p-6 h-full">
-          <h1 className="text-2xl font-bold mb-4">
+      <div className="page-shell h-full overflow-hidden">
+        <div className="h-full">
+          <h1 className="page-header-title mb-4 text-xl">
             {isEditing ? 'Modifier le devis' : 'Nouveau devis'}
           </h1>
           <SalesDocumentForm

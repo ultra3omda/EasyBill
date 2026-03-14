@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { Toaster } from './components/ui/sonner';
+import { PageSkeleton } from './components/ui/skeleton';
 import { companiesAPI } from './services/api';
 
 // Pages
@@ -117,10 +118,9 @@ const ProtectedRoute = ({ children }) => {
 
   if (loading || checkingCompany) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 to-amber-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mx-auto mb-4"></div>
-          <p className="text-gray-500 text-sm">Chargement…</p>
+      <div className="min-h-screen bg-background px-4 py-4 md:px-5 md:py-5">
+        <div className="mx-auto max-w-[1600px]">
+          <PageSkeleton cards={4} withSidePanel />
         </div>
       </div>
     );
@@ -142,8 +142,10 @@ const GuestOnlyRoute = ({ children, fallback = '/dashboard' }) => {
   const { user, loading } = useAuth();
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 to-amber-50">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-violet-600 border-t-transparent"></div>
+      <div className="min-h-screen bg-background px-4 py-4 md:px-5 md:py-5">
+        <div className="mx-auto max-w-[1600px]">
+          <PageSkeleton cards={3} withTable={false} />
+        </div>
       </div>
     );
   }

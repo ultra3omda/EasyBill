@@ -217,7 +217,7 @@ async def parse_bank_statement(
     company_id: str = Query(...),
     provider: str = Query(
         "auto",
-        description="Provider d'extraction: auto (Document AI puis pdfplumber/gemini), document_ai, pdfplumber, gemini, openai, benchmark"
+        description="Provider d'extraction: auto, document_ai, pdfplumber, gemini, openai, anthropic, benchmark"
     ),
     current_user: dict = Depends(get_current_user)
 ):
@@ -266,13 +266,13 @@ async def parse_bank_statement(
 
     # ══════════════════════════════════════════════════════════════════════════
     # STRATÉGIE D'EXTRACTION :
-    #   provider=auto : PDF→pdfplumber, Image→Gemini
-    #   provider=pdfplumber|gemini|openai : forcer un seul
+    #   provider=auto : stratégie partagée optimisée
+    #   provider=pdfplumber|gemini|openai|anthropic : forcer un seul
     #   provider=benchmark : exécuter tous et retourner timing + comparaison
     # ══════════════════════════════════════════════════════════════════════════
 
     def _sync_extract_bank(skip_ai=False, force_provider=None):
-        """Si skip_ai=True: pdfplumber uniquement. force_provider: pdfplumber|gemini|openai|benchmark."""
+        """Si skip_ai=True: pdfplumber uniquement. force_provider: pdfplumber|gemini|openai|anthropic|benchmark."""
         import os as _os, time, json as _json
 
         def _run_pdfplumber_extract():
@@ -626,6 +626,69 @@ async def parse_bank_statement(
                 logger.warning(f"OpenAI extract erreur: {e}")
                 return None
 
+        def _run_anthropic_extract():
+            anthropic_key = _os.environ.get("ANTHROPIC_API_KEY", "")
+            if not anthropic_key:
+                return None
+            try:
+                import anthropic as _anthropic
+                import base64 as _base64
+                aclient = _anthropic.Anthropic(api_key=anthropic_key)
+                b64 = _base64.standard_b64encode(file_bytes).decode("utf-8")
+                if content_type and content_type.startswith("image/"):
+                    media_type = content_type if content_type in ("image/jpeg", "image/png", "image/webp", "image/gif") else "image/jpeg"
+                    content_blocks = [
+                        {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": b64}},
+                        {"type": "text", "text": BANK_STATEMENT_PROMPT},
+                    ]
+                else:
+                    content_blocks = [
+                        {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": b64}},
+                        {"type": "text", "text": BANK_STATEMENT_PROMPT},
+                    ]
+
+                for model_name in ["claude-3-7-sonnet-latest", "claude-3-5-sonnet-latest"]:
+                    try:
+                        response = aclient.messages.create(
+                            model=model_name,
+                            max_tokens=8192,
+                            messages=[{"role": "user", "content": content_blocks}],
+                        )
+                        raw = "".join(
+                            block.text for block in getattr(response, "content", [])
+                            if getattr(block, "type", "") == "text"
+                        ).strip()
+                        if raw.startswith("```"):
+                            raw = re.sub(r"^```(?:json)?\n?", "", raw)
+                            raw = re.sub(r"\n?```$", "", raw.strip())
+                        if not raw:
+                            continue
+                        try:
+                            data = json.loads(raw)
+                        except json.JSONDecodeError:
+                            fixed = re.sub(r",\s*([\]}])", r"\1", raw)
+                            if not fixed.rstrip().endswith("}"):
+                                last_ok = fixed.rfind("},")
+                                if last_ok > 0:
+                                    fixed = fixed[:last_ok + 1] + "\n]}"
+                                else:
+                                    fixed = (fixed.rstrip().rstrip(",") or "{}") + "}"
+                            data = json.loads(fixed)
+                        data["extraction_method"] = f"anthropic ({model_name})"
+                        return data
+                    except Exception as e:
+                        err_str = str(e)
+                        if "404" in err_str or "not_found" in err_str.lower() or "model" in err_str.lower():
+                            logger.warning("Anthropic model %s unavailable, trying next: %s", model_name, e)
+                            continue
+                        if "429" in err_str or "rate" in err_str.lower():
+                            logger.warning("Anthropic %s rate limited, trying next: %s", model_name, e)
+                            continue
+                        raise
+            except Exception as e:
+                logger.warning(f"Anthropic extract erreur: {e}")
+                return None
+
         # ── Mode benchmark : exécuter tous les providers et mesurer ────────────
         if force_provider == "benchmark":
             import sys
@@ -642,7 +705,7 @@ async def parse_bank_statement(
                 pdfplumber_data = _run_pdfplumber_extract()
                 elapsed = round((time.perf_counter() - t0) * 1000)
                 tx_count = len(pdfplumber_data.get("transactions") or []) if pdfplumber_data else 0
-                _log(f"      pdfplumber terminé en {elapsed} ms → {tx_count} transactions")
+                _log(f"      pdfplumber termine en {elapsed} ms -> {tx_count} transactions")
                 bench_results.append({
                     "provider": "pdfplumber",
                     "time_ms": round((time.perf_counter() - t0) * 1000),
@@ -654,13 +717,13 @@ async def parse_bank_statement(
             # 2. Gemini
             gemini_data = None
             if _os.environ.get("GEMINI_API_KEY"):
-                _log("[Benchmark 2/3] Lancement Gemini...")
+                _log("[Benchmark 2/4] Lancement Gemini...")
                 t0 = time.perf_counter()
                 try:
                     gemini_data = _run_gemini_extract()
                     elapsed = round((time.perf_counter() - t0) * 1000)
                     tx_count = len(gemini_data.get("transactions") or []) if gemini_data else 0
-                    _log(f"      Gemini terminé en {elapsed} ms → {tx_count} transactions")
+                    _log(f"      Gemini termine en {elapsed} ms -> {tx_count} transactions")
                     bench_results.append({
                         "provider": "gemini",
                         "time_ms": round((time.perf_counter() - t0) * 1000),
@@ -675,13 +738,13 @@ async def parse_bank_statement(
             # 3. OpenAI
             openai_data = None
             if _os.environ.get("OPENAI_API_KEY"):
-                _log("[Benchmark 3/3] Lancement OpenAI GPT-4o...")
+                _log("[Benchmark 3/4] Lancement OpenAI GPT-4o...")
                 t0 = time.perf_counter()
                 try:
                     openai_data = _run_openai_extract()
                     elapsed = round((time.perf_counter() - t0) * 1000)
                     tx_count = len(openai_data.get("transactions") or []) if openai_data else 0
-                    _log(f"      OpenAI terminé en {elapsed} ms → {tx_count} transactions")
+                    _log(f"      OpenAI termine en {elapsed} ms -> {tx_count} transactions")
                     bench_results.append({
                         "provider": "openai",
                         "time_ms": round((time.perf_counter() - t0) * 1000),
@@ -693,12 +756,40 @@ async def parse_bank_statement(
                 except Exception as e:
                     _log(f"      OpenAI échec: {str(e)[:150]}")
                     bench_results.append({"provider": "openai", "time_ms": round((time.perf_counter() - t0) * 1000), "transactions_count": 0, "success": False, "error": str(e)[:200]})
+            # 4. Anthropic
+            anthropic_data = None
+            if _os.environ.get("ANTHROPIC_API_KEY"):
+                _log("[Benchmark 4/4] Lancement Anthropic Claude...")
+                t0 = time.perf_counter()
+                try:
+                    anthropic_data = _run_anthropic_extract()
+                    elapsed = round((time.perf_counter() - t0) * 1000)
+                    tx_count = len(anthropic_data.get("transactions") or []) if anthropic_data else 0
+                    _log(f"      Anthropic termine en {elapsed} ms -> {tx_count} transactions")
+                    bench_results.append({
+                        "provider": "anthropic",
+                        "time_ms": round((time.perf_counter() - t0) * 1000),
+                        "transactions_count": len(anthropic_data.get("transactions") or []) if anthropic_data else 0,
+                        "success": bool(anthropic_data and (anthropic_data.get("transactions") or [])),
+                        "model": anthropic_data.get("extraction_method", "").replace("anthropic (", "").rstrip(")") if anthropic_data else None,
+                        "_data": anthropic_data
+                    })
+                except Exception as e:
+                    _log(f"      Anthropic échec: {str(e)[:150]}")
+                    bench_results.append({"provider": "anthropic", "time_ms": round((time.perf_counter() - t0) * 1000), "transactions_count": 0, "success": False, "error": str(e)[:200]})
             # Meilleur résultat (plus de transactions)
             best = None
             best_data = None
             for br in bench_results:
                 if br.get("success") and br.get("transactions_count", 0) > 0:
-                    if best is None or br["transactions_count"] > best.get("transactions_count", 0):
+                    if (
+                        best is None or
+                        br["transactions_count"] > best.get("transactions_count", 0) or
+                        (
+                            br["transactions_count"] == best.get("transactions_count", 0) and
+                            br.get("time_ms", 10**9) < best.get("time_ms", 10**9)
+                        )
+                    ):
                         best = br
                         best_data = br.get("_data")
             if not best_data or not best_data.get("transactions"):
@@ -730,7 +821,7 @@ async def parse_bank_statement(
                 "extraction_method": f"benchmark (meilleur: {best['provider']})" if best else "benchmark"
             }
 
-        # ── Provider forcé (pdfplumber, gemini, openai) ─────────────────────────
+        # ── Provider forcé (pdfplumber, gemini, openai, anthropic) ──────────────
         if force_provider == "pdfplumber":
             if content_type != "application/pdf":
                 return {"error": "pdfplumber ne supporte que les PDF", "transactions": []}
@@ -742,6 +833,9 @@ async def parse_bank_statement(
         if force_provider == "openai":
             r = _run_openai_extract()
             return r if r else {"error": "Extraction OpenAI impossible", "transactions": []}
+        if force_provider == "anthropic":
+            r = _run_anthropic_extract()
+            return r if r else {"error": "Extraction Anthropic impossible", "transactions": []}
 
         # ── PDF : pdfplumber par défaut (rapide, toutes les lignes) ─────────────
         if content_type == "application/pdf" and not force_provider:
@@ -773,12 +867,38 @@ async def parse_bank_statement(
         return res if res else {"error": "Extraction impossible", "transactions": []}
 
     # ══════════════════════════════════════════════════════════════════════════
-    # DOCUMENT AI : première tentative si provider=auto et Document AI configuré
-    # (OCR adapté aux relevés tunisiens scannés)
+    # AUTO robuste : réutilise la stratégie du service partagé
+    # (native PDF text -> Document AI -> Gemini -> pdfplumber selon qualité)
     # ══════════════════════════════════════════════════════════════════════════
     extracted = None
     doc_ai_service = BankStatementExtractionService()
-    if provider in ("auto", "document_ai") and doc_ai_service.use_document_ai:
+    if provider == "auto":
+        try:
+            suf = ".pdf" if content_type == "application/pdf" else (".png" if content_type == "image/png" else ".jpg")
+            with tempfile.NamedTemporaryFile(suffix=suf, delete=False) as tmp:
+                tmp.write(file_bytes)
+                tmp_path = tmp.name
+            try:
+                extracted = await asyncio.wait_for(
+                    doc_ai_service.extract_from_file(tmp_path, company_id),
+                    timeout=240.0
+                )
+                if extracted and extracted.get("transactions") is not None:
+                    logger.info(
+                        "AUTO service selection: %d transactions extraites via %s",
+                        len(extracted.get("transactions") or []),
+                        extracted.get("ocr_provider") or extracted.get("extraction_method") or "unknown",
+                    )
+            finally:
+                try:
+                    os.unlink(tmp_path)
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.warning(f"Auto extraction service failed, fallback legacy path: {e}")
+
+    # DOCUMENT AI explicite : on tente uniquement la chaîne pilotée par ce provider
+    if extracted is None and provider == "document_ai" and doc_ai_service.use_document_ai:
         try:
             suf = ".pdf" if content_type == "application/pdf" else (".png" if content_type == "image/png" else ".jpg")
             with tempfile.NamedTemporaryFile(suffix=suf, delete=False) as tmp:
@@ -787,8 +907,8 @@ async def parse_bank_statement(
             try:
                 extracted = await doc_ai_service.extract_from_file(tmp_path, company_id)
                 if extracted and extracted.get("transactions") is not None:
-                    extracted["extraction_method"] = "document_ai"
-                    logger.info(f"Document AI: {len(extracted.get('transactions') or [])} transactions extraites")
+                    extracted["extraction_method"] = extracted.get("extraction_method") or "document_ai"
+                    logger.info(f"Document AI explicit mode: {len(extracted.get('transactions') or [])} transactions extraites")
             finally:
                 try:
                     os.unlink(tmp_path)
@@ -810,10 +930,13 @@ async def parse_bank_statement(
             extracted = None
 
     # Si aucun résultat ou moins de 10 transactions, forcer pdfplumber SANS réappeler l'IA
-    # (sauf mode benchmark ou Document AI : on garde le résultat tel quel)
+    # (sauf mode benchmark, auto-service ou Document AI : on garde le résultat tel quel)
     tx_count = len((extracted or {}).get("transactions") or [])
-    used_document_ai = (extracted or {}).get("extraction_method") == "document_ai"
-    if not (extracted or {}).get("benchmark") and not used_document_ai and (not extracted or tx_count < 10):
+    extraction_method = (extracted or {}).get("extraction_method") or ""
+    ocr_provider = (extracted or {}).get("ocr_provider") or ""
+    used_document_ai = extraction_method == "document_ai" or ocr_provider == "document_ai"
+    used_auto_service = provider == "auto" and extracted is not None
+    if not (extracted or {}).get("benchmark") and not used_document_ai and not used_auto_service and (not extracted or tx_count < 10):
         logger.info(f"Résultat IA insuffisant ({tx_count} tx) — extraction pdfplumber directe (sans IA)...")
         try:
             if content_type != "application/pdf":
@@ -894,6 +1017,8 @@ async def parse_bank_statement(
         "currency": extracted.get("currency", "TND"),
         "opening_balance": extracted.get("opening_balance", 0),
         "closing_balance": extracted.get("closing_balance", 0),
+        "ocr_provider": extracted.get("ocr_provider"),
+        "extraction_method": extracted.get("extraction_method"),
         "transactions": enriched,
         "status": "pending",
         "created_at": now,
@@ -912,6 +1037,8 @@ async def parse_bank_statement(
         "currency": extracted.get("currency", "TND"),
         "opening_balance": extracted.get("opening_balance", 0),
         "closing_balance": extracted.get("closing_balance", 0),
+        "ocr_provider": extracted.get("ocr_provider"),
+        "extraction_method": extracted.get("extraction_method"),
         "transactions": enriched,
         "total_lines": len(enriched),
     }
@@ -919,7 +1046,6 @@ async def parse_bank_statement(
         resp["benchmark"] = True
         resp["benchmark_results"] = extracted.get("benchmark_results", [])
         resp["benchmark_summary"] = extracted.get("benchmark_summary", {})
-        resp["extraction_method"] = extracted.get("extraction_method")
     return resp
 
 

@@ -5,6 +5,8 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
+import { TableSkeleton } from '../components/ui/skeleton';
 import { toast } from 'sonner';
 import { useCompany } from '../hooks/useCompany';
 import { accountingMappingsAPI } from '../services/api';
@@ -63,11 +65,11 @@ export default function SupplierAccountMappingsPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="page-shell section-stack">
+        <div className="page-header">
           <div>
             <h1 className="page-header-title flex items-center gap-2">
-              <Settings2 className="w-6 h-6 text-violet-700" />
+              <Settings2 className="w-6 h-6 text-primary" />
               Mappings fournisseurs
             </h1>
             <p className="page-header-subtitle">
@@ -80,12 +82,39 @@ export default function SupplierAccountMappingsPage() {
           </Button>
         </div>
 
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="interactive-lift p-5">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Mappings actifs</p>
+            <p className="metric-value mt-2">{mappings.length}</p>
+            <p className="mt-1 text-sm text-slate-500">Règles utilisables par l'analyse comptable</p>
+          </Card>
+          <Card className="interactive-lift p-5">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Confiance forte</p>
+            <p className="metric-value mt-2">{mappings.filter((m) => m.confidence === 'fort').length}</p>
+            <p className="mt-1 text-sm text-slate-500">Mappings déjà bien confirmés</p>
+          </Card>
+          <Card className="interactive-lift p-5">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Confirmations</p>
+            <p className="metric-value mt-2">{mappings.reduce((acc, m) => acc + (m.times_confirmed || 0), 0)}</p>
+            <p className="mt-1 text-sm text-slate-500">Retours terrain consolidés</p>
+          </Card>
+        </div>
+
+        <Card className="border-blue-200 bg-blue-50/70">
+          <CardContent className="p-5">
+            <p className="text-sm font-semibold text-blue-900">Principe</p>
+            <p className="mt-2 text-sm text-blue-800">
+              Utilisez ces mappings pour sécuriser les affectations comptables récurrentes. Plus une règle est confirmée, plus elle devient fiable pour le rapprochement automatique.
+            </p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Nouveau mapping</CardTitle>
           </CardHeader>
           <CardContent>
-            <form className="grid grid-cols-1 md:grid-cols-4 gap-4" onSubmit={handleCreate}>
+            <form className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4" onSubmit={handleCreate}>
               <div className="space-y-2">
                 <Label>Pattern fournisseur</Label>
                 <Input value={form.supplier_pattern} onChange={(e) => setForm({ ...form, supplier_pattern: e.target.value })} placeholder="META / OOREDOO / GARAGE..." />
@@ -118,40 +147,38 @@ export default function SupplierAccountMappingsPage() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="py-8 text-center text-slate-400"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></div>
+              <TableSkeleton rows={6} columns={6} showToolbar={false} />
             ) : mappings.length === 0 ? (
               <div className="py-8 text-center text-slate-400">Aucun mapping</div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="border-b bg-slate-50/80">
-                    <tr>
-                      <th className="px-3 py-2 text-left">Pattern</th>
-                      <th className="px-3 py-2 text-left">Compte</th>
-                      <th className="px-3 py-2 text-left">Clé sémantique</th>
-                      <th className="px-3 py-2 text-left">Source</th>
-                      <th className="px-3 py-2 text-left">Confiance</th>
-                      <th className="px-3 py-2 text-right">Confirmations</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {mappings.map((mapping) => (
-                      <tr key={mapping.id} className="hover:bg-slate-50">
-                        <td className="px-3 py-2 font-medium text-slate-900">{mapping.supplier_pattern}</td>
-                        <td className="px-3 py-2 font-mono">{mapping.default_expense_account_code || '—'}</td>
-                        <td className="px-3 py-2">{mapping.semantic_key || '—'}</td>
-                        <td className="px-3 py-2">{mapping.source}</td>
-                        <td className="px-3 py-2">
-                          <Badge className={mapping.confidence === 'fort' ? 'bg-green-100 text-green-700' : mapping.confidence === 'moyen' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}>
-                            {mapping.confidence || 'faible'}
-                          </Badge>
-                        </td>
-                        <td className="px-3 py-2 text-right">{mapping.times_confirmed || 0}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Pattern</TableHead>
+                    <TableHead>Compte</TableHead>
+                    <TableHead>Clé sémantique</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Confiance</TableHead>
+                    <TableHead className="text-right">Confirmations</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {mappings.map((mapping) => (
+                    <TableRow key={mapping.id}>
+                      <TableCell className="font-medium text-slate-900">{mapping.supplier_pattern}</TableCell>
+                      <TableCell className="font-mono">{mapping.default_expense_account_code || '—'}</TableCell>
+                      <TableCell>{mapping.semantic_key || '—'}</TableCell>
+                      <TableCell>{mapping.source}</TableCell>
+                      <TableCell>
+                        <Badge variant={mapping.confidence === 'fort' ? 'success' : mapping.confidence === 'moyen' ? 'warning' : 'secondary'}>
+                          {mapping.confidence || 'faible'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">{mapping.times_confirmed || 0}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>

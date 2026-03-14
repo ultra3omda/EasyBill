@@ -8,6 +8,7 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
+import { TableSkeleton } from '../components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -183,11 +184,11 @@ const Invoices = () => {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      paid: { label: t('invoices.paid'), className: 'bg-green-100 text-green-800' },
-      sent: { label: t('invoices.sent'), className: 'bg-blue-100 text-blue-800' },
-      draft: { label: t('invoices.draft'), className: 'bg-gray-100 text-gray-800' },
-      overdue: { label: t('invoices.overdue'), className: 'bg-red-100 text-red-800' },
-      partial: { label: t('invoices.partial'), className: 'bg-orange-100 text-orange-800' },
+      paid: { label: t('invoices.paid'), variant: 'success', tone: 'text-emerald-700 bg-emerald-50' },
+      sent: { label: t('invoices.sent'), variant: 'info', tone: 'text-blue-700 bg-blue-50' },
+      draft: { label: t('invoices.draft'), variant: 'secondary', tone: 'text-slate-700 bg-slate-100' },
+      overdue: { label: t('invoices.overdue'), variant: 'destructive', tone: 'text-red-700 bg-red-50' },
+      partial: { label: t('invoices.partial'), variant: 'warning', tone: 'text-amber-700 bg-amber-50' },
     };
     return statusConfig[status] || statusConfig.draft;
   };
@@ -209,19 +210,19 @@ const Invoices = () => {
   };
 
   if (!currentCompany) {
-    return <AppLayout><div className="text-center py-20">Aucune entreprise sélectionnée</div></AppLayout>;
+    return <AppLayout><div className="page-shell"><div className="rounded-[24px] border border-dashed border-slate-300 bg-slate-50 px-6 py-16 text-center text-slate-500">Aucune entreprise sélectionnée</div></div></AppLayout>;
   }
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="page-shell section-stack">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="page-header">
           <div>
             <h1 className="page-header-title">{t('invoices.title')}</h1>
             <p className="page-header-subtitle">{filteredInvoices.length} factures au total</p>
           </div>
-          <div className="flex gap-2">
+          <div className="page-actions">
             <Button variant="outline" onClick={() => setImportOdooOpen(true)}>
               <Upload className="w-4 h-4 mr-2" />
               Importer Odoo
@@ -233,9 +234,32 @@ const Invoices = () => {
           </div>
         </div>
 
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <Card className="interactive-lift p-5">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Total facturé</p>
+            <p className="metric-value mt-2">{stats.totalInvoiced.toFixed(3)} TND</p>
+            <p className="mt-1 text-sm text-slate-500">{filteredInvoices.length} facture(s) filtrée(s)</p>
+          </Card>
+          <Card className="interactive-lift p-5">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Encaissements confirmés</p>
+            <p className="metric-value mt-2">{stats.totalPaid.toFixed(3)} TND</p>
+            <p className="mt-1 text-sm text-slate-500">{stats.paidCount} facture(s) payée(s)</p>
+          </Card>
+          <Card className="interactive-lift p-5">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Reste à encaisser</p>
+            <p className="metric-value mt-2">{stats.totalPending.toFixed(3)} TND</p>
+            <p className="mt-1 text-sm text-slate-500">{stats.pendingCount} facture(s) ouvertes</p>
+          </Card>
+          <Card className="interactive-lift p-5">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Retards</p>
+            <p className="metric-value mt-2">{stats.totalOverdue.toFixed(3)} TND</p>
+            <p className="mt-1 text-sm text-slate-500">{stats.overdueCount} facture(s) en retard</p>
+          </Card>
+        </div>
+
         {/* Filters */}
-        <Card className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
+        <Card className="p-4 md:p-5">
+          <div className="flex flex-col gap-4 md:flex-row">
             <div className="flex-1 relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <Input
@@ -335,68 +359,17 @@ const Invoices = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="stat-surface p-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-violet-100 p-3">
-                <FileText className="w-5 h-5 text-violet-700" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-600">Total Facturé</p>
-                <p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.totalInvoiced.toFixed(3)} TND</p>
-                <p className="text-xs text-slate-500">{filteredInvoices.length} factures</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="stat-surface p-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-green-100 p-3">
-                <CheckCircle className="w-5 h-5 text-green-700" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-600">Payées</p>
-                <p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.totalPaid.toFixed(3)} TND</p>
-                <p className="text-xs text-slate-500">{stats.paidCount} factures</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="stat-surface p-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-amber-100 p-3">
-                <CreditCard className="w-5 h-5 text-amber-700" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-600">En attente</p>
-                <p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.totalPending.toFixed(3)} TND</p>
-                <p className="text-xs text-slate-500">{stats.pendingCount} factures</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="stat-surface p-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-rose-100 p-3">
-                <FileText className="w-5 h-5 text-rose-700" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-600">En retard</p>
-                <p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.totalOverdue.toFixed(3)} TND</p>
-                <p className="text-xs text-slate-500">{stats.overdueCount} factures</p>
-              </div>
-            </div>
-          </Card>
-        </div>
-
         {/* Invoices Table */}
         <Card>
           {loading ? (
-            <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <div className="p-4 md:p-5">
+              <TableSkeleton rows={7} columns={7} />
             </div>
           ) : filteredInvoices.length === 0 ? (
-            <div className="p-8 text-center">
+            <div className="p-8 md:p-12 text-center">
               <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500">Aucune facture trouvée</p>
+              <p className="text-base font-semibold text-slate-900">Aucune facture trouvée</p>
+              <p className="mt-2 text-sm text-slate-500">Créez une facture manuellement ou importez un export Odoo pour alimenter votre cycle client.</p>
               <Button onClick={openCreateModal} className="mt-4">
                 <Plus className="w-4 h-4 mr-2" />
                 Créer votre première facture
@@ -420,28 +393,36 @@ const Invoices = () => {
                   {filteredInvoices.map((invoice) => {
                     const statusConfig = getStatusBadge(invoice.status);
                     return (
-                      <TableRow key={invoice.id} className="hover:bg-gray-50" data-testid={`invoice-row-${invoice.id}`}>
+                      <TableRow key={invoice.id} data-testid={`invoice-row-${invoice.id}`}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-violet-100 rounded-lg flex items-center justify-center">
-                              <FileText className="w-5 h-5 text-violet-600" />
+                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${statusConfig.tone}`}>
+                              <FileText className="w-5 h-5" />
                             </div>
-                            <span className="font-medium">{invoice.number}</span>
+                            <div>
+                              <p className="font-medium text-slate-900">{invoice.number}</p>
+                              <p className="text-xs text-slate-400">{invoice.customer_reference || 'Cycle client'}</p>
+                            </div>
                           </div>
                         </TableCell>
-                        <TableCell>{invoice.customer_name}</TableCell>
-                        <TableCell>{invoice.date ? new Date(invoice.date).toLocaleDateString('fr-FR') : '-'}</TableCell>
-                        <TableCell>{invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('fr-FR') : '-'}</TableCell>
                         <TableCell>
                           <div>
-                            <span className="font-semibold">{(invoice.total || 0).toFixed(3)} TND</span>
+                            <p className="font-medium text-slate-900">{invoice.customer_name}</p>
+                            <p className="text-xs text-slate-400">{invoice.customer_email || 'Client'}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-slate-500">{invoice.date ? new Date(invoice.date).toLocaleDateString('fr-FR') : '-'}</TableCell>
+                        <TableCell className="text-slate-500">{invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('fr-FR') : '-'}</TableCell>
+                        <TableCell>
+                          <div>
+                            <span className="font-semibold text-slate-900">{(invoice.total || 0).toFixed(3)} TND</span>
                             {invoice.balance_due > 0 && invoice.balance_due < invoice.total && (
-                              <p className="text-xs text-orange-600">Reste: {invoice.balance_due.toFixed(3)} TND</p>
+                              <p className="text-xs text-amber-600">Reste: {invoice.balance_due.toFixed(3)} TND</p>
                             )}
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge className={statusConfig.className}>
+                          <Badge variant={statusConfig.variant}>
                             {statusConfig.label}
                           </Badge>
                         </TableCell>

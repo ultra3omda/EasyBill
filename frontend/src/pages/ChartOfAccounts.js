@@ -4,6 +4,7 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
+import { TableSkeleton } from '../components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -412,9 +413,9 @@ const ChartOfAccounts = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6" data-testid="chart-of-accounts-page">
+      <div className="page-shell section-stack" data-testid="chart-of-accounts-page">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="page-header">
           <div>
             <h1 className="page-header-title">Plan Comptable</h1>
             <p className="page-header-subtitle">
@@ -441,9 +442,18 @@ const ChartOfAccounts = () => {
           </Button>
         </div>
 
+        <Card className="border-blue-200 bg-blue-50/70">
+          <div className="p-5">
+            <p className="text-sm font-semibold text-blue-900">Configuration comptable sensible</p>
+            <p className="mt-2 text-sm text-blue-800">
+              Le plan comptable structure toutes les imputations, mappings et écritures générées. Toute modification doit rester cohérente avec les règles de la société et le référentiel actif.
+            </p>
+          </div>
+        </Card>
+
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-          <Card className="stat-surface p-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7">
+          <Card className="stat-surface interactive-lift p-4">
             <div className="flex items-center gap-3">
               <div className="rounded-2xl bg-violet-100 p-2.5">
                 <BookOpen className="w-5 h-5 text-violet-700" />
@@ -455,7 +465,7 @@ const ChartOfAccounts = () => {
             </div>
           </Card>
           {stats.byType.map((type) => (
-            <Card key={type.value} className="stat-surface p-4">
+            <Card key={type.value} className="stat-surface interactive-lift p-4">
               <div>
                 <p className="text-xs text-slate-500">{type.label}</p>
                 <p className="text-xl font-bold tracking-[-0.03em] text-slate-900">{type.count}</p>
@@ -465,7 +475,7 @@ const ChartOfAccounts = () => {
         </div>
 
         {/* Filters & Search */}
-        <Card className="p-4">
+        <Card className="p-4 md:p-5">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -520,9 +530,8 @@ const ChartOfAccounts = () => {
           {/* Content */}
           <div className="max-h-[600px] overflow-y-auto">
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <RefreshCw className="w-6 h-6 animate-spin text-primary" />
-                <span className="ml-2 text-slate-600">Chargement...</span>
+              <div className="p-4">
+                <TableSkeleton rows={10} columns={6} showToolbar={false} />
               </div>
             ) : searchTerm ? (
               // Flat search results

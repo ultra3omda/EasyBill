@@ -133,7 +133,7 @@ const PurchaseOrders = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6" data-testid="purchase-orders-page">
+      <div className="space-y-4" data-testid="purchase-orders-page">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div><h1 className="page-header-title">Bons de commande</h1><p className="page-header-subtitle">{filteredDocs.length} commandes</p></div>
           <Button onClick={openCreate} data-testid="create-po-btn"><Plus className="w-4 h-4 mr-2" /> Nouveau BC</Button>

@@ -7,7 +7,7 @@ import { Wallet, CreditCard, DollarSign } from 'lucide-react';
 const Treasury = () => {
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div>
           <h1 className="page-header-title">Trésorerie</h1>
           <p className="page-header-subtitle">Gestion des paiements et flux de trésorerie</p>

@@ -129,7 +129,7 @@ const SupplierPayments = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6" data-testid="supplier-payments-page">
+      <div className="space-y-4" data-testid="supplier-payments-page">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div><h1 className="page-header-title">Paiements fournisseur</h1><p className="page-header-subtitle">{filteredPayments.length} paiements</p></div>
           <Button onClick={openCreate} data-testid="create-sp-btn"><Plus className="w-4 h-4 mr-2" /> Enregistrer un paiement</Button>
