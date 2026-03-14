@@ -8,9 +8,7 @@ import { Badge } from '../components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Plus, Search, Eye, CheckCircle, Package } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
-import axios from 'axios';
-
-const API_URL = process.env.REACT_APP_BACKEND_URL;
+import { receiptsAPI } from '../services/api';
 
 const Receipts = () => {
   const { currentCompany } = useCompany();
@@ -27,18 +25,16 @@ const Receipts = () => {
     if (!currentCompany) return;
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-      
-      const res = await axios.get(`${API_URL}/api/receipts/?company_id=${currentCompany.id}`, { headers });
-      setReceipts(res.data.items || res.data || []);
-      
-      const statsRes = await axios.get(`${API_URL}/api/receipts/stats?company_id=${currentCompany.id}`, { headers });
+      const [listRes, statsRes] = await Promise.all([
+        receiptsAPI.list(currentCompany.id),
+        receiptsAPI.getStats(currentCompany.id)
+      ]);
+      setReceipts(listRes.data?.items || listRes.data || []);
       const statsData = statsRes.data || {};
       setStats({
-        total: statsData.total || 0,
-        validated: statsData.validated || 0,
-        pending: statsData.pending || 0
+        total: statsData.total ?? 0,
+        validated: statsData.validated ?? 0,
+        pending: statsData.draft ?? statsData.pending ?? 0
       });
     } catch (error) {
       console.error('Error loading data:', error);
@@ -51,9 +47,7 @@ const Receipts = () => {
 
   const validateReceipt = async (id) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/api/receipts/${id}/validate?company_id=${currentCompany.id}`, {}, 
-        { headers: { Authorization: `Bearer ${token}` } });
+      await receiptsAPI.validate(currentCompany.id, id);
       toast({ title: "Succès", description: "Bon de réception validé et stock mis à jour" });
       loadData();
     } catch (error) {
@@ -77,7 +71,7 @@ const Receipts = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="page-header-title">Bons de Réception</h1>

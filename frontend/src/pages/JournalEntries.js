@@ -403,7 +403,7 @@ const JournalEntries = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6" data-testid="journal-entries-page">
+      <div className="space-y-4" data-testid="journal-entries-page">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>

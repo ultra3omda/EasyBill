@@ -7,12 +7,15 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { DetailPanelSkeleton, TableSkeleton, WorkflowProgressSkeleton } from '../components/ui/skeleton';
+import { WorkflowStageProgress } from '../components/banking/WorkflowStageProgress';
 import { toast } from 'sonner';
 import { useCompany } from '../hooks/useCompany';
 import {
   Upload, FileText, Building2, CheckCircle, Loader2, Link2,
   ChevronDown, ChevronRight, Calendar, RefreshCw, History,
-  ArrowDownLeft, ArrowUpRight, Check, X, Search, Edit2, Banknote
+  ArrowDownLeft, ArrowUpRight, Check, X, Search, Edit2, Banknote, ShieldCheck, AlertTriangle, ScanLine, Sparkles
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -70,6 +73,28 @@ const CONFIDENCE_COLORS = {
   faible: 'bg-red-100 text-red-700 border-red-300',
 };
 
+const FILTER_OPTIONS = [
+  { value: 'all', label: 'Toutes les lignes' },
+  { value: 'attention', label: 'Attention requise' },
+  { value: 'validated', label: 'Validées' },
+  { value: 'lettered', label: 'Lettrées' },
+];
+
+const getConfidenceVariant = (confidence) => {
+  if (confidence === 'fort') return 'success';
+  if (confidence === 'moyen') return 'warning';
+  return 'destructive';
+};
+
+const getStatementWarnings = (statement, unresolvedCount) => {
+  const warnings = [];
+  if (statement?.total_lines > 250) warnings.push("Le relevé contient un volume élevé d'opérations. Le scan manuel sera plus rapide avec des filtres.");
+  if (statement?.benchmark) warnings.push("Le benchmark a comparé plusieurs moteurs. Vérifiez la méthode retenue avant validation massive.");
+  if (unresolvedCount > 0) warnings.push(`${unresolvedCount} ligne(s) demandent encore une action manuelle ou une vérification.`);
+  if (statement?.error) warnings.push(statement.error);
+  return warnings;
+};
+
 export default function BankReconciliation() {
   const navigate = useNavigate();
   const { currentCompany } = useCompany();
@@ -99,6 +124,9 @@ export default function BankReconciliation() {
   const [hideLettered, setHideLettered] = useState(true);
   const [saving, setSaving] = useState(false);
   const [reanalyzing, setReanalyzing] = useState(false);
+  const [lineFilter, setLineFilter] = useState('attention');
+  const [lineQuery, setLineQuery] = useState('');
+  const [activeLineIndex, setActiveLineIndex] = useState(null);
   const [parseElapsed, setParseElapsed] = useState(0);
   const [parseStep, setParseStep] = useState('');
   const parseTimerRef = useRef(null);
@@ -146,6 +174,11 @@ export default function BankReconciliation() {
   }, [currentCompany]);
 
   useEffect(() => { if (tab === 'history') loadHistory(); }, [tab, loadHistory]);
+  useEffect(() => {
+    if (tab === 'upload' && statements.length === 0 && currentCompany) {
+      loadHistory();
+    }
+  }, [tab, statements.length, currentCompany, loadHistory]);
   useEffect(() => () => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     if (parseTimerRef.current) clearInterval(parseTimerRef.current);
@@ -182,6 +215,30 @@ export default function BankReconciliation() {
     { at: 180, label: 'Finalisation de l\'analyse...' },
   ];
 
+  const parseWithProvider = async (selectedProvider, signal) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(`${API}/api/bank-reconciliation/parse?company_id=${currentCompany.id}&provider=${selectedProvider}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token()}` },
+      body: fd,
+      signal
+    });
+    let data;
+    try {
+      data = await res.json();
+    } catch (_) {
+      throw new Error('Réponse invalide du serveur');
+    }
+    if (!res.ok) {
+      const error = new Error(data.detail || data.error || 'Erreur analyse');
+      error.status = res.status;
+      error.payload = data;
+      throw error;
+    }
+    return data;
+  };
+
   const handleParse = async () => {
     if (!file || !currentCompany) return;
     setParsing(true);
@@ -197,44 +254,41 @@ export default function BankReconciliation() {
       });
     }, 1000);
     try {
-      const fd = new FormData();
-      fd.append('file', file);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8 * 60 * 1000);
-      const res = await fetch(`${API}/api/bank-reconciliation/parse?company_id=${currentCompany.id}&provider=${provider}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token()}` },
-        body: fd,
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
       let data;
       try {
-        data = await res.json();
-      } catch (_) {
-        throw new Error('Réponse invalide du serveur');
+        data = await parseWithProvider(provider, controller.signal);
+      } catch (e) {
+        const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+        const shouldRetryWithGemini =
+          provider === 'auto' &&
+          isPdf &&
+          e?.status === 422 &&
+          /Extraction impossible après plusieurs tentatives/i.test(e?.message || '');
+
+        if (!shouldRetryWithGemini) {
+          throw e;
+        }
+
+        setParseStep('Le mode automatique a échoué, relance avec Gemini...');
+        toast.error('Mode automatique en échec sur ce PDF, relance avec Gemini...');
+        data = await parseWithProvider('gemini', controller.signal);
       }
-      if (!res.ok) throw new Error(data.detail || data.error || 'Erreur analyse');
+      clearTimeout(timeoutId);
       if (data.error && !data.transactions?.length) {
         throw new Error(data.error);
       }
       const txs = data.transactions || [];
       setStatement({
+        ...data,
         id: data.statement_id || data.id,
         statement_id: data.statement_id || data.id,
-        bank_name: data.bank_name,
-        account_number: data.account_number,
-        period_start: data.period_start,
-        period_end: data.period_end,
         currency: data.currency || 'TND',
         opening_balance: data.opening_balance ?? 0,
         closing_balance: data.closing_balance ?? 0,
         transactions: txs,
         total_lines: data.total_lines ?? txs.length,
-        benchmark: data.benchmark,
-        benchmark_results: data.benchmark_results,
-        benchmark_summary: data.benchmark_summary,
-        extraction_method: data.extraction_method,
       });
       toast.success(data.benchmark ? `Benchmark terminé — ${txs.length} ligne(s) (meilleur: ${data.extraction_method || 'N/A'})` : `${txs.length} ligne(s) extraite(s)`);
     } catch (e) {
@@ -257,7 +311,7 @@ export default function BankReconciliation() {
       const res = await fetch(`${API}/api/bank-reconciliation/statements/${id}?company_id=${currentCompany.id}`,
         { headers: { Authorization: `Bearer ${token()}` } });
       const data = await res.json();
-      setStatement({ ...data, statement_id: data.id });
+      setStatement({ ...data, statement_id: data.id, transactions: data.transactions || [] });
       setTab('upload');
     } catch { toast.error('Erreur chargement'); }
   };
@@ -385,103 +439,261 @@ export default function BankReconciliation() {
     (inv.supplier_name || '').toLowerCase().includes(invoiceSearch.toLowerCase())
   );
 
-  const selectedCount = (statement?.transactions || []).filter(t => t.validated && !t.lettered).length;
-  const displayRows = (statement?.transactions || []).map((t, idx) => ({ t, origIdx: idx })).filter(({ t }) => !hideLettered || !t.lettered);
+  const allRows = (statement?.transactions || []).map((t, idx) => ({ t, origIdx: idx }));
+  const selectedCount = allRows.filter(({ t }) => t.validated && !t.lettered).length;
+  const unresolvedCount = allRows.filter(({ t }) => !t.validated && !t.lettered).length;
+  const validatedCount = allRows.filter(({ t }) => t.validated && !t.lettered).length;
+  const letteredCount = allRows.filter(({ t }) => t.lettered).length;
+  const filteredRows = allRows.filter(({ t }) => {
+    if (hideLettered && t.lettered) return false;
+    if (lineFilter === 'attention' && (t.validated || t.lettered)) return false;
+    if (lineFilter === 'validated' && (!t.validated || t.lettered)) return false;
+    if (lineFilter === 'lettered' && !t.lettered) return false;
+    if (lineQuery) {
+      const haystack = `${t.description || ''} ${t.reference || ''} ${t.account_debit || ''} ${t.account_credit || ''} ${t.matched_invoice_number || ''}`.toLowerCase();
+      if (!haystack.includes(lineQuery.toLowerCase())) return false;
+    }
+    return true;
+  });
+  const displayRows = filteredRows;
+  const activeLine = activeLineIndex != null ? statement?.transactions?.[activeLineIndex] : null;
+  const statementWarnings = getStatementWarnings(statement, unresolvedCount);
+  const statementStages = [
+    {
+      id: 'upload',
+      label: 'Upload reçu',
+      status: file || statement ? 'complete' : 'pending',
+      meta: file?.name || statement?.bank_name || 'Aucun document chargé',
+    },
+    {
+      id: 'ocr',
+      label: 'OCR en cours',
+      status: parsing && parseElapsed < 10 ? 'active' : statement ? 'complete' : 'pending',
+      meta: parsing ? 'Lecture des pages et détection des blocs bancaires' : 'OCR terminé',
+    },
+    {
+      id: 'detected',
+      label: 'Opérations détectées',
+      status: (statement?.total_lines || 0) > 0 ? 'complete' : parsing && parseElapsed >= 10 ? 'active' : 'pending',
+      meta: statement?.total_lines ? `${statement.total_lines} ligne(s) détectée(s)` : 'Comptage des opérations en cours',
+    },
+    {
+      id: 'parsing',
+      label: 'Parsing en cours',
+      status: parsing && parseElapsed >= 10 && parseElapsed < 120 ? 'active' : statement ? 'complete' : 'pending',
+      meta: parseStep || statement?.extraction_method || 'Normalisation comptable',
+    },
+    {
+      id: 'analysis',
+      label: 'Analyse de rapprochement',
+      status: reanalyzing ? 'active' : statement ? (unresolvedCount > 0 ? 'warning' : 'complete') : 'pending',
+      meta: reanalyzing ? 'Réanalyse IA en cours' : `${unresolvedCount} ligne(s) encore à arbitrer`,
+    },
+    {
+      id: 'ready',
+      label: 'Suggestions prêtes',
+      status: statement ? (unresolvedCount > 0 ? 'warning' : 'complete') : 'pending',
+      meta: statement ? `${validatedCount} validée(s), ${letteredCount} lettrée(s)` : 'En attente de résultat',
+    },
+  ];
+
+  useEffect(() => {
+    if (!statement?.transactions?.length) {
+      setActiveLineIndex(null);
+      return;
+    }
+    if (activeLineIndex != null && statement.transactions[activeLineIndex]) return;
+    const firstAttention = statement.transactions.findIndex((tx) => !tx.validated && !tx.lettered);
+    setActiveLineIndex(firstAttention >= 0 ? firstAttention : 0);
+  }, [statement, activeLineIndex]);
+
+  useEffect(() => {
+    if (!displayRows.length) return;
+    if (activeLineIndex != null && displayRows.some(({ origIdx }) => origIdx === activeLineIndex)) return;
+    setActiveLineIndex(displayRows[0].origIdx);
+  }, [displayRows, activeLineIndex]);
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+      <div className="page-shell section-stack">
+        <div className="page-header">
           <div>
             <h1 className="page-header-title flex items-center gap-2">
-              <Building2 className="w-6 h-6 text-violet-700" />
+              <Building2 className="h-6 w-6 text-primary" />
               Lettrage bancaire
             </h1>
             <p className="page-header-subtitle">
-              Upload de l'extrait de compte · Proposition d'écritures · Lettrage des virements fournisseurs
+              Import d'extrait, lecture OCR, analyse comptable et rapprochement dans un flux de travail unique.
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant={tab === 'upload' ? 'default' : 'outline'}
-              onClick={() => setTab('upload')}
-              className={tab === 'upload' ? '' : ''}
-            >
-              <Upload className="w-4 h-4 mr-1" /> Nouvel extrait
+          <div className="page-actions">
+            <Button variant={tab === 'upload' ? 'default' : 'outline'} onClick={() => setTab('upload')}>
+              <Upload className="mr-1 h-4 w-4" /> Nouvel extrait
             </Button>
-            <Button
-              variant={tab === 'history' ? 'default' : 'outline'}
-              onClick={() => setTab('history')}
-              className={tab === 'history' ? '' : ''}
-            >
-              <History className="w-4 h-4 mr-1" /> Historique
+            <Button variant={tab === 'history' ? 'default' : 'outline'} onClick={() => setTab('history')}>
+              <History className="mr-1 h-4 w-4" /> Historique
             </Button>
           </div>
         </div>
 
-        {/* ── Tab Upload ── */}
+        <Card className="border-blue-200 bg-blue-50/80">
+          <CardContent className="p-5">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="mt-0.5 h-5 w-5 text-blue-700" />
+              <div className="grid gap-2 text-sm text-blue-800 md:grid-cols-2">
+                <p>Le temps de traitement dépend surtout du nombre de lignes bancaires détectées, pas uniquement de la taille du PDF.</p>
+                <p>Un petit extrait peut rester lent s'il contient beaucoup d'opérations ou une longue période.</p>
+                <p>Les périodes plus courtes réduisent les erreurs d'OCR et accélèrent le rapprochement.</p>
+                <p>Les relevés denses peuvent nécessiter un découpage avant import pour garder des suggestions fiables.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <WorkflowStageProgress
+          title="Progression du traitement"
+          description="Suivi de l'import, de l'OCR, du parsing et de la préparation des suggestions."
+          stages={statementStages}
+          metrics={[
+            { label: 'Lignes', value: statement?.total_lines || 0 },
+            { label: 'À revoir', value: unresolvedCount },
+            { label: 'Lettrées', value: letteredCount },
+          ]}
+        />
+
         {tab === 'upload' && (
           <>
-            {/* Upload zone */}
             {!statement && !parsing && (
-              <Card>
-                <CardContent className="p-6">
-                  <div className="mb-4 flex items-center gap-2">
-                    <Label className="text-sm text-slate-600">API d'extraction :</Label>
-                    <select
-                      value={provider}
-                      onChange={e => setProvider(e.target.value)}
-                      className="border rounded-md px-3 py-1.5 text-sm bg-white"
-                    >
-                      <option value="auto">Auto (recommandé)</option>
-                      <option value="pdfplumber">pdfplumber (PDF uniquement)</option>
-                      <option value="gemini">Gemini</option>
-                      <option value="openai">OpenAI GPT-4o</option>
-                      <option value="benchmark">Benchmark (tester tous)</option>
-                    </select>
-                    {provider === 'benchmark' && (
-                      <span className="text-amber-600 text-sm">→ Compare pdfplumber, Gemini et OpenAI</span>
-                    )}
-                  </div>
-                  <div
-                    onDrop={e => { e.preventDefault(); setDragOver(false); handleFileSelect(e.dataTransfer.files[0]); }}
-                    onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-                    onDragLeave={() => setDragOver(false)}
-                    onClick={() => !file && fileInputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all ${
-                      dragOver ? 'border-violet-500 bg-violet-50' : file ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-violet-400'
-                    }`}
-                  >
-                    <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
-                      onChange={e => handleFileSelect(e.target.files[0])} />
-                    {file ? (
-                      <div className="space-y-2">
-                        <FileText className="w-12 h-12 mx-auto text-green-600" />
-                        <p className="font-semibold">{file.name}</p>
-                        <p className="text-sm text-slate-500">{(file.size / 1024).toFixed(1)} Ko</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <Building2 className="mx-auto h-12 w-12 text-slate-400" />
-                        <p className="font-semibold text-slate-700">Glisser-déposer ou cliquer</p>
-                        <p className="text-sm text-slate-400">Extrait de compte PDF ou image — max 15 Mo</p>
-                      </div>
-                    )}
-                  </div>
-                  {file && (
-                    <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
-                      <Button variant="outline" onClick={() => { setFile(null); setStatement(null); }}>Annuler</Button>
-                      <Button onClick={handleParse} disabled={parsing} className="min-w-36">
-                        {provider === 'benchmark' ? 'Lancer le benchmark' : 'Analyser l\'extrait'}
-                      </Button>
+              <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
+                <Card className="interactive-lift">
+                  <CardHeader>
+                    <CardTitle>Préparer un nouvel extrait</CardTitle>
+                    <p className="text-sm text-slate-500">Choisissez le moteur d'extraction puis déposez le document. Les relevés très denses sont plus sûrs lorsqu'ils sont scindés.</p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm text-slate-600">Moteur d'extraction</Label>
+                      <Select value={provider} onValueChange={setProvider}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="auto">Auto (recommandé)</SelectItem>
+                          <SelectItem value="pdfplumber">pdfplumber (PDF uniquement)</SelectItem>
+                          <SelectItem value="gemini">Gemini</SelectItem>
+                          <SelectItem value="openai">OpenAI GPT-4o</SelectItem>
+                          <SelectItem value="anthropic">Anthropic Claude</SelectItem>
+                          <SelectItem value="benchmark">Benchmark (tester tous)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {provider === 'benchmark' ? (
+                        <p className="text-xs text-amber-700">Le benchmark compare pdfplumber, Gemini, OpenAI et Anthropic avant de retenir le meilleur résultat exploitable.</p>
+                      ) : null}
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+
+                    <div
+                      onDrop={e => { e.preventDefault(); setDragOver(false); handleFileSelect(e.dataTransfer.files[0]); }}
+                      onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                      onDragLeave={() => setDragOver(false)}
+                      onClick={() => !file && fileInputRef.current?.click()}
+                      className={`rounded-[24px] border-2 border-dashed p-8 text-center transition-all ${
+                        dragOver ? 'border-primary bg-blue-50' : file ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300 bg-slate-50 hover:border-primary/50 hover:bg-blue-50/50'
+                      }`}
+                    >
+                      <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
+                        onChange={e => handleFileSelect(e.target.files[0])} />
+                      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm">
+                        {file ? <FileText className="h-6 w-6 text-emerald-600" /> : <Upload className="h-6 w-6 text-primary" />}
+                      </div>
+                      {file ? (
+                        <div className="mt-4">
+                          <p className="font-semibold text-slate-900">{file.name}</p>
+                          <p className="mt-1 text-sm text-slate-500">{(file.size / 1024).toFixed(1)} Ko</p>
+                          <p className="mt-2 text-xs text-slate-400">Le traitement dépendra surtout des lignes bancaires détectées.</p>
+                        </div>
+                      ) : (
+                        <div className="mt-4 space-y-2">
+                          <p className="font-semibold text-slate-900">Glissez-déposez le relevé bancaire</p>
+                          <p className="text-sm text-slate-500">PDF ou image, jusqu'à 15 Mo</p>
+                          <p className="text-xs text-slate-400">Les relevés courts sur une période limitée sont traités plus vite.</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {file ? (
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <Button variant="outline" onClick={() => { setFile(null); setStatement(null); }}>
+                          Annuler
+                        </Button>
+                        <Button onClick={handleParse} disabled={parsing} className="min-w-40">
+                          {provider === 'benchmark' ? 'Lancer le benchmark' : "Analyser l'extrait"}
+                        </Button>
+                      </div>
+                    ) : null}
+                  </CardContent>
+                </Card>
+
+                <div className="section-stack">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Ce que EasyBill va faire</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid gap-3 md:grid-cols-2">
+                      <div className="rounded-2xl border border-slate-200 p-4">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                          <ScanLine className="h-4 w-4 text-primary" />
+                          OCR et lecture du document
+                        </div>
+                        <p className="mt-2 text-sm text-slate-600">Lecture des pages, détection des colonnes et récupération des opérations bancaires.</p>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 p-4">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                          <Sparkles className="h-4 w-4 text-primary" />
+                          Parsing et suggestions
+                        </div>
+                        <p className="mt-2 text-sm text-slate-600">Normalisation des libellés, proposition de comptes et pré-lettrage des écritures pertinentes.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Historique récent</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {loadingHistory ? (
+                        <WorkflowProgressSkeleton steps={4} />
+                      ) : statements.length === 0 ? (
+                        <div className="rounded-[24px] border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+                          <p className="text-base font-semibold text-slate-900">Aucun extrait importé</p>
+                          <p className="mt-2 text-sm text-slate-500">Les derniers extraits traités apparaîtront ici avec leurs volumes et leur statut d'avancement.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {statements.slice(0, 3).map((s) => (
+                            <button
+                              key={s.id}
+                              onClick={() => loadStatement(s.id)}
+                              className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition-colors hover:bg-slate-50"
+                            >
+                              <div>
+                                <p className="font-medium text-slate-900">{s.bank_name || s.filename}</p>
+                                <p className="text-sm text-slate-500">{s.period_start} {s.period_end ? `→ ${s.period_end}` : ''}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-semibold text-slate-900">{s.total_lines} ligne(s)</p>
+                                <p className="text-xs text-slate-400">{s.validated_lines}/{s.total_lines} validées</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
             )}
 
-            {/* Loading overlay during parsing */}
             {parsing && !statement && (() => {
               const estimated = getEstimatedTime(file);
               const progress = Math.min((parseElapsed / estimated) * 100, 95);
@@ -492,161 +704,185 @@ export default function BankReconciliation() {
                 return m > 0 ? `${m} min ${sec.toString().padStart(2, '0')} s` : `${sec} s`;
               };
               return (
-                <Card className="border-violet-200 bg-gradient-to-br from-violet-50 via-white to-indigo-50">
-                  <CardContent className="py-12 px-8">
-                    <div className="flex flex-col items-center text-center space-y-6 max-w-md mx-auto">
-                      {/* Animated spinner */}
-                      <div className="relative">
-                        <div className="w-20 h-20 rounded-full border-4 border-violet-100 flex items-center justify-center">
-                          <Loader2 className="w-10 h-10 text-violet-600 animate-spin" />
-                        </div>
-                        <div
-                          className="absolute -inset-1 rounded-full border-4 border-transparent border-t-violet-500 animate-spin"
-                          style={{ animationDuration: '1.5s' }}
-                        />
-                      </div>
-
-                      {/* File info */}
-                      <div>
-                        <p className="text-lg font-bold text-violet-800">Analyse en cours</p>
-                        <p className="text-sm text-gray-500 mt-1">
-                          {file?.name} — {file ? (file.size / 1024).toFixed(1) : 0} Ko
+                <Card className="border-blue-200 bg-gradient-to-br from-blue-50 via-white to-slate-50">
+                  <CardContent className="p-8 md:p-10">
+                    <div className="mx-auto max-w-3xl space-y-6">
+                      <div className="text-center">
+                        <p className="text-lg font-semibold text-slate-950">Traitement de l'extrait en cours</p>
+                        <p className="mt-1 text-sm text-slate-500">
+                          {file?.name} · le temps dépend surtout du nombre d'opérations détectées.
                         </p>
                       </div>
 
-                      {/* Current step */}
-                      <div className="bg-white border border-violet-200 rounded-lg px-4 py-3 w-full shadow-sm">
-                        <p className="text-sm text-violet-700 font-medium">{parseStep}</p>
-                      </div>
+                      <WorkflowStageProgress
+                        stages={statementStages}
+                        metrics={[
+                          { label: 'Temps écoulé', value: fmtTime(parseElapsed) },
+                          { label: 'Restant estimé', value: `~${fmtTime(remaining)}` },
+                          { label: 'Progression', value: `${Math.round(progress)}%` },
+                        ]}
+                      />
 
-                      {/* Progress bar */}
-                      <div className="w-full">
-                        <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-                          <span>Progression</span>
+                      <div className="rounded-[24px] border border-blue-200 bg-white p-5">
+                        <div className="flex items-center justify-between text-sm text-slate-500">
+                          <span>Étape active</span>
                           <span>{Math.round(progress)}%</span>
                         </div>
-                        <div className="w-full h-2.5 bg-violet-100 rounded-full overflow-hidden">
+                        <p className="mt-3 text-base font-semibold text-blue-900">{parseStep}</p>
+                        <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-blue-100">
                           <div
-                            className="h-full bg-gradient-to-r from-violet-500 to-indigo-500 rounded-full transition-all duration-1000 ease-out"
+                            className="h-full rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 transition-all duration-1000 ease-out"
                             style={{ width: `${progress}%` }}
                           />
                         </div>
+                        <p className="mt-4 text-xs text-slate-500">
+                          Les relevés très denses ou sur de longues périodes peuvent demander plus de temps, même avec un fichier léger.
+                        </p>
                       </div>
-
-                      {/* Time info */}
-                      <div className="flex gap-6 text-sm">
-                        <div className="text-center">
-                          <p className="text-gray-400 text-xs">Temps écoulé</p>
-                          <p className="font-mono font-bold text-violet-700 text-lg">{fmtTime(parseElapsed)}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-gray-400 text-xs">Estimé restant</p>
-                          <p className="font-mono font-bold text-gray-600 text-lg">~{fmtTime(remaining)}</p>
-                        </div>
-                      </div>
-
-                      <p className="text-xs text-gray-400">
-                        Les relevés volumineux (&gt;15 pages) sont découpés et analysés par morceaux pour plus de fiabilité
-                      </p>
                     </div>
                   </CardContent>
                 </Card>
               );
             })()}
 
-            {/* Statement summary */}
             {statement && (
               <>
+                {statementWarnings.length > 0 ? (
+                  <Card className="border-amber-200 bg-amber-50/80">
+                    <CardContent className="p-5">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-700" />
+                        <div className="space-y-1 text-sm text-amber-800">
+                          {statementWarnings.map((warning, index) => (
+                            <p key={`${warning}-${index}`}>{warning}</p>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : null}
+
                 {statement.benchmark && statement.benchmark_results?.length > 0 && (
                   <Card className="border-amber-200 bg-amber-50">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Comparaison des APIs d'extraction</CardTitle>
+                      <CardTitle className="text-base">Comparaison des moteurs d'extraction</CardTitle>
                       <p className="text-sm text-amber-800 mt-1 font-normal">
-                        Le benchmark a testé chaque méthode sur votre document. Le résultat avec le plus de transactions a été retenu pour l'affichage ci-dessous.
+                        Le benchmark compare plusieurs moteurs. Le résultat affiché ci-dessous utilise le moteur jugé le plus exploitable.
                       </p>
                     </CardHeader>
                     <CardContent>
-                      {statement.benchmark_summary?.description && (
-                        <p className="text-sm text-amber-700 mb-3 p-2 bg-amber-100 rounded">
+                      {statement.benchmark_summary?.description ? (
+                        <p className="mb-3 rounded-2xl bg-amber-100 p-3 text-sm text-amber-800">
                           {statement.benchmark_summary.description}
                         </p>
-                      )}
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-amber-200">
-                              <th className="text-left py-2">Méthode</th>
-                              <th className="text-right py-2">Durée</th>
-                              <th className="text-right py-2">Lignes extraites</th>
-                              <th className="text-left py-2">Statut</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {statement.benchmark_results.map((r, i) => {
-                              const isWinner = statement.benchmark_summary?.winner === r.provider;
-                              const timeSec = r.time_ms >= 1000 ? `${(r.time_ms / 1000).toFixed(1)} s` : `${r.time_ms} ms`;
-                              return (
-                                <tr
-                                  key={i}
-                                  className={`border-b border-amber-100 ${isWinner ? 'bg-green-100 font-semibold' : ''}`}
-                                >
-                                  <td className="py-1.5">
-                                    {r.provider}{r.model ? ` (${r.model})` : ''}
-                                    {isWinner && <Badge className="ml-2 bg-green-600 text-white text-xs">Retenu</Badge>}
-                                  </td>
-                                  <td className="text-right">{timeSec}</td>
-                                  <td className="text-right">{r.transactions_count}</td>
-                                  <td>{r.success ? <Badge className="bg-green-100 text-green-700">OK</Badge> : <span className="text-red-600 text-xs">{r.error || 'Échec'}</span>}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                      {statement.extraction_method && (
-                        <p className="text-sm text-amber-700 mt-3 font-medium">
-                          Méthode utilisée pour les lignes ci-dessous : {statement.extraction_method}
+                      ) : null}
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Méthode</TableHead>
+                            <TableHead className="text-right">Durée</TableHead>
+                            <TableHead className="text-right">Lignes</TableHead>
+                            <TableHead>Statut</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {statement.benchmark_results.map((r, i) => {
+                            const isWinner = statement.benchmark_summary?.winner === r.provider;
+                            const timeSec = r.time_ms >= 1000 ? `${(r.time_ms / 1000).toFixed(1)} s` : `${r.time_ms} ms`;
+                            return (
+                              <TableRow key={i} className={isWinner ? 'bg-emerald-50/70' : ''}>
+                                <TableCell>
+                                  {r.provider}{r.model ? ` (${r.model})` : ''}
+                                  {isWinner ? <Badge variant="success" className="ml-2">Retenu</Badge> : null}
+                                </TableCell>
+                                <TableCell className="text-right">{timeSec}</TableCell>
+                                <TableCell className="text-right">{r.transactions_count}</TableCell>
+                                <TableCell>
+                                  {r.success ? <Badge variant="success">OK</Badge> : <Badge variant="destructive">{r.error || 'Échec'}</Badge>}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                      {statement.extraction_method ? (
+                        <p className="mt-3 text-sm font-medium text-amber-700">
+                          Méthode retenue : {statement.extraction_method}
                         </p>
-                      )}
+                      ) : null}
                     </CardContent>
                   </Card>
                 )}
-                <Card className="bg-violet-50 border-violet-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between flex-wrap gap-3">
+
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <Card className="interactive-lift">
+                    <CardContent className="p-5">
+                      <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Banque / compte</p>
+                      <p className="mt-2 text-sm font-semibold text-slate-900">{statement.bank_name || 'Extrait bancaire'}</p>
+                      <p className="mt-1 text-sm text-slate-500">{statement.account_number || 'Compte non détecté'}</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="interactive-lift">
+                    <CardContent className="p-5">
+                      <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Période</p>
+                      <p className="mt-2 text-sm font-semibold text-slate-900">{statement.period_start || '—'} {statement.period_end ? `→ ${statement.period_end}` : ''}</p>
+                      <p className="mt-1 text-sm text-slate-500">{statement.currency || 'TND'}</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="interactive-lift">
+                    <CardContent className="p-5">
+                      <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Soldes</p>
+                      <p className="mt-2 text-sm font-semibold text-slate-900">Ouverture {fmt(statement.opening_balance)} TND</p>
+                      <p className="mt-1 text-sm text-slate-500">Clôture {fmt(statement.closing_balance)} TND</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="interactive-lift">
+                    <CardContent className="p-5">
+                      <p className="text-xs uppercase tracking-[0.12em] text-slate-400">État du workbench</p>
+                      <p className="mt-2 text-sm font-semibold text-slate-900">{statement.total_lines || 0} ligne(s)</p>
+                      <p className="mt-1 text-sm text-slate-500">{unresolvedCount} à traiter · {letteredCount} lettrée(s)</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card className="border-slate-200/80">
+                  <CardHeader>
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                       <div>
-                        <p className="font-bold text-violet-800 text-lg">{statement.bank_name || 'Extrait bancaire'}</p>
-                        <p className="text-sm text-violet-600">
-                          {statement.period_start && `Du ${statement.period_start}`}
-                          {statement.period_end && ` au ${statement.period_end}`}
-                          {statement.account_number && ` · Compte : ${statement.account_number}`}
-                        </p>
+                        <CardTitle className="text-base">Workbench de rapprochement</CardTitle>
+                        <p className="text-sm text-slate-500">Comprendre rapidement la nature de chaque ligne, la suggestion de compte, le niveau de confiance et l'action à prendre.</p>
                       </div>
-                      <div className="flex gap-4 text-sm">
-                        <div className="text-center">
-                          <p className="text-gray-500">Solde ouverture</p>
-                          <p className="font-bold">{fmt(statement.opening_balance)} TND</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-gray-500">Solde clôture</p>
-                          <p className="font-bold">{fmt(statement.closing_balance)} TND</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-gray-500">Lignes</p>
-                          <p className="font-bold">{statement.total_lines || statement.transactions?.length || 0}</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        {selectedCount > 0 && (
-                          <Button
-                            onClick={handleValidateSelected}
-                            disabled={validating}
-                            className="bg-green-600 hover:bg-green-700 gap-1.5"
-                          >
-                            {validating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                            Valider {selectedCount} écriture{selectedCount > 1 ? 's' : ''}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Input
+                          value={lineQuery}
+                          onChange={(e) => setLineQuery(e.target.value)}
+                          placeholder="Rechercher une ligne, une référence, un compte..."
+                          className="w-[300px]"
+                        />
+                        <Select value={lineFilter} onValueChange={setLineFilter}>
+                          <SelectTrigger className="w-[200px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {FILTER_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+                          <input type="checkbox" checked={hideLettered} onChange={e => setHideLettered(e.target.checked)} className="rounded" />
+                          Masquer les lettrés
+                        </label>
+                        <Button variant="outline" onClick={saveStatement} disabled={saving || !statement?.transactions?.length}>
+                          {saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
+                          Sauvegarder
+                        </Button>
+                        {selectedCount > 0 ? (
+                          <Button onClick={handleValidateSelected} disabled={validating} className="bg-emerald-600 hover:bg-emerald-700">
+                            {validating ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />}
+                            Valider {selectedCount}
                           </Button>
-                        )}
+                        ) : null}
                         <Button
                           variant="outline"
                           disabled={reanalyzing}
@@ -660,7 +896,7 @@ export default function BankReconciliation() {
                               );
                               const data = await res.json();
                               if (!res.ok) throw new Error(data.detail);
-                              setStatement(prev => ({ ...prev, transactions: data.transactions }));
+                              setStatement(prev => ({ ...prev, transactions: data.transactions, ai_stats: data.ai_stats }));
                               toast.success(`Analyse IA terminee — ${data.ai_stats?.fort || 0} fort, ${data.ai_stats?.moyen || 0} moyen, ${data.ai_stats?.faible || 0} faible`);
                             } catch (e) {
                               toast.error(e.message);
@@ -668,246 +904,226 @@ export default function BankReconciliation() {
                               setReanalyzing(false);
                             }
                           }}
-                          className="gap-1.5 border-violet-300 text-violet-700 hover:bg-violet-50"
                         >
-                          {reanalyzing ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyse IA en cours...</> : 'Re-analyser avec IA'}
+                          {reanalyzing ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1 h-4 w-4" />}
+                          Re-analyser avec IA
                         </Button>
                         <Button variant="outline" onClick={() => { setStatement(null); setFile(null); }}>
-                          <RefreshCw className="w-4 h-4 mr-1" /> Nouvel extrait
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Transactions table */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div>
-                        <CardTitle className="text-base">
-                          Lignes de l'extrait — Écritures proposées
-                        </CardTitle>
-                        <p className="text-xs text-gray-500">
-                          Cochez les lignes à valider · Cliquez "Lettrer" pour rapprocher avec une facture fournisseur
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
-                          <input type="checkbox" checked={hideLettered} onChange={e => setHideLettered(e.target.checked)} className="rounded" />
-                          Masquer les lettrés
-                        </label>
-                        <Button variant="outline" size="sm" onClick={saveStatement} disabled={saving || !statement?.transactions?.length}>
-                          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                          Sauvegarder
+                          <RefreshCw className="mr-1 h-4 w-4" /> Nouvel extrait
                         </Button>
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="bg-gray-50 border-b">
-                          <tr>
-                            <th className="px-3 py-2 text-left w-10">✓</th>
-                            <th className="px-3 py-2 text-left">Date</th>
-                            <th className="px-3 py-2 text-left">Description / Libellé</th>
-                            <th className="px-3 py-2 text-right bg-red-50/50"><span className="flex items-center justify-end gap-1"><ArrowDownLeft className="w-3.5 h-3.5 text-red-600" /> Débit (sortie)</span></th>
-                            <th className="px-3 py-2 text-right bg-green-50/50"><span className="flex items-center justify-end gap-1"><ArrowUpRight className="w-3.5 h-3.5 text-green-600" /> Crédit (entrée)</span></th>
-                            <th className="px-3 py-2 text-left">Compte débit</th>
-                            <th className="px-3 py-2 text-left">Compte crédit</th>
-                            <th className="px-3 py-2 text-center">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                          {displayRows.map(({ t, origIdx }) => (
-                            <tr key={origIdx} className={`hover:bg-gray-50 ${t.validated ? 'bg-green-50/50' : ''} ${t.lettered ? 'bg-blue-50/50' : ''}`}>
-                              {/* Checkbox */}
-                              <td className="px-3 py-2">
-                                {!t.lettered ? (
-                                  <button
-                                    onClick={() => toggleValidated(origIdx)}
-                                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                                      t.validated ? 'border-green-500 bg-green-500' : 'border-gray-300'
-                                    }`}
-                                  >
-                                    {t.validated && <Check className="w-3 h-3 text-white" />}
-                                  </button>
-                                ) : (
-                                  <Link2 className="w-4 h-4 text-blue-500 mx-auto" title="Lettré" />
-                                )}
-                              </td>
+                  <CardContent>
+                    {parsing ? (
+                      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_360px]">
+                        <TableSkeleton rows={8} columns={7} showToolbar={false} />
+                        <DetailPanelSkeleton />
+                      </div>
+                    ) : displayRows.length === 0 ? (
+                      <div className="rounded-[24px] border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center">
+                        <p className="text-base font-semibold text-slate-900">Aucune ligne à afficher</p>
+                        <p className="mt-2 text-sm text-slate-500">Ajustez les filtres ou rechargez un autre extrait.</p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_360px]">
+                        <div className="table-surface overflow-hidden">
+                          <div className="overflow-auto">
+                            <table className="w-full min-w-[1100px] text-sm">
+                              <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur">
+                                <tr className="border-b border-slate-200/80">
+                                  <th className="px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">OK</th>
+                                  <th className="px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Opération</th>
+                                  <th className="px-3 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Montant</th>
+                                  <th className="px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Suggestion / lettrage</th>
+                                  <th className="px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Comptes suggérés</th>
+                                  <th className="px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Confiance</th>
+                                  <th className="px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {displayRows.map(({ t, origIdx }) => {
+                                  const isAttention = !t.validated && !t.lettered;
+                                  const isActive = activeLineIndex === origIdx;
+                                  return (
+                                    <tr
+                                      key={origIdx}
+                                      onClick={() => setActiveLineIndex(origIdx)}
+                                      className={`cursor-pointer border-b border-slate-200/70 align-top transition-colors ${
+                                        isActive ? 'bg-blue-50/70' : t.lettered ? 'bg-slate-50/70' : isAttention ? 'bg-amber-50/30 hover:bg-amber-50/50' : 'hover:bg-slate-50/80'
+                                      }`}
+                                    >
+                                      <td className="px-3 py-3">
+                                        {!t.lettered ? (
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); toggleValidated(origIdx); }}
+                                            className={`flex h-5 w-5 items-center justify-center rounded border-2 ${
+                                              t.validated ? 'border-emerald-500 bg-emerald-500' : 'border-slate-300 bg-white'
+                                            }`}
+                                          >
+                                            {t.validated ? <Check className="h-3 w-3 text-white" /> : null}
+                                          </button>
+                                        ) : (
+                                          <Link2 className="mx-auto h-4 w-4 text-blue-600" />
+                                        )}
+                                      </td>
+                                      <td className="px-3 py-3">
+                                        <div className="max-w-[320px]">
+                                          <div className="flex flex-wrap items-center gap-2">
+                                            <p className="font-medium text-slate-900">{t.description || 'Sans libellé'}</p>
+                                            {t.operation_type && t.operation_type !== 'autre' ? (
+                                              <Badge variant="secondary">{(OPERATION_TYPES[t.operation_type] || OPERATION_TYPES.autre).label}</Badge>
+                                            ) : (
+                                              <Badge variant="secondary">{t.transaction_type || 'Autre'}</Badge>
+                                            )}
+                                            {t.needs_lettrage ? <Badge variant="info">Lettrage requis</Badge> : null}
+                                          </div>
+                                          <p className="mt-1 text-xs text-slate-500">{t.date || '-'} {t.reference ? `· ${t.reference}` : ''}</p>
+                                          {t.ai_explanation ? (
+                                            <p className="mt-2 line-clamp-2 text-xs text-slate-400">{t.ai_explanation}</p>
+                                          ) : null}
+                                        </div>
+                                      </td>
+                                      <td className="px-3 py-3 text-right">
+                                        <div>
+                                          {t.debit > 0 ? (
+                                            <p className="font-semibold text-red-700">{fmt(t.debit)} TND</p>
+                                          ) : (
+                                            <p className="font-semibold text-emerald-700">{fmt(t.credit)} TND</p>
+                                          )}
+                                          <p className="mt-1 text-xs text-slate-400">{t.debit > 0 ? 'Sortie' : 'Entrée'}</p>
+                                        </div>
+                                      </td>
+                                      <td className="px-3 py-3">
+                                        <div className="space-y-2">
+                                          {t.matched_invoice_number ? (
+                                            <Badge variant="info">{t.matched_invoice_number}</Badge>
+                                          ) : (
+                                            <Badge variant={isAttention ? 'warning' : 'secondary'}>{isAttention ? 'Manuel requis' : 'En attente'}</Badge>
+                                          )}
+                                          <p className="text-xs text-slate-500">
+                                            {t.piece_metier ? t.piece_metier.replace(/_/g, ' ') : 'Aucune pièce métier détectée'}
+                                          </p>
+                                        </div>
+                                      </td>
+                                      <td className="px-3 py-3">
+                                        <div className="space-y-1 text-xs">
+                                          <div className="rounded-xl border border-slate-200 bg-white px-2 py-1">
+                                            <span className="font-mono font-semibold text-slate-900">{t.account_debit || '—'}</span>
+                                            <span className="ml-1 text-slate-500">{t.account_debit_name || 'Débit'}</span>
+                                          </div>
+                                          <div className="rounded-xl border border-slate-200 bg-white px-2 py-1">
+                                            <span className="font-mono font-semibold text-slate-900">{t.account_credit || '—'}</span>
+                                            <span className="ml-1 text-slate-500">{t.account_credit_name || 'Crédit'}</span>
+                                          </div>
+                                        </div>
+                                      </td>
+                                      <td className="px-3 py-3">
+                                        <div className="space-y-2">
+                                          {t.confidence ? <Badge variant={getConfidenceVariant(t.confidence)}>{t.confidence}</Badge> : <Badge variant="secondary">Sans score</Badge>}
+                                          {t.lettered ? <Badge variant="success">Lettré</Badge> : null}
+                                          {t.is_cash_operation ? <Badge variant="warning">+ Caisse</Badge> : null}
+                                        </div>
+                                      </td>
+                                      <td className="px-3 py-3">
+                                        <div className="flex flex-col items-stretch gap-2">
+                                          {!t.validated && !t.lettered ? (
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              className="h-8"
+                                              onClick={(e) => { e.stopPropagation(); setEditModal({ open: true, idx: origIdx, tx: { ...t } }); }}
+                                            >
+                                              <Edit2 className="mr-1 h-3 w-3" /> Éditer
+                                            </Button>
+                                          ) : null}
+                                          {!t.lettered && t.debit > 0 ? (
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              className="h-8 border-blue-200 text-blue-700"
+                                              onClick={(e) => { e.stopPropagation(); openLettrageModal(origIdx, t, 'supplier'); }}
+                                            >
+                                              <Link2 className="mr-1 h-3 w-3" /> Fournisseur
+                                            </Button>
+                                          ) : null}
+                                          {!t.lettered && t.credit > 0 ? (
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              className="h-8 border-emerald-200 text-emerald-700"
+                                              onClick={(e) => { e.stopPropagation(); openLettrageModal(origIdx, t, 'client'); }}
+                                            >
+                                              <Link2 className="mr-1 h-3 w-3" /> Client
+                                            </Button>
+                                          ) : null}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
 
-                              {/* Date */}
-                              <td className="px-3 py-2 text-gray-500 whitespace-nowrap">{t.date || '-'}</td>
-
-                              {/* Description + Analyse IA */}
-                              <td className="px-3 py-2">
-                                <div className="max-w-xs">
-                                  <p className="truncate font-medium">{t.description}</p>
-                                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                                    {t.operation_type && t.operation_type !== 'autre' && (
-                                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${(OPERATION_TYPES[t.operation_type] || OPERATION_TYPES.autre).color}`}>
-                                        {(OPERATION_TYPES[t.operation_type] || OPERATION_TYPES.autre).label}
-                                      </span>
-                                    )}
-                                    {!t.operation_type || t.operation_type === 'autre' ? (
-                                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${TYPE_COLORS[t.transaction_type] || TYPE_COLORS.autre}`}>
-                                        {t.transaction_type}
-                                      </span>
-                                    ) : null}
-                                    {t.piece_metier && t.piece_metier !== 'ecriture_manuelle' && (
-                                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-violet-50 text-violet-600">
-                                        {t.piece_metier.replace(/_/g, ' ')}
-                                      </span>
-                                    )}
-                                    {t.confidence && (
-                                      <span className={`text-xs px-1.5 py-0.5 rounded-full border ${CONFIDENCE_COLORS[t.confidence] || CONFIDENCE_COLORS.faible}`}>
-                                        {t.confidence === 'fort' ? '\u2705' : t.confidence === 'moyen' ? '\u26A0\uFE0F' : '\u2753'} {t.confidence}
-                                      </span>
-                                    )}
-                                    {t.needs_lettrage && (
-                                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200">
-                                        Lettrage requis
-                                      </span>
-                                    )}
-                                    {t.reference && <span className="text-xs text-gray-400">{t.reference}</span>}
-                                    {t.matched_invoice_number && (
-                                      <span className="text-xs text-blue-600 font-medium">{'\u2192'} {t.matched_invoice_number}</span>
-                                    )}
-                                  </div>
-                                  {t.ai_explanation && (
-                                    <p className="text-xs text-gray-400 mt-0.5 italic truncate">{t.ai_explanation}</p>
-                                  )}
+                        {activeLine ? (
+                          <Card className="sticky top-4 h-fit">
+                            <CardHeader>
+                              <CardTitle className="text-base">Détail de la ligne sélectionnée</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                <p className="font-semibold text-slate-900">{activeLine.description || 'Sans libellé'}</p>
+                                <p className="mt-1 text-sm text-slate-500">{activeLine.date || '-'} {activeLine.reference ? `· ${activeLine.reference}` : ''}</p>
+                              </div>
+                              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
+                                <div className="rounded-2xl border border-slate-200 p-4">
+                                  <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Montant</p>
+                                  <p className={`mt-2 text-lg font-semibold ${activeLine.debit > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+                                    {fmt(activeLine.debit > 0 ? activeLine.debit : activeLine.credit)} TND
+                                  </p>
+                                  <p className="text-sm text-slate-500">{activeLine.debit > 0 ? 'Débit / sortie' : 'Crédit / entrée'}</p>
                                 </div>
-                              </td>
-
-                              {/* Debit (sortie) */}
-                              <td className="px-3 py-2 text-right bg-red-50/30">
-                                {t.debit > 0 ? (
-                                  <span className="text-red-700 font-medium flex items-center justify-end gap-0.5">
-                                    <ArrowDownLeft className="w-3 h-3" />{fmt(t.debit)}
-                                  </span>
-                                ) : <span className="text-gray-300">—</span>}
-                              </td>
-
-                              {/* Credit (entrée) */}
-                              <td className="px-3 py-2 text-right bg-green-50/30">
-                                {t.credit > 0 ? (
-                                  <span className="text-green-700 font-medium flex items-center justify-end gap-0.5">
-                                    <ArrowUpRight className="w-3 h-3" />{fmt(t.credit)}
-                                  </span>
-                                ) : <span className="text-gray-300">—</span>}
-                              </td>
-
-                              {/* Account Debit */}
-                              <td className="px-3 py-2">
-                                {editingLine === `${origIdx}-d` ? (
-                                  <div className="flex gap-1">
-                                    <Input
-                                      value={t.account_debit || ''}
-                                      onChange={e => updateAccountField(origIdx, 'account_debit', e.target.value)}
-                                      className="h-6 w-16 text-xs p-1"
-                                      autoFocus
-                                      onBlur={() => setEditingLine(null)}
-                                    />
-                                    <Input
-                                      value={t.account_debit_name || ''}
-                                      onChange={e => updateAccountField(origIdx, 'account_debit_name', e.target.value)}
-                                      className="h-6 text-xs p-1"
-                                      onBlur={() => setEditingLine(null)}
-                                    />
+                                <div className="rounded-2xl border border-slate-200 p-4">
+                                  <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Confiance IA</p>
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    {activeLine.confidence ? <Badge variant={getConfidenceVariant(activeLine.confidence)}>{activeLine.confidence}</Badge> : <Badge variant="secondary">Sans score</Badge>}
+                                    {activeLine.needs_lettrage ? <Badge variant="info">Lettrage requis</Badge> : null}
+                                    {activeLine.lettered ? <Badge variant="success">Déjà lettré</Badge> : null}
                                   </div>
-                                ) : (
-                                  <button
-                                    className="text-left hover:bg-violet-50 px-1.5 py-0.5 rounded text-xs"
-                                    onClick={() => setEditingLine(`${origIdx}-d`)}
-                                  >
-                                    <span className="font-mono text-violet-700">{t.account_debit}</span>
-                                    <span className="text-gray-500 ml-1 truncate max-w-20 inline-block">{t.account_debit_name}</span>
-                                  </button>
-                                )}
-                              </td>
-
-                              {/* Account Credit */}
-                              <td className="px-3 py-2">
-                                {editingLine === `${origIdx}-c` ? (
-                                  <div className="flex gap-1">
-                                    <Input
-                                      value={t.account_credit || ''}
-                                      onChange={e => updateAccountField(origIdx, 'account_credit', e.target.value)}
-                                      className="h-6 w-16 text-xs p-1"
-                                      autoFocus
-                                      onBlur={() => setEditingLine(null)}
-                                    />
-                                    <Input
-                                      value={t.account_credit_name || ''}
-                                      onChange={e => updateAccountField(origIdx, 'account_credit_name', e.target.value)}
-                                      className="h-6 text-xs p-1"
-                                      onBlur={() => setEditingLine(null)}
-                                    />
-                                  </div>
-                                ) : (
-                                  <button
-                                    className="text-left hover:bg-violet-50 px-1.5 py-0.5 rounded text-xs"
-                                    onClick={() => setEditingLine(`${origIdx}-c`)}
-                                  >
-                                    <span className="font-mono text-violet-700">{t.account_credit}</span>
-                                    <span className="text-gray-500 ml-1 truncate max-w-20 inline-block">{t.account_credit_name}</span>
-                                  </button>
-                                )}
-                              </td>
-
-                              {/* Actions */}
-                              <td className="px-3 py-2 text-center">
-                                <div className="flex flex-col gap-1 items-center">
-                                {!t.validated && !t.lettered && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-6 text-xs px-2 border-violet-300 text-violet-700 hover:bg-violet-50 w-full"
-                                    onClick={() => setEditModal({ open: true, idx: origIdx, tx: { ...t } })}
-                                  >
-                                    <Edit2 className="w-3 h-3 mr-0.5" /> Éditer
-                                  </Button>
-                                )}
-                                {t.is_cash_operation && (
-                                  <span className="text-xs text-yellow-600 flex items-center gap-0.5">
-                                    <Banknote className="w-3 h-3" /> +Caisse
-                                  </span>
-                                )}
-                                {!t.lettered && t.debit > 0 && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-6 text-xs px-2 border-blue-300 text-blue-700 hover:bg-blue-50"
-                                    onClick={() => openLettrageModal(origIdx, t, 'supplier')}
-                                    title="Lettrer avec une facture fournisseur"
-                                  >
-                                    <Link2 className="w-3 h-3 mr-0.5" /> Fournisseur
-                                  </Button>
-                                )}
-                                {!t.lettered && t.credit > 0 && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-6 text-xs px-2 border-green-300 text-green-700 hover:bg-green-50"
-                                    onClick={() => openLettrageModal(origIdx, t, 'client')}
-                                    title="Lettrer avec une facture client"
-                                  >
-                                    <Link2 className="w-3 h-3 mr-0.5" /> Client
-                                  </Button>
-                                )}
-                                {t.lettered && (
-                                  <Badge className="bg-blue-100 text-blue-700 text-xs">Lettré</Badge>
-                                )}
                                 </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                              </div>
+
+                              <div className="rounded-2xl border border-slate-200 p-4">
+                                <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Comptes suggérés</p>
+                                <div className="mt-3 space-y-2 text-sm">
+                                  <div className="rounded-xl bg-slate-50 px-3 py-2">
+                                    <span className="font-mono font-semibold text-slate-900">{activeLine.account_debit || '—'}</span>
+                                    <span className="ml-2 text-slate-500">{activeLine.account_debit_name || 'Compte débit'}</span>
+                                  </div>
+                                  <div className="rounded-xl bg-slate-50 px-3 py-2">
+                                    <span className="font-mono font-semibold text-slate-900">{activeLine.account_credit || '—'}</span>
+                                    <span className="ml-2 text-slate-500">{activeLine.account_credit_name || 'Compte crédit'}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="rounded-2xl border border-slate-200 p-4">
+                                <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Raisonnement / correspondance</p>
+                                <p className="mt-3 text-sm text-slate-600">{activeLine.ai_explanation || 'Aucune explication détaillée fournie par le moteur.'}</p>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {activeLine.matched_invoice_number ? <Badge variant="info">{activeLine.matched_invoice_number}</Badge> : null}
+                                  {activeLine.piece_metier ? <Badge variant="secondary">{activeLine.piece_metier.replace(/_/g, ' ')}</Badge> : null}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ) : (
+                          <DetailPanelSkeleton />
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </>
@@ -915,59 +1131,61 @@ export default function BankReconciliation() {
           </>
         )}
 
-        {/* ── Tab History ── */}
         {tab === 'history' && (
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
-                <History className="w-4 h-4 text-violet-600" />
+                <History className="h-4 w-4 text-primary" />
                 Extraits bancaires importés
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {loadingHistory ? (
-                <div className="text-center py-8 text-gray-400">
-                  <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />Chargement…
+                <div className="p-4">
+                  <TableSkeleton rows={5} columns={6} showToolbar={false} />
                 </div>
               ) : statements.length === 0 ? (
-                <div className="text-center py-8 text-gray-400">Aucun extrait importé</div>
+                <div className="rounded-[24px] border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center">
+                  <p className="text-base font-semibold text-slate-900">Aucun extrait importé</p>
+                  <p className="mt-2 text-sm text-slate-500">Les extraits validés ou en cours apparaîtront ici pour réouverture dans le workbench.</p>
+                </div>
               ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b">
-                    <tr>
-                      <th className="px-4 py-2 text-left">Banque</th>
-                      <th className="px-4 py-2 text-left">Période</th>
-                      <th className="px-4 py-2 text-right">Lignes</th>
-                      <th className="px-4 py-2 text-right">Validées</th>
-                      <th className="px-4 py-2 text-left">Date import</th>
-                      <th className="px-4 py-2 text-center">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Banque</TableHead>
+                      <TableHead>Période</TableHead>
+                      <TableHead className="text-right">Lignes</TableHead>
+                      <TableHead className="text-right">Validées</TableHead>
+                      <TableHead>Date import</TableHead>
+                      <TableHead className="text-center">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {statements.map(s => (
-                      <tr key={s.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-2 font-medium">{s.bank_name || s.filename}</td>
-                        <td className="px-4 py-2 text-gray-500">
-                          {s.period_start} {s.period_end && `→ ${s.period_end}`}
-                        </td>
-                        <td className="px-4 py-2 text-right">{s.total_lines}</td>
-                        <td className="px-4 py-2 text-right">
-                          <span className={s.validated_lines === s.total_lines ? 'text-green-600 font-medium' : ''}>
+                      <TableRow key={s.id}>
+                        <TableCell className="font-medium">{s.bank_name || s.filename}</TableCell>
+                        <TableCell className="text-slate-500">
+                          {s.period_start} {s.period_end ? `→ ${s.period_end}` : ''}
+                        </TableCell>
+                        <TableCell className="text-right">{s.total_lines}</TableCell>
+                        <TableCell className="text-right">
+                          <span className={s.validated_lines === s.total_lines ? 'font-medium text-emerald-700' : 'text-slate-600'}>
                             {s.validated_lines}/{s.total_lines}
                           </span>
-                        </td>
-                        <td className="px-4 py-2 text-gray-500">
+                        </TableCell>
+                        <TableCell className="text-slate-500">
                           {s.created_at ? new Date(s.created_at).toLocaleDateString('fr-TN') : '-'}
-                        </td>
-                        <td className="px-4 py-2 text-center">
+                        </TableCell>
+                        <TableCell className="text-center">
                           <Button size="sm" variant="outline" onClick={() => loadStatement(s.id)}>
                             Ouvrir
                           </Button>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               )}
             </CardContent>
           </Card>

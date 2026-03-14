@@ -84,7 +84,7 @@ const WithholdingTaxes = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="page-header-title">Retenues à la Source</h1>

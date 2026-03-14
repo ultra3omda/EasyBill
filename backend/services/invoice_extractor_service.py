@@ -387,6 +387,85 @@ async def extract_with_gemini(file_bytes: bytes, mime_type: str, api_key: str) -
         return None
 
 
+async def extract_with_anthropic(file_bytes: bytes, mime_type: str, api_key: str) -> Optional[Dict[str, Any]]:
+    """
+    Use Anthropic Claude to extract invoice data from PDF/image content.
+    """
+    import asyncio
+    import base64
+    import json
+
+    def _sync_extract() -> Optional[Dict]:
+        try:
+            import anthropic
+
+            client = anthropic.Anthropic(api_key=api_key)
+            actual_mime = mime_type if mime_type.startswith("image/") else "application/pdf"
+            encoded = base64.standard_b64encode(file_bytes).decode("utf-8")
+
+            if actual_mime.startswith("image/"):
+                media_type = actual_mime if actual_mime in ("image/jpeg", "image/png", "image/webp", "image/gif") else "image/jpeg"
+                content_blocks = [
+                    {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": encoded}},
+                    {"type": "text", "text": GEMINI_PROMPT},
+                ]
+            else:
+                content_blocks = [
+                    {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": encoded}},
+                    {"type": "text", "text": GEMINI_PROMPT},
+                ]
+
+            last_error = None
+            for model_name in ["claude-3-7-sonnet-latest", "claude-3-5-sonnet-latest"]:
+                try:
+                    response = client.messages.create(
+                        model=model_name,
+                        max_tokens=4096,
+                        messages=[{"role": "user", "content": content_blocks}],
+                    )
+                    raw = "".join(
+                        block.text for block in getattr(response, "content", [])
+                        if getattr(block, "type", "") == "text"
+                    ).strip()
+                    if raw.startswith("```"):
+                        raw = re.sub(r"^```(?:json)?\n?", "", raw)
+                        raw = re.sub(r"\n?```$", "", raw.strip())
+                    if not raw:
+                        continue
+                    data = json.loads(raw)
+                    data["confidence"] = 0.9
+                    data["extraction_method"] = f"anthropic_vision ({model_name})"
+                    return data
+                except Exception as e:
+                    err_str = str(e)
+                    if "429" in err_str or "rate" in err_str.lower():
+                        logger.warning(f"Anthropic quota {model_name}, essai suivant...")
+                        last_error = e
+                        continue
+                    if "404" in err_str or "not_found" in err_str.lower():
+                        logger.warning(f"Modele Anthropic {model_name} non disponible, essai suivant...")
+                        last_error = e
+                        continue
+                    logger.warning(f"Anthropic {model_name} erreur: {e}")
+                    last_error = e
+                    break
+
+            logger.warning(f"Tous les modeles Anthropic ont echoue: {last_error}")
+            return None
+        except Exception as e:
+            logger.warning(f"Anthropic extraction echec: {e}")
+            return None
+
+    try:
+        return await asyncio.wait_for(asyncio.to_thread(_sync_extract), timeout=150.0)
+    except asyncio.TimeoutError:
+        logger.warning("Anthropic timeout apres 150s")
+        return None
+    except Exception as e:
+        logger.warning(f"Anthropic asyncio.to_thread echec: {e}")
+        return None
+
+
 async def extract_text_from_pdf(file_bytes: bytes) -> str:
     """Extract raw text from PDF using pdfplumber."""
     try:
@@ -401,6 +480,24 @@ async def extract_text_from_pdf(file_bytes: bytes) -> str:
         return ""
 
 
+def _is_fast_pdf_result_good(result: Dict[str, Any]) -> bool:
+    """
+    Fast acceptance gate for digital PDFs.
+    We keep the regex/native path only when the result is sufficiently complete,
+    which avoids expensive LLM calls on clean text-based invoices.
+    """
+    supplier = result.get("supplier") or {}
+    invoice = result.get("invoice") or {}
+    items = invoice.get("items") or []
+    confidence = float(result.get("confidence") or 0)
+    has_supplier = bool(supplier.get("name"))
+    has_number = bool(invoice.get("supplier_number"))
+    has_date = bool(invoice.get("date"))
+    has_total = bool(invoice.get("total"))
+    has_items = len(items) > 0
+    return confidence >= 0.7 and has_supplier and has_date and has_total and (has_items or has_number)
+
+
 async def extract_invoice_data(
     file_bytes: bytes,
     filename: str,
@@ -410,6 +507,19 @@ async def extract_invoice_data(
     Main entry point: extract structured invoice data from a file.
     """
     gemini_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_AI_KEY")
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+    raw_text = ""
+    regex_result = None
+
+    # Fast path for digital PDFs: prefer native text parsing when quality is already good.
+    if mime_type == "application/pdf" or filename.lower().endswith(".pdf"):
+        raw_text = await extract_text_from_pdf(file_bytes)
+        if raw_text.strip():
+            regex_result = _extract_with_regex(raw_text)
+            regex_result["raw_text_preview"] = raw_text[:500]
+            if _is_fast_pdf_result_good(regex_result):
+                regex_result["extraction_method"] = "regex_fast_pdf"
+                return regex_result
 
     # Try Gemini Vision first (most accurate)
     if gemini_key:
@@ -418,9 +528,15 @@ async def extract_invoice_data(
             result["extraction_method"] = "gemini_vision"
             return result
 
+    # Anthropic fallback for PDFs/images when Gemini is unavailable or fails.
+    if anthropic_key:
+        result = await extract_with_anthropic(file_bytes, mime_type, anthropic_key)
+        if result:
+            result["extraction_method"] = "anthropic_vision"
+            return result
+
     # Fallback: extract text then parse with regex
-    raw_text = ""
-    if mime_type == "application/pdf" or filename.lower().endswith(".pdf"):
+    if not raw_text and (mime_type == "application/pdf" or filename.lower().endswith(".pdf")):
         raw_text = await extract_text_from_pdf(file_bytes)
     elif mime_type.startswith("image/"):
         # For images without Gemini, try basic PIL-based approach
@@ -447,7 +563,7 @@ async def extract_invoice_data(
             "error": "Impossible d'extraire le texte du document. Vérifiez que le PDF n'est pas scanné ou configurez GEMINI_API_KEY."
         }
 
-    result = _extract_with_regex(raw_text)
+    result = regex_result or _extract_with_regex(raw_text)
     result["extraction_method"] = "regex"
     result["raw_text_preview"] = raw_text[:500]
     return result

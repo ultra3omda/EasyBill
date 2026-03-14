@@ -321,7 +321,7 @@ const Settings = () => {
         </div>
 
         {isProfile && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <Card className="p-6">
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
                 <div className="relative shrink-0">
@@ -448,7 +448,7 @@ const Settings = () => {
         )}
 
         {isCompany && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {!currentCompany ? (
               <Card className="p-6">
                 <div className="text-center py-10 text-gray-500 bg-gray-50 rounded-lg">
@@ -520,7 +520,7 @@ const Settings = () => {
 
                 <Card className="p-6">
                   <h2 className="text-xl font-semibold mb-6">Informations entreprise</h2>
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div>
                         <Label className="text-gray-600">Nom de l'entreprise</Label>
@@ -594,7 +594,7 @@ const Settings = () => {
         )}
 
         {isNotifications && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <Card className="p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2.5 bg-amber-100 rounded-lg">
@@ -652,7 +652,7 @@ const Settings = () => {
         )}
 
         {isSecurity && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <Card className="p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2.5 bg-violet-100 rounded-lg">

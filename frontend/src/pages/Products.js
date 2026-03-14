@@ -249,6 +249,31 @@ const Products = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleAddComponent = () => {
+    setFormData(prev => ({
+      ...prev,
+      components: [...(prev.components || []), { product_id: '', product_name: '', quantity: 1 }]
+    }));
+  };
+
+  const handleUpdateComponent = (index, field, value) => {
+    setFormData(prev => {
+      const comps = [...(prev.components || [])];
+      if (!comps[index]) return prev;
+      comps[index] = { ...comps[index], [field]: value };
+      if (field === 'product_id') {
+        const p = products.find(pr => pr.id === value);
+        comps[index].product_name = p ? p.name : '';
+      }
+      return { ...prev, components: comps };
+    });
+  };
+
+  const handleRemoveComponent = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      components: (prev.components || []).filter((_, i) => i !== index)
+      
   const addComponent = () => {
     if (!newComponentProductId || Number(newComponentQuantity) <= 0) {
       toast({ title: 'Erreur', description: 'Sélectionnez un article et une quantité supérieure à 0', variant: 'destructive' });
@@ -300,8 +325,10 @@ const Products = () => {
         composite_field_name: formData.composite_field_name || '',
         composite_operation: formData.composite_operation || 'multiply',
         barcode: formData.barcode,
-        is_composite: !!(formData.is_composite || (formData.components && formData.components.length > 0)),
-        components: (formData.components || []).map(c => ({ product_id: c.product_id, quantity: Math.max(1, Number(c.quantity) || 1) }))
+        is_composite: formData.is_composite,
+        components: (formData.components || [])
+          .filter(c => c.product_id && (parseFloat(c.quantity) || 0) > 0)
+          .map(c => ({ product_id: c.product_id, product_name: c.product_name || '', quantity: parseFloat(c.quantity) || 1 }))
       };
 
       let productId = editingProduct?.id;
@@ -369,7 +396,11 @@ const Products = () => {
       quantity_in_stock: product.quantity_in_stock || 0,
       warehouse_id: product.warehouse_id || '',
       is_composite: product.is_composite || false,
-      components: (product.components || []).map(c => ({ ...c, product_name: c.product_name || '' }))
+      components: (product.components || []).map(c => ({
+        product_id: c.product_id || c.productId || '',
+        product_name: c.product_name || products.find(p => p.id === (c.product_id || c.productId))?.name || '',
+        quantity: c.quantity ?? 1
+      }))
     });
     setNewComponentProductId('');
     setNewComponentQuantity(1);
@@ -617,12 +648,12 @@ const Products = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6" data-testid="products-page">
+      <div className="space-y-4" data-testid="products-page">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Articles</h1>
-            <p className="text-gray-500 text-sm">Stock • {currentCompany?.name || 'Mycompany'}</p>
+            <h1 className="page-header-title">Articles</h1>
+            <p className="page-header-subtitle">Stock • {currentCompany?.name || 'Mycompany'}</p>
           </div>
           <div className="flex gap-2">
             {/* Action Dropdown */}
@@ -684,16 +715,16 @@ const Products = () => {
         </div>
 
         {/* KPI Cards - Iberis Style */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           {/* Stock le plus bas */}
-          <Card className="p-4 bg-gradient-to-br from-red-50 to-red-100 border-0 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="p-3 bg-red-500 rounded-lg">
-                <TrendingDown className="w-6 h-6 text-white" />
+          <Card className="p-3 bg-gradient-to-br from-red-50 to-red-100 border-0 shadow-sm">
+            <div className="flex items-start gap-2">
+              <div className="p-2 bg-red-500 rounded-lg">
+                <TrendingDown className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
-                <p className="text-sm text-gray-600 font-medium">Stock le plus bas</p>
-                <p className="text-lg font-bold text-gray-900 truncate">
+                <p className="text-xs text-gray-600 font-medium">Stock le plus bas</p>
+                <p className="text-base font-bold text-gray-900 truncate">
                   {lowStockProduct?.name || 'Aucun(e)'}
                 </p>
               </div>
@@ -701,15 +732,15 @@ const Products = () => {
           </Card>
 
           {/* Valeur du Stock */}
-          <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-0 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="p-3 bg-blue-500 rounded-lg">
-                <Package className="w-6 h-6 text-white" />
+          <Card className="p-3 bg-gradient-to-br from-blue-50 to-blue-100 border-0 shadow-sm">
+            <div className="flex items-start gap-2">
+              <div className="p-2 bg-blue-500 rounded-lg">
+                <Package className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
-                <p className="text-sm text-gray-600 font-medium">Valeur du Stock</p>
+                <p className="text-xs text-gray-600 font-medium">Valeur du Stock</p>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold text-gray-900">{totalValue.toFixed(3)}</span>
+                  <span className="text-base font-bold text-gray-900">{totalValue.toFixed(3)}</span>
                   <span className="text-sm font-medium text-gray-600">TND</span>
                 </div>
               </div>
@@ -717,14 +748,14 @@ const Products = () => {
           </Card>
 
           {/* Le plus rentable */}
-          <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 border-0 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="p-3 bg-green-500 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-white" />
+          <Card className="p-3 bg-gradient-to-br from-green-50 to-green-100 border-0 shadow-sm">
+            <div className="flex items-start gap-2">
+              <div className="p-2 bg-green-500 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
-                <p className="text-sm text-gray-600 font-medium">Le plus rentable</p>
-                <p className="text-lg font-bold text-gray-900 truncate">
+                <p className="text-xs text-gray-600 font-medium">Le plus rentable</p>
+                <p className="text-base font-bold text-gray-900 truncate">
                   {mostProfitable?.name || 'Aucun(e)'}
                 </p>
               </div>
@@ -732,14 +763,14 @@ const Products = () => {
           </Card>
 
           {/* Article le plus vendu */}
-          <Card className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 border-0 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="p-3 bg-purple-500 rounded-lg">
-                <ShoppingCart className="w-6 h-6 text-white" />
+          <Card className="p-3 bg-gradient-to-br from-purple-50 to-purple-100 border-0 shadow-sm">
+            <div className="flex items-start gap-2">
+              <div className="p-2 bg-purple-500 rounded-lg">
+                <ShoppingCart className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
-                <p className="text-sm text-gray-600 font-medium">Article le plus vendu</p>
-                <p className="text-lg font-bold text-gray-900 truncate">
+                <p className="text-xs text-gray-600 font-medium">Article le plus vendu</p>
+                <p className="text-base font-bold text-gray-900 truncate">
                   {mostSold?.name || 'Aucun(e)'}
                 </p>
               </div>
@@ -1418,69 +1449,67 @@ const Products = () => {
                     <Layers className="w-4 h-4" />
                     <span>Composition de l'article</span>
                   </div>
-                  <p className="text-sm text-amber-600 mb-4">
+                  <p className="text-sm text-amber-600 mb-3">
                     Ajoutez les articles qui composent ce produit. Cette fonctionnalité permet de gérer les produits assemblés.
                   </p>
                   {(formData.components || []).length > 0 && (
-                    <div className="mb-4">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Article</TableHead>
-                            <TableHead className="w-24">Quantité</TableHead>
-                            <TableHead className="w-12"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {(formData.components || []).map((comp, index) => (
-                            <TableRow key={`${comp.product_id}-${index}`}>
-                              <TableCell className="font-medium">
-                                {products.find(p => p.id === comp.product_id)?.name || comp.product_name || comp.product_id || '—'}
-                              </TableCell>
-                              <TableCell>{Number(comp.quantity)}</TableCell>
-                              <TableCell>
-                                <Button type="button" variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => removeComponent(index)}>
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                    <div className="space-y-3 mb-3">
+                      <div className="grid grid-cols-12 gap-2 text-xs font-medium text-amber-700">
+                        <div className="col-span-7">Article</div>
+                        <div className="col-span-3">Quantité</div>
+                        <div className="col-span-2"></div>
+                      </div>
+                      {(formData.components || []).map((comp, idx) => (
+                        <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+                          <div className="col-span-7">
+                            <Select
+                              value={comp.product_id}
+                              onValueChange={(v) => handleUpdateComponent(idx, 'product_id', v)}
+                            >
+                              <SelectTrigger className="bg-white">
+                                <SelectValue placeholder="Sélectionner un article" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {products
+                                  .filter(p => !editingProduct || p.id !== editingProduct.id)
+                                  .map(p => (
+                                    <SelectItem key={p.id} value={p.id}>
+                                      {p.name} {p.sku ? `(${p.sku})` : ''}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="col-span-3">
+                            <Input
+                              type="number"
+                              min="0.001"
+                              step="0.001"
+                              value={comp.quantity}
+                              onChange={(e) => handleUpdateComponent(idx, 'quantity', e.target.value)}
+                              placeholder="1"
+                              className="bg-white"
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleRemoveComponent(idx)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
-                  <div className="flex flex-wrap items-end gap-2">
-                    <div className="flex-1 min-w-[200px]">
-                      <Label className="text-xs text-gray-500">Article</Label>
-                      <Select value={newComponentProductId} onValueChange={setNewComponentProductId}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Choisir un article" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {products
-                            .filter(p => p.id !== editingProduct?.id)
-                            .map(p => (
-                              <SelectItem key={p.id} value={p.id}>{p.name} {p.sku ? `(${p.sku})` : ''}</SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="w-28">
-                      <Label className="text-xs text-gray-500">Quantité</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        step={1}
-                        value={newComponentQuantity}
-                        onChange={(e) => setNewComponentQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                        className="mt-1"
-                      />
-                    </div>
-                    <Button type="button" variant="outline" onClick={addComponent}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Ajouter un composant
-                    </Button>
-                  </div>
+                  <Button variant="outline" className="mt-3" type="button" onClick={handleAddComponent}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Ajouter un composant
+                  </Button>
                 </div>
               )}
 

@@ -339,12 +339,13 @@ const CustomerFormModal = ({ open, onClose, onSuccess, customer = null }) => {
       if (customer) {
         await customersAPI.update(currentCompany.id, customer.id, dataToSend);
         toast({ title: 'Succès', description: 'Client modifié avec succès' });
+        onSuccess({ id: customer.id });
       } else {
-        await customersAPI.create(currentCompany.id, dataToSend);
+        const res = await customersAPI.create(currentCompany.id, dataToSend);
         toast({ title: 'Succès', description: 'Client créé avec succès' });
+        onSuccess({ id: res.data?.id });
       }
       
-      onSuccess();
       onClose();
     } catch (error) {
       console.error('Error saving customer:', error);
