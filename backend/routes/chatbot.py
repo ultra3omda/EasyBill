@@ -1225,8 +1225,25 @@ async def _action_consult_client(company_id: str, name: str, current_user: dict 
         user_id = current_user.get("_id") if current_user else None
         customer, err_resp = await _resolve_customer_for_action(company_id, name, user_id, ChatbotIntent.CONSULT_CLIENT, {"client_name": name}, "consult_client")
         if err_resp:
+            if err_resp.get("action") == "confirm_client":
+                return err_resp
+            name_clean = (name or "").strip()
+            if name_clean:
+                client_entities = {"first_name": name_clean, "display_name": name_clean}
+                action_summary = [f"Créer le nouveau client : {name_clean}"]
+                await _save_pending_execution(company_id, user_id, ChatbotIntent.CREATE_CLIENT, client_entities, None, action_summary)
+                msg = f"Client « {name_clean} » non trouvé. Voulez-vous le créer ?\n\n• " + "\n• ".join(action_summary) + "\n\nConfirmez-vous l'exécution ?"
+                return {"action": "confirm_execution", "action_summary": action_summary, "message": msg, "suggestions": err_resp.get("suggestions", [])}
             return err_resp
     if not customer:
+        name_clean = (name or "").strip()
+        if name_clean:
+            user_id = current_user.get("_id") if current_user else None
+            client_entities = {"first_name": name_clean, "display_name": name_clean}
+            action_summary = [f"Créer le nouveau client : {name_clean}"]
+            await _save_pending_execution(company_id, user_id, ChatbotIntent.CREATE_CLIENT, client_entities, None, action_summary)
+            msg = f"Client « {name_clean} » non trouvé. Voulez-vous le créer ?\n\n• " + "\n• ".join(action_summary) + "\n\nConfirmez-vous l'exécution ?"
+            return {"action": "confirm_execution", "action_summary": action_summary, "message": msg, "suggestions": []}
         return {"action": "consult_client", "found": False, "message": f"Client '{name}' non trouvé.", "suggestions": []}
 
     total_invoiced_pipeline = [

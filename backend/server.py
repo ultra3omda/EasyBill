@@ -58,9 +58,9 @@ except Exception:
     receipts_pdf = None
 
 # MongoDB connection
-mongo_url = os.environ['MONGO_URL']
+mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+db = client[os.environ.get('DB_NAME', 'easybill')]
 
 # Create the main app
 app = FastAPI(title="EasyBill API", version="1.0.0")
@@ -157,6 +157,14 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+@app.on_event("startup")
+async def verify_mongodb():
+    try:
+        await client.admin.command('ping')
+        logger.info("MongoDB connection OK")
+    except Exception as e:
+        logger.error("MongoDB connection failed: %s", e)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
