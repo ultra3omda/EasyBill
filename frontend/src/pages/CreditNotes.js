@@ -200,7 +200,7 @@ const CreditNotes = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6" data-testid="credit-notes-page">
+      <div className="space-y-4" data-testid="credit-notes-page">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Factures d'avoir</h1>

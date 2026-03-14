@@ -71,7 +71,7 @@ const Warehouses = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6" data-testid="warehouses-page">
+      <div className="space-y-4" data-testid="warehouses-page">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div><h1 className="text-3xl font-bold text-gray-900">Entrepôts</h1><p className="text-gray-500 mt-1">{stats.total} entrepôts</p></div>
           <Button className="bg-violet-600 hover:bg-violet-700 text-white" onClick={openCreate} data-testid="create-warehouse-btn"><Plus className="w-4 h-4 mr-2" /> Nouvel entrepôt</Button>

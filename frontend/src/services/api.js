@@ -213,6 +213,18 @@ export const paymentsAPI = {
   delete: (companyId, id) => apiClient.delete(`/payments/${id}?company_id=${companyId}`),
 };
 
+// Receipts API (Bons de réception)
+export const receiptsAPI = {
+  list: (companyId, params = {}) => {
+    const queryParams = new URLSearchParams({ company_id: companyId, ...params }).toString();
+    return apiClient.get(`/receipts/?${queryParams}`);
+  },
+  getStats: (companyId) => apiClient.get(`/receipts/stats?company_id=${companyId}`),
+  get: (companyId, id) => apiClient.get(`/receipts/${id}?company_id=${companyId}`),
+  create: (companyId, data) => apiClient.post(`/receipts/?company_id=${companyId}`, data),
+  validate: (companyId, id) => apiClient.post(`/receipts/${id}/validate?company_id=${companyId}`),
+};
+
 // Delivery Notes API
 export const deliveryNotesAPI = {
   create: (companyId, data) => apiClient.post(`/delivery-notes/?company_id=${companyId}`, data),

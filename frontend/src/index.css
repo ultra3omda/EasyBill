@@ -10,9 +10,9 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background:
-        radial-gradient(circle at top left, rgba(124, 58, 237, 0.1), transparent 24%),
-        radial-gradient(circle at top right, rgba(245, 158, 11, 0.08), transparent 22%),
-        linear-gradient(180deg, #f7f7fb 0%, #f1f3f8 100%);
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 24%),
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.06), transparent 20%),
+        linear-gradient(180deg, #f5f7fb 0%, #eef2f7 100%);
 }
 
 code {
@@ -22,39 +22,53 @@ code {
 
 @layer base {
     :root {
-        --background: 240 25% 97%;
-        --foreground: 240 18% 14%;
+        --background: 220 30% 97%;
+        --foreground: 222 35% 12%;
         --card: 0 0% 100%;
-        --card-foreground: 240 18% 14%;
+        --card-foreground: 222 35% 12%;
         --popover: 0 0% 100%;
-        --popover-foreground: 240 18% 14%;
-        --primary: 258 85% 59%;
+        --popover-foreground: 222 35% 12%;
+        --primary: 221 83% 53%;
         --primary-foreground: 0 0% 100%;
-        --secondary: 43 96% 56%;
-        --secondary-foreground: 240 18% 14%;
-        --muted: 240 17% 94%;
-        --muted-foreground: 240 9% 42%;
-        --accent: 258 85% 95%;
-        --accent-foreground: 258 70% 34%;
-        --destructive: 0 84.2% 60.2%;
+        --secondary: 210 40% 96%;
+        --secondary-foreground: 222 35% 18%;
+        --muted: 220 24% 95%;
+        --muted-foreground: 220 11% 41%;
+        --accent: 217 91% 96%;
+        --accent-foreground: 221 70% 34%;
+        --destructive: 0 72% 51%;
         --destructive-foreground: 0 0% 98%;
-        --border: 240 16% 88%;
-        --input: 240 16% 88%;
-        --ring: 258 85% 59%;
-        --chart-1: 258 85% 59%;
-        --chart-2: 43 96% 56%;
-        --chart-3: 231 83% 61%;
-        --chart-4: 279 70% 62%;
-        --chart-5: 27 87% 63%;
+        --border: 220 18% 88%;
+        --input: 220 18% 88%;
+        --ring: 221 83% 53%;
+        --chart-1: 221 83% 53%;
+        --chart-2: 196 85% 46%;
+        --chart-3: 160 84% 39%;
+        --chart-4: 39 92% 50%;
+        --chart-5: 262 83% 58%;
         --radius: 1rem;
+        --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+        --shadow-sm: 0 8px 24px rgba(15, 23, 42, 0.05);
+        --shadow-md: 0 18px 40px rgba(15, 23, 42, 0.08);
+        --shadow-lg: 0 32px 80px rgba(15, 23, 42, 0.14);
+        --success: 160 84% 32%;
+        --success-foreground: 0 0% 100%;
+        --success-soft: 160 60% 95%;
+        --warning: 38 92% 50%;
+        --warning-foreground: 222 35% 14%;
+        --warning-soft: 44 96% 93%;
+        --info: 221 83% 53%;
+        --info-foreground: 0 0% 100%;
+        --info-soft: 217 91% 96%;
+        --danger-soft: 0 86% 97%;
         
         /* EasyBill Custom Colors */
-        --easybill-violet: 258 85% 59%;
-        --easybill-violet-light: 258 100% 96%;
-        --easybill-violet-dark: 258 60% 24%;
-        --easybill-gold: 43 96% 56%;
-        --easybill-gold-light: 48 100% 92%;
-        --easybill-gold-dark: 40 80% 35%;
+        --easybill-violet: 221 83% 53%;
+        --easybill-violet-light: 217 91% 96%;
+        --easybill-violet-dark: 222 47% 20%;
+        --easybill-gold: 38 92% 50%;
+        --easybill-gold-light: 44 96% 93%;
+        --easybill-gold-dark: 31 81% 32%;
     }
     .dark {
         --background: 0 0% 3.9%;
@@ -128,10 +142,16 @@ code {
 @layer base {
     html {
         font-family: "Manrope", "Segoe UI", sans-serif;
+        scroll-behavior: smooth;
     }
 
     body {
         min-height: 100vh;
+    }
+
+    /* Scrollbars discrets pour navigation fluide */
+    .overscroll-contain {
+        overscroll-behavior: contain;
     }
 
     ::selection {
@@ -141,11 +161,35 @@ code {
 
 @layer components {
     .app-page {
-        @apply rounded-[28px] border border-white/80 bg-white/85 shadow-[0_20px_60px_rgba(15,23,42,0.06)] backdrop-blur-sm;
+        @apply min-h-full overflow-hidden rounded-[28px] border border-white/70 bg-white/90 shadow-[0_20px_60px_rgba(15,23,42,0.06)] backdrop-blur-sm;
+    }
+
+    .app-shell-surface {
+        @apply rounded-[24px] border border-slate-200/80 bg-white/95 shadow-[0_12px_32px_rgba(15,23,42,0.05)] backdrop-blur-sm;
+    }
+
+    .page-shell {
+        @apply flex min-h-full flex-col gap-6 p-4 md:p-6;
+    }
+
+    .page-header {
+        @apply flex flex-col gap-4 border-b border-slate-200/80 pb-4 md:flex-row md:items-start md:justify-between;
+    }
+
+    .page-actions {
+        @apply flex flex-wrap items-center gap-2;
+    }
+
+    .section-stack {
+        @apply space-y-4 md:space-y-6;
+    }
+
+    .section-grid {
+        @apply grid gap-4 md:gap-5;
     }
 
     .page-header-title {
-        @apply text-[28px] font-extrabold tracking-[-0.03em] text-slate-900;
+        @apply text-[26px] font-extrabold tracking-[-0.03em] text-slate-950 md:text-[30px];
     }
 
     .page-header-subtitle {
@@ -154,6 +198,18 @@ code {
 
     .stat-surface {
         @apply rounded-[24px] border border-slate-200/70 bg-gradient-to-br from-white to-slate-50 shadow-[0_14px_30px_rgba(15,23,42,0.05)];
+    }
+
+    .table-surface {
+        @apply overflow-hidden rounded-[22px] border border-slate-200/80 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.04)];
+    }
+
+    .metric-value {
+        @apply text-xl font-bold tracking-[-0.03em] text-slate-950 md:text-2xl;
+    }
+
+    .status-pill {
+        @apply inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-[0.03em];
     }
 }
 
@@ -169,4 +225,14 @@ code {
 }
 [data-sonner-toast] [data-description] {
     color: #404040 !important;
+}
+
+@layer utilities {
+    .interactive-lift {
+        @apply transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_18px_36px_rgba(15,23,42,0.08)];
+    }
+
+    .focus-ring {
+        @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2;
+    }
 }

@@ -170,14 +170,17 @@ class BankStatementExtractionService:
     async def extract_from_file(self, file_path: str, company_id: str) -> Dict[str, Any]:
         """
         Extract transactions from a bank statement file.
-        Strategy: native PDF text -> Document AI OCR -> Gemini fallback -> pdfplumber fallback.
+        Strategy:
+          - PDF: native PDF text -> Gemini -> Document AI -> pdfplumber
+          - Image: Document AI -> Gemini
         Returns: { transactions: [...], bank_name, account_number, period_start, period_end, ... }
         """
         result = None
         page_count = self._get_pdf_page_count(file_path)
         native_pdf_result = None
+        is_pdf = file_path.lower().endswith(".pdf")
 
-        if file_path.lower().endswith(".pdf"):
+        if is_pdf:
             native_pdf_result = self._extract_native_pdf_text(file_path)
             if native_pdf_result and not self._is_low_quality_extraction(native_pdf_result):
                 logger.info(
@@ -186,12 +189,25 @@ class BankStatementExtractionService:
                 )
                 return native_pdf_result
 
-        if self.use_document_ai and page_count <= 30:
+        # For PDFs, Gemini is often the best trade-off when native extraction is weak or unavailable.
+        if is_pdf and (not native_pdf_result or self._is_low_quality_extraction(native_pdf_result)):
+            gemini_result = await self._extract_gemini_fallback(file_path, company_id)
+            if gemini_result and (gemini_result.get("transactions") or []):
+                logger.info(
+                    "PDF fallback Gemini selected: %d transactions",
+                    len(gemini_result.get("transactions") or [])
+                )
+                gemini_result.setdefault("ocr_provider", "gemini")
+                gemini_result.setdefault("ocr_raw", None)
+                gemini_result.setdefault("parsing_warnings", [])
+                return gemini_result
+
+        if self.use_document_ai and (not is_pdf or page_count <= 30):
             try:
                 result = await self._extract_document_ai(file_path)
             except Exception as e:
                 logger.warning("Document AI extraction failed: %s", e)
-        elif self.use_document_ai and page_count > 30:
+        elif self.use_document_ai and is_pdf and page_count > 30:
             logger.info("PDF has %d pages (> 30 limit), skipping Document AI", page_count)
 
         if result and self._is_low_quality_extraction(result) and native_pdf_result and (native_pdf_result.get("transactions") or []):

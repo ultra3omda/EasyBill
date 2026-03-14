@@ -233,7 +233,7 @@ async def create_receipt(
         "delivery_note_number": receipt.delivery_note_number,
         "carrier": receipt.carrier,
         "company_id": ObjectId(company_id),
-        "created_by": ObjectId(current_user["id"]),
+        "created_by": current_user["_id"],
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc)
     }
@@ -333,7 +333,7 @@ async def validate_receipt(
                 "lot_number": item.get("lot_number"),
                 "expiry_date": item.get("expiry_date"),
                 "company_id": ObjectId(company_id),
-                "created_by": ObjectId(current_user["id"]),
+                "created_by": current_user["_id"],
                 "created_at": datetime.now(timezone.utc)
             }
             await db.stock_movements.insert_one(movement)
@@ -352,7 +352,7 @@ async def validate_receipt(
             "$set": {
                 "status": "validated",
                 "validated_at": datetime.now(timezone.utc),
-                "validated_by": ObjectId(current_user["id"]),
+                "validated_by": current_user["_id"],
                 "updated_at": datetime.now(timezone.utc)
             }
         }
@@ -467,7 +467,7 @@ async def create_receipt_from_po(
         "status": ReceiptStatus.DRAFT.value,
         "notes": f"Créé depuis le bon de commande {po.get('number')}",
         "company_id": ObjectId(company_id),
-        "created_by": ObjectId(current_user["id"]),
+        "created_by": current_user["_id"],
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc)
     }

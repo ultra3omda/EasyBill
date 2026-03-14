@@ -26,21 +26,43 @@ const Expenses = () => {
     expense.supplier.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const totalExpenses = filteredExpenses.reduce((acc, e) => acc + e.amount, 0);
+  const recurringExpenses = filteredExpenses.filter(e => e.recurring).reduce((acc, e) => acc + e.amount, 0);
+  const oneOffExpenses = filteredExpenses.filter(e => !e.recurring).reduce((acc, e) => acc + e.amount, 0);
+
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="page-shell section-stack">
+        <div className="page-header">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{t('nav.expenses')}</h1>
-            <p className="text-gray-500 mt-1">{filteredExpenses.length} dépenses enregistrées</p>
+            <h1 className="page-header-title">{t('nav.expenses')}</h1>
+            <p className="page-header-subtitle">{filteredExpenses.length} dépense(s) visibles sur le périmètre courant</p>
           </div>
-          <Button className="bg-teal-600 hover:bg-teal-700 text-white">
+          <Button>
             <Plus className="w-4 h-4 mr-2" />
             Nouvelle dépense
           </Button>
         </div>
 
-        <Card className="p-4">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="interactive-lift p-5">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Total dépenses</p>
+            <p className="metric-value mt-2">{totalExpenses.toFixed(3)} TND</p>
+            <p className="mt-1 text-sm text-slate-500">Montant cumulé des lignes filtrées</p>
+          </Card>
+          <Card className="interactive-lift p-5">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Récurrentes</p>
+            <p className="metric-value mt-2">{recurringExpenses.toFixed(3)} TND</p>
+            <p className="mt-1 text-sm text-slate-500">Charges périodiques</p>
+          </Card>
+          <Card className="interactive-lift p-5">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-400">Ponctuelles</p>
+            <p className="metric-value mt-2">{oneOffExpenses.toFixed(3)} TND</p>
+            <p className="mt-1 text-sm text-slate-500">Achats ou frais non récurrents</p>
+          </Card>
+        </div>
+
+        <Card className="p-4 md:p-5">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -58,63 +80,54 @@ const Expenses = () => {
           </div>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-6">
-            <p className="text-sm text-gray-600 mb-2">Total Dépenses</p>
-            <p className="text-2xl font-bold text-gray-900">
-              {expenses.reduce((acc, e) => acc + e.amount, 0).toFixed(3)} TND
-            </p>
-          </Card>
-          <Card className="p-6">
-            <p className="text-sm text-gray-600 mb-2">Dépenses Récurrentes</p>
-            <p className="text-2xl font-bold text-blue-600">
-              {expenses.filter(e => e.recurring).reduce((acc, e) => acc + e.amount, 0).toFixed(3)} TND
-            </p>
-          </Card>
-          <Card className="p-6">
-            <p className="text-sm text-gray-600 mb-2">Ce mois</p>
-            <p className="text-2xl font-bold text-orange-600">
-              {expenses.reduce((acc, e) => acc + e.amount, 0).toFixed(3)} TND
-            </p>
-          </Card>
-        </div>
-
         <Card>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Référence</TableHead>
-                  <TableHead>Catégorie</TableHead>
-                  <TableHead>Fournisseur</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Montant</TableHead>
-                  <TableHead>Type</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredExpenses.map((expense) => (
-                  <TableRow key={expense.id} className="hover:bg-gray-50">
-                    <TableCell className="font-medium">{expense.id}</TableCell>
-                    <TableCell>{expense.category}</TableCell>
-                    <TableCell>{expense.supplier}</TableCell>
-                    <TableCell>{new Date(expense.date).toLocaleDateString('fr-FR')}</TableCell>
-                    <TableCell className="font-semibold">{expense.amount.toFixed(3)} TND</TableCell>
-                    <TableCell>
-                      {expense.recurring ? (
-                        <Badge className="bg-blue-100 text-blue-800">
-                          <RefreshCw className="w-3 h-3 mr-1" />
-                          Récurrent
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline">Ponctuel</Badge>
-                      )}
-                    </TableCell>
+          {filteredExpenses.length === 0 ? (
+            <div className="p-10 text-center">
+              <p className="text-base font-semibold text-slate-900">Aucune dépense trouvée</p>
+              <p className="mt-2 text-sm text-slate-500">Ajustez votre recherche ou ajoutez une nouvelle charge pour alimenter le suivi des dépenses.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Référence</TableHead>
+                    <TableHead>Catégorie</TableHead>
+                    <TableHead>Fournisseur</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Montant</TableHead>
+                    <TableHead>Type</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredExpenses.map((expense) => (
+                    <TableRow key={expense.id}>
+                      <TableCell className="font-medium text-slate-900">{expense.id}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium text-slate-900">{expense.category}</p>
+                          <p className="text-xs text-slate-400">Charge d'exploitation</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-slate-700">{expense.supplier}</TableCell>
+                      <TableCell className="text-slate-500">{new Date(expense.date).toLocaleDateString('fr-FR')}</TableCell>
+                      <TableCell className="font-semibold text-slate-900">{expense.amount.toFixed(3)} TND</TableCell>
+                      <TableCell>
+                        {expense.recurring ? (
+                          <Badge variant="info">
+                            <RefreshCw className="w-3 h-3 mr-1" />
+                            Récurrent
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">Ponctuel</Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </Card>
       </div>
     </AppLayout>

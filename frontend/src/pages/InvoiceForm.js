@@ -3,9 +3,9 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useCompany } from '../hooks/useCompany';
 import AppLayout from '../components/layout/AppLayout';
 import SalesDocumentForm from '../components/forms/SalesDocumentForm';
+import { FormSkeleton } from '../components/ui/skeleton';
 import { invoicesAPI } from '../services/api';
 import { toast } from '../hooks/use-toast';
-import { Loader2 } from 'lucide-react';
 
 const InvoiceForm = () => {
   const navigate = useNavigate();
@@ -66,20 +66,19 @@ const InvoiceForm = () => {
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-96">
-          <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
-        </div>
+        <FormSkeleton />
       </AppLayout>
     );
   }
 
   return (
     <AppLayout>
-      <div className="h-[calc(100vh-80px)] overflow-hidden">
-        <div className="p-6 h-full">
-          <h1 className="text-2xl font-bold mb-4">
+      <div className="page-shell h-full overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col">
+          <h1 className="page-header-title mb-3 text-xl">
             {isEditing ? 'Modifier la facture' : 'Nouvelle facture'}
           </h1>
+          <div className="flex-1 min-h-0">
           <SalesDocumentForm
             type="invoice"
             document={invoice}
@@ -88,6 +87,7 @@ const InvoiceForm = () => {
             onSave={handleSave}
             onCancel={() => navigate('/sales/invoices')}
           />
+          </div>
         </div>
       </div>
     </AppLayout>

@@ -61,6 +61,7 @@ import {
 import { customersAPI, productsAPI, taxesAPI } from '../../services/api';
 import { toast } from '../../hooks/use-toast';
 import ProductFormModal from '../modals/ProductFormModal';
+import CustomerFormModal from '../modals/CustomerFormModal';
 
 const SalesDocumentForm = ({
   type = 'invoice', // invoice, quote, delivery_note, exit_note
@@ -419,12 +420,12 @@ const SalesDocumentForm = ({
 
 
   return (
-    <div className="flex gap-6 h-full" data-testid="sales-document-form">
+    <div className="flex gap-4 h-full min-h-0" data-testid="sales-document-form">
       {/* Main Form */}
-      <div className="flex-1 space-y-6 overflow-y-auto pb-20">
+      <div className="flex-1 space-y-4 overflow-y-auto overscroll-contain min-h-0">
         {/* Header */}
-        <Card className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             {/* Date */}
             <div>
               <Label className="text-sm text-gray-600">Date *</Label>
@@ -516,8 +517,8 @@ const SalesDocumentForm = ({
         </Card>
 
         {/* Customer Selection */}
-        <Card className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label className="text-sm text-gray-600 flex items-center gap-2">
                 <User className="w-4 h-4" />
@@ -585,7 +586,7 @@ const SalesDocumentForm = ({
         </Card>
 
         {/* Items Table */}
-        <Card className="p-6">
+        <Card className="p-4">
           <div className="flex items-center justify-between mb-4">
             <Button variant="outline" size="sm" onClick={() => setShowCsvImport(true)}>
               <Upload className="w-4 h-4 mr-2" />
@@ -750,8 +751,8 @@ const SalesDocumentForm = ({
         </Card>
 
         {/* Terms & Attachments */}
-        <Card className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label className="text-sm text-gray-600">Conditions générales</Label>
               <Textarea
@@ -785,7 +786,7 @@ const SalesDocumentForm = ({
       </div>
 
       {/* Right Sidebar */}
-      <div className="w-80 space-y-4 overflow-y-auto pb-4">
+      <div className="w-72 shrink-0 space-y-3 overflow-y-auto overscroll-contain min-h-0">
         {/* Totals */}
         <Card className="p-4">
           <h3 className="font-semibold mb-4 flex items-center gap-2">
@@ -940,6 +941,21 @@ const SalesDocumentForm = ({
           </Button>
         </div>
       </div>
+
+      {/* Modal création nouveau client */}
+      <CustomerFormModal
+        open={showCustomerModal}
+        onClose={() => setShowCustomerModal(false)}
+        onSuccess={async (createdCustomer) => {
+          setShowCustomerModal(false);
+          if (companyId && createdCustomer?.id) {
+            const r = await customersAPI.list(companyId).catch(() => ({ data: [] }));
+            setCustomers(r.data);
+            setFormData(prev => ({ ...prev, customer_id: createdCustomer.id }));
+            loadCustomerDetails(createdCustomer.id);
+          }
+        }}
+      />
 
       {/* Modal création nouveau produit depuis la ligne */}
       <ProductFormModal

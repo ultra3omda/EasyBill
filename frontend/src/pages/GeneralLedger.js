@@ -190,7 +190,7 @@ const GeneralLedger = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6" data-testid="general-ledger-page">
+      <div className="space-y-4" data-testid="general-ledger-page">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>

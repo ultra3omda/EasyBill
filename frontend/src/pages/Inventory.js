@@ -58,7 +58,7 @@ const Inventory = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6" data-testid="inventory-page">
+      <div className="space-y-4" data-testid="inventory-page">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div><h1 className="page-header-title">Inventaire</h1><p className="page-header-subtitle">État du stock en temps réel</p></div>
         </div>

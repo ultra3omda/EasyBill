@@ -323,32 +323,15 @@ const AppLayout = ({ children }) => {
     },
     {
       type: 'group',
-      key: 'contacts',
-      icon: Users,
-      label: 'Contacts',
-      items: [
-        { icon: Users, label: 'Clients', path: '/customers' },
-        { icon: Truck, label: 'Fournisseurs', path: '/suppliers' }
-      ]
-    },
-    {
-      type: 'group',
-      key: 'stock',
-      icon: Package,
-      label: 'Stock',
-      items: [
-        { icon: Package, label: 'Articles', path: '/products' },
-        { icon: Warehouse, label: 'Entrepôts', path: '/warehouses' },
-        { icon: ClipboardList, label: 'Inventaire', path: '/inventory' },
-        { icon: ArrowLeftRight, label: 'Mouvements', path: '/stock-movements' }
-      ]
-    },
-    {
-      type: 'group',
-      key: 'ventes',
+      key: 'sales',
       icon: ShoppingBag,
       label: 'Ventes',
       items: [
+        { icon: Users, label: 'Clients', path: '/customers' },
+        { icon: Package, label: 'Articles', path: '/products' },
+        { icon: Warehouse, label: 'Entrepôts', path: '/warehouses' },
+        { icon: ClipboardList, label: 'Inventaire', path: '/inventory' },
+        { icon: ArrowLeftRight, label: 'Mouvements de stock', path: '/stock-movements' },
         { icon: Truck, label: 'Bons de livraison', path: '/sales/delivery-notes' },
         { icon: FileOutput, label: 'Bons de sortie', path: '/sales/exit-vouchers' },
         { icon: FileText, label: 'Devis', path: '/sales/quotes' },
@@ -361,33 +344,34 @@ const AppLayout = ({ children }) => {
     },
     {
       type: 'group',
-      key: 'caisse',
-      icon: Banknote,
-      label: 'Caisse & Cash',
-      items: [
-        { icon: Wallet, label: 'Tableau de bord caisse', path: '/cash' },
-        { icon: Banknote, label: 'Configurer caisse', path: '/cash-accounts' },
-        { icon: Bot, label: 'Assistant chatbot', path: '/chatbot' },
-      ]
-    },
-    {
-      type: 'group',
-      key: 'achats',
+      key: 'purchases',
       icon: ShoppingCart,
       label: 'Achats',
       items: [
+        { icon: Truck, label: 'Fournisseurs', path: '/suppliers' },
         { icon: FileText, label: 'Bons de commande', path: '/purchases/purchase-orders' },
         { icon: FileInput, label: 'Bons de réception', path: '/purchases/receipts' },
         { icon: Receipt, label: 'Factures fournisseur', path: '/purchases/supplier-invoices' },
         { icon: CreditCard, label: 'Paiements', path: '/purchases/supplier-payments' },
         { icon: Scan, label: 'Scanner une facture', path: '/purchases/invoice-scanner' },
-        { icon: Building2, label: 'Lettrage bancaire', path: '/purchases/bank-reconciliation' },
-        { icon: FileSpreadsheet, label: 'Import extraits (Document AI)', path: '/purchases/bank-statement-import' }
       ]
     },
     {
       type: 'group',
-      key: 'comptabilite',
+      key: 'banking',
+      icon: Banknote,
+      label: 'Banque & trésorerie',
+      items: [
+        { icon: Wallet, label: 'Tableau de bord caisse', path: '/cash' },
+        { icon: Banknote, label: 'Comptes de caisse', path: '/cash-accounts' },
+        { icon: Building2, label: 'Lettrage bancaire', path: '/purchases/bank-reconciliation' },
+        { icon: FileSpreadsheet, label: "Import d'extraits", path: '/purchases/bank-statement-import' },
+        { icon: Bot, label: 'Assistant', path: '/chatbot' },
+      ]
+    },
+    {
+      type: 'group',
+      key: 'accounting',
       icon: Calculator,
       label: 'Comptabilité',
       items: [
@@ -418,46 +402,25 @@ const AppLayout = ({ children }) => {
     },
     {
       type: 'group',
-      key: 'rh',
-      icon: Briefcase,
-      label: 'Ressources Humaines',
-      items: [
-        { icon: PieChart, label: 'Tableau de bord RH', path: '/hr/dashboard' },
-        { icon: Users, label: 'Employes', path: '/hr/employees' },
-        { icon: Calculator, label: 'Paie', path: '/hr/payroll' },
-        { icon: Calendar, label: 'Conges', path: '/hr/leaves' },
-        { icon: FileBarChart, label: 'Declarations', path: '/hr/declarations' },
-        { icon: Settings, label: 'Configuration RH', path: '/hr/config' },
-      ]
-    },
-    {
-      type: 'single',
-      icon: FolderKanban,
-      label: 'Projets',
-      path: '/projects'
-    },
-    {
-      type: 'group',
-      key: 'parametres',
+      key: 'settings',
       icon: Settings,
       label: 'Paramètres',
       items: [
-        { icon: User, label: 'Profil', path: '/settings' },
+        { icon: User, label: 'Préférences', path: '/settings' },
         { icon: Building2, label: 'Entreprise', path: '/settings/company' },
-        { icon: Bell, label: 'Notifications', path: '/settings/notifications' },
-        { icon: Lock, label: 'Sécurité', path: '/settings/security' },
         { icon: UserPlus, label: 'Collaborateurs', path: '/collaborators' },
         { icon: Shield, label: 'Rôles & permissions', path: '/roles-permissions' },
+        { icon: Lock, label: 'Sécurité', path: '/settings/security' },
+        { icon: Bell, label: 'Notifications', path: '/settings/notifications' },
         { icon: PlusCircle, label: 'Entrées supplémentaires', path: '/additional-entries' },
         { icon: Percent, label: 'Taxes', path: '/taxes' },
         { icon: Landmark, label: 'Banques', path: '/banks' },
-        { icon: Palette, label: 'Personnalisation', path: '/customization' },
-        { icon: CalendarDays, label: 'Calendrier', path: '/calendar' },
+        { icon: FolderKanban, label: 'Projets', path: '/projects' },
+        { icon: Briefcase, label: 'Tableau de bord RH', path: '/hr/dashboard' },
+        { icon: Users, label: 'Employés', path: '/hr/employees' },
+        { icon: Calculator, label: 'Paie', path: '/hr/payroll' },
+        { icon: FileBarChart, label: 'Rapports', path: '/reports' },
         { icon: FileKey, label: "Journal d'accès", path: '/access-logs' },
-        { icon: FolderOpen, label: 'Mes Fichiers', path: '/files' },
-        { icon: BarChart3, label: 'Mes Rapports', path: '/reports' },
-        { icon: Link2, label: 'Intégrations', path: '/integrations' },
-        { icon: Workflow, label: 'Workflows', path: '/workflows' }
       ]
     }
   ];
@@ -465,7 +428,7 @@ const AppLayout = ({ children }) => {
   const isActiveItem = (path) => path && location.pathname === path;
   const isActiveGroup = (items, groupKey) => {
     if (!items) return false;
-    if (groupKey === 'parametres' && location.pathname.startsWith('/settings')) return true;
+    if (groupKey === 'settings' && location.pathname.startsWith('/settings')) return true;
     return items.some(item => {
       if (item.type === 'nested') {
         return item.items?.some(subItem => location.pathname === subItem.path);
@@ -480,7 +443,7 @@ const AppLayout = ({ children }) => {
     const pathname = location.pathname;
     const pathInGroup = (items, groupKey) => {
       if (!items) return false;
-      if (groupKey === 'parametres' && pathname.startsWith('/settings')) return true;
+      if (groupKey === 'settings' && pathname.startsWith('/settings')) return true;
       return items.some(it => {
         if (it.type === 'nested') return it.items?.some(s => s.path === pathname);
         return it.path === pathname;
@@ -500,7 +463,7 @@ const AppLayout = ({ children }) => {
     });
   }, [location.pathname]);
 
-  // Render menu item (handles nested submenus)
+  // Render menu item (handles nested submenus) - harmonisé avec les menus principaux
   const renderMenuItem = (item, depth = 0) => {
     if (item.type === 'nested') {
       const hasActiveChild = item.items?.some(subItem => location.pathname === subItem.path);
@@ -510,14 +473,14 @@ const AppLayout = ({ children }) => {
         <div key={item.key}>
           <button
             onClick={() => toggleMenu(item.key)}
-            className={`flex items-center justify-between w-full rounded-2xl px-3 py-2.5 text-sm font-medium transition-all ${
+            className={`flex items-center justify-between w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
               hasActiveChild
-                ? 'bg-white text-violet-900 shadow-sm'
-                : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                ? 'bg-white/10 text-white shadow-sm ring-1 ring-white/10'
+                : 'text-slate-300 hover:bg-white/6 hover:text-white'
             }`}
           >
-            <div className="flex items-center gap-3">
-              <item.icon className="w-4 h-4" />
+            <div className="flex items-center gap-2">
+              <item.icon className="w-4 h-4 shrink-0" />
               {item.label}
             </div>
             {isExpanded ? (
@@ -528,7 +491,7 @@ const AppLayout = ({ children }) => {
           </button>
           
           {isExpanded && (
-            <div className="ml-5 mt-2 space-y-1 border-l border-white/10 pl-3">
+            <div className="ml-4 mt-1.5 space-y-1 border-l border-white/10 pl-3">
               {item.items.map((subItem) => {
                 const SubIcon = subItem.icon;
                 const isSubActive = isActiveItem(subItem.path);
@@ -536,13 +499,13 @@ const AppLayout = ({ children }) => {
                   <Link
                     key={subItem.path}
                     to={subItem.path}
-                    className={`flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-medium transition-all ${
+                    className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-150 ${
                       isSubActive
-                        ? 'bg-violet-50 text-violet-700'
-                        : 'text-slate-400 hover:bg-white/10 hover:text-white'
+                        ? 'bg-white text-slate-950'
+                        : 'text-slate-400 hover:bg-white/6 hover:text-white'
                     }`}
                   >
-                    <SubIcon className="w-3 h-3" />
+                    <SubIcon className="w-4 h-4 shrink-0" />
                     {subItem.label}
                   </Link>
                 );
@@ -553,20 +516,20 @@ const AppLayout = ({ children }) => {
       );
     }
     
-    // Regular item
+    // Regular item - même taille que les menus principaux
     const Icon = item.icon;
     const isActive = isActiveItem(item.path);
     return (
       <Link
         key={item.path}
         to={item.path}
-        className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all ${
+        className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
           isActive
-            ? 'bg-white text-violet-800 shadow-sm'
-            : 'text-slate-300 hover:bg-white/10 hover:text-white'
+            ? 'bg-white text-slate-950 shadow-sm'
+            : 'text-slate-300 hover:bg-white/6 hover:text-white'
         }`}
       >
-        <Icon className="w-4 h-4" />
+        <Icon className="w-4 h-4 shrink-0" />
         {item.label}
       </Link>
     );
@@ -580,22 +543,42 @@ const AppLayout = ({ children }) => {
     }
   };
 
+  const findActiveLabel = (items) => {
+    for (const item of items) {
+      if (item.type === 'single' && item.path === location.pathname) return item.label;
+      if (!item.items) continue;
+      for (const subItem of item.items) {
+        if (subItem.type === 'nested') {
+          const nested = subItem.items?.find(entry => entry.path === location.pathname);
+          if (nested) return nested.label;
+        }
+        if (subItem.path === location.pathname) return subItem.label;
+      }
+    }
+    return 'Espace de travail';
+  };
+
+  const activePageLabel = findActiveLabel(menuStructure);
+
   return (
-    <div className="h-screen flex overflow-hidden bg-[#f5f4fb]">
+    <div className="flex h-screen overflow-hidden bg-[linear-gradient(180deg,#f5f7fb_0%,#eef3f8_100%)]">
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-[290px] bg-[#4f2cc8] text-white transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
+      <div className={`fixed inset-y-0 left-0 z-50 w-[252px] border-r border-white/10 bg-[linear-gradient(180deg,#0f172a_0%,#111c34_100%)] text-white transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        <div className="h-full flex flex-col">
+        <div className="h-full flex flex-col min-h-0">
           {/* Logo */}
-          <div className="flex h-20 items-center justify-between px-5 border-b border-white/10">
+          <div className="flex h-16 shrink-0 items-center justify-between px-4 border-b border-white/10">
             <Link to="/dashboard" className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/12 ring-1 ring-white/15">
-                <span className="text-white font-bold text-lg">E</span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15">
+                <span className="text-white font-bold text-sm">E</span>
               </div>
-              <span className="text-xl font-extrabold tracking-[-0.03em] text-white">
-                EasyBill
-              </span>
+              <div>
+                <span className="block text-base font-extrabold tracking-[-0.03em] text-white">
+                  EasyBill
+                </span>
+                <span className="block text-[11px] uppercase tracking-[0.18em] text-slate-400">Finance OS</span>
+              </div>
             </Link>
             <button 
               onClick={() => setSidebarOpen(false)}
@@ -606,38 +589,38 @@ const AppLayout = ({ children }) => {
           </div>
 
           {/* Company Section */}
-          <div className="border-b border-white/10 p-4">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-100/70">Mes Entreprises</p>
+          <div className="border-b border-white/10 p-3 shrink-0">
+            <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Entreprise active</p>
             
             {/* List of companies */}
-            <div className="space-y-2 max-h-36 overflow-y-auto">
+            <div className="space-y-1.5 max-h-28 overflow-y-auto overscroll-contain">
               {companies.map((company) => (
                 <button
                   key={company.id}
                   onClick={() => handleCompanySelect(company.id)}
-                  className={`flex items-center gap-3 w-full rounded-2xl p-3 transition-all ${
+                  className={`flex items-center gap-2 w-full rounded-2xl p-2.5 transition-all duration-150 ${
                     currentCompany?.id === company.id
-                      ? 'bg-white text-violet-900 shadow-sm'
-                      : 'bg-white/5 text-white hover:bg-white/10'
+                      ? 'bg-white text-slate-950 shadow-sm'
+                      : 'bg-white/5 text-white hover:bg-white/8'
                   }`}
                   data-testid={`company-${company.id}`}
                 >
-                  <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${
-                    currentCompany?.id === company.id ? 'bg-amber-100' : 'bg-white/10'
+                  <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${
+                    currentCompany?.id === company.id ? 'bg-blue-100' : 'bg-white/10'
                   }`}>
-                    <Building2 className={`w-4 h-4 ${
-                      currentCompany?.id === company.id ? 'text-amber-700' : 'text-white/75'
+                    <Building2 className={`w-3.5 h-3.5 ${
+                      currentCompany?.id === company.id ? 'text-blue-700' : 'text-white/75'
                     }`} />
                   </div>
                   <div className="flex-1 min-w-0 text-left">
-                    <p className={`text-sm font-medium truncate ${
+                    <p className={`text-xs font-medium truncate ${
                       currentCompany?.id === company.id ? 'text-slate-900' : 'text-white'
                     }`}>
                       {company.name}
                     </p>
                   </div>
                   {currentCompany?.id === company.id && (
-                    <Check className="w-4 h-4 text-violet-700" />
+                    <Check className="w-4 h-4 text-blue-700" />
                   )}
                 </button>
               ))}
@@ -646,7 +629,7 @@ const AppLayout = ({ children }) => {
             {/* Add new company button */}
             <button 
               onClick={() => setNewCompanyModalOpen(true)}
-              className="mt-3 flex w-full items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 text-sm font-medium text-white hover:bg-white/10 transition-colors"
+              className="mt-2 flex w-full items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-2.5 text-sm font-medium text-white hover:bg-white/8 transition-colors"
               data-testid="add-company-btn"
             >
               <Plus className="w-4 h-4" />
@@ -655,10 +638,10 @@ const AppLayout = ({ children }) => {
           </div>
 
           {/* Menu Items */}
-          <nav className="flex-1 overflow-y-auto py-4">
-            <p className="mb-3 px-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-100/70">Menu Principal</p>
-            <div className="space-y-1.5 px-3">
-              {menuStructure.map((item, index) => {
+          <nav className="flex-1 min-h-0 overflow-y-auto py-3 overscroll-contain">
+            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Navigation</p>
+            <div className="space-y-1 px-2">
+              {menuStructure.map((item) => {
                 if (item.type === 'single') {
                   const Icon = item.icon;
                   const isActive = isActiveItem(item.path);
@@ -666,13 +649,13 @@ const AppLayout = ({ children }) => {
                     <Link
                       key={item.path}
                       to={item.path}
-                      className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all ${
+                      className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
                         isActive
-                          ? 'bg-white text-violet-800 shadow-sm'
-                          : 'text-slate-200 hover:bg-white/10 hover:text-white'
+                          ? 'bg-white text-slate-950 shadow-sm'
+                          : 'text-slate-200 hover:bg-white/6 hover:text-white'
                       }`}
                     >
-                      <Icon className="w-5 h-5" />
+                      <Icon className="w-4 h-4 shrink-0" />
                       {item.label}
                     </Link>
                   );
@@ -684,14 +667,14 @@ const AppLayout = ({ children }) => {
                     <div key={item.key}>
                       <button
                         onClick={() => toggleMenu(item.key)}
-                        className={`flex items-center justify-between w-full rounded-2xl px-3 py-3 text-sm font-medium transition-all ${
+                        className={`flex items-center justify-between w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
                           hasActiveChild
-                            ? 'bg-white text-violet-900 shadow-sm'
-                            : 'text-slate-200 hover:bg-white/10 hover:text-white'
+                            ? 'bg-white/10 text-white shadow-sm ring-1 ring-white/10'
+                            : 'text-slate-200 hover:bg-white/6 hover:text-white'
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <Icon className="w-5 h-5" />
+                        <div className="flex items-center gap-2">
+                          <Icon className="w-4 h-4 shrink-0" />
                           {item.label}
                         </div>
                         {isExpanded ? (
@@ -702,7 +685,7 @@ const AppLayout = ({ children }) => {
                       </button>
                       
                       {isExpanded && (
-                        <div className="ml-5 mt-2 space-y-1.5 border-l border-white/10 pl-3">
+                        <div className="ml-4 mt-1.5 space-y-1 border-l border-white/10 pl-3">
                           {item.items.map((subItem) => renderMenuItem(subItem, 1))}
                         </div>
                       )}
@@ -714,12 +697,12 @@ const AppLayout = ({ children }) => {
           </nav>
 
           {/* Logout */}
-          <div className="border-t border-white/10 p-4">
+          <div className="border-t border-white/10 p-3 shrink-0">
             <button
               onClick={handleLogout}
-              className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-rose-200 hover:bg-white/10 hover:text-white transition-colors"
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-rose-200 hover:bg-white/8 hover:text-white transition-colors"
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut className="w-4 h-4" />
               Déconnexion
             </button>
           </div>
@@ -729,7 +712,7 @@ const AppLayout = ({ children }) => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="flex h-20 items-center justify-between border-b border-slate-200/70 bg-white/75 px-5 backdrop-blur-sm lg:px-8">
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200/70 bg-white/72 px-4 backdrop-blur-md lg:px-6">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setSidebarOpen(true)}
@@ -738,8 +721,13 @@ const AppLayout = ({ children }) => {
               <Menu className="w-6 h-6" />
             </button>
             
-            <div className="hidden md:flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 w-[28rem]">
-              <Search className="w-5 h-5 text-slate-400" />
+            <div className="hidden xl:flex flex-col">
+              <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Section</span>
+              <span className="text-sm font-semibold text-slate-900">{activePageLabel}</span>
+            </div>
+
+            <div className="hidden md:flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white px-3 py-2 w-[20rem] shadow-sm">
+              <Search className="w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 placeholder="Rechercher..."
@@ -748,12 +736,19 @@ const AppLayout = ({ children }) => {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="hidden lg:flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white px-3 py-2 shadow-sm">
+              <Building2 className="h-4 w-4 text-slate-500" />
+              <div className="min-w-0">
+                <p className="max-w-[180px] truncate text-sm font-medium text-slate-900">{currentCompany?.name || 'Entreprise'}</p>
+                <p className="text-[11px] text-slate-500">Contexte actif</p>
+              </div>
+            </div>
             {/* Notifications Dropdown */}
             <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
               <DropdownMenuTrigger asChild>
                 <button 
-                  className="relative rounded-2xl border border-slate-200 bg-white p-2.5 hover:bg-slate-50"
+                  className="relative rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm hover:bg-slate-50"
                   data-testid="notifications-btn"
                 >
                   <Bell className="w-5 h-5 text-slate-600" />
@@ -810,7 +805,7 @@ const AppLayout = ({ children }) => {
             {/* Language Selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center space-x-1 rounded-2xl border border-slate-200 bg-white p-2.5 hover:bg-slate-50">
+                <button className="flex items-center space-x-1 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm hover:bg-slate-50">
                   <img 
                     src={language === 'fr' ? 'https://flagcdn.com/w40/fr.png' : 'https://flagcdn.com/w40/gb.png'}
                     alt={language}
@@ -833,7 +828,7 @@ const AppLayout = ({ children }) => {
             {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 hover:bg-slate-50">
+                <button className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm hover:bg-slate-50">
                   {user?.photo ? (
                     <img
                       src={user.photo.startsWith('http') ? user.photo : `${process.env.REACT_APP_BACKEND_URL || ''}${user.photo}`}
@@ -868,8 +863,8 @@ const AppLayout = ({ children }) => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          <div className="app-page min-h-full p-4 lg:p-6">
+        <main className="flex-1 min-h-0 overflow-y-auto px-4 py-4 lg:px-5 lg:py-5 overscroll-contain scroll-smooth">
+          <div className="app-page min-h-full">
             {children}
           </div>
         </main>
