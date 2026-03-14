@@ -273,26 +273,6 @@ const Products = () => {
     setFormData(prev => ({
       ...prev,
       components: (prev.components || []).filter((_, i) => i !== index)
-      
-  const addComponent = () => {
-    if (!newComponentProductId || Number(newComponentQuantity) <= 0) {
-      toast({ title: 'Erreur', description: 'Sélectionnez un article et une quantité supérieure à 0', variant: 'destructive' });
-      return;
-    }
-    const product = products.find(p => p.id === newComponentProductId);
-    const name = product?.name || '';
-    setFormData(prev => ({
-      ...prev,
-      components: [...(prev.components || []), { product_id: newComponentProductId, quantity: Number(newComponentQuantity), product_name: name }]
-    }));
-    setNewComponentProductId('');
-    setNewComponentQuantity(1);
-  };
-
-  const removeComponent = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      components: prev.components.filter((_, i) => i !== index)
     }));
   };
 
