@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCompany } from '../hooks/useCompany';
+import { customersAPI } from '../services/api';
 import AppLayout from '../components/layout/AppLayout';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -10,9 +11,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { ArrowLeft, FileText, CreditCard, TrendingUp, DollarSign, Calendar, Mail, Phone } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import axios from 'axios';
-
-const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const CustomerSummary = () => {
   const { customerId } = useParams();
@@ -20,34 +18,41 @@ const CustomerSummary = () => {
   const { currentCompany } = useCompany();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (currentCompany && customerId) {
-      loadData();
-    }
-  }, [currentCompany, customerId]);
-
-  const loadData = async () => {
-    if (!currentCompany || !customerId) return;
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get(
-        `${API_URL}/api/customers/${customerId}/stats?company_id=${currentCompany.id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setData(res.data);
-    } catch (error) {
-      console.error('Error loading customer stats:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les statistiques client",
-        variant: "destructive"
-      });
-    } finally {
+    if (!customerId) {
       setLoading(false);
+      setError('Identifiant client manquant');
+      return;
     }
-  };
+    if (!currentCompany?.id) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    customersAPI
+      .getStats(currentCompany.id, customerId)
+      .then((res) => {
+        if (!cancelled) setData(res.data);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err.response?.data?.detail || 'Impossible de charger les statistiques client');
+          toast({
+            title: "Erreur",
+            description: err.response?.data?.detail || "Impossible de charger les statistiques client",
+            variant: "destructive"
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [currentCompany?.id, customerId]);
 
   if (loading) {
     return (
@@ -57,10 +62,32 @@ const CustomerSummary = () => {
     );
   }
 
-  if (!data) {
+  if (!currentCompany) {
     return (
       <AppLayout>
-        <div className="text-center py-20">Client non trouvé</div>
+        <div className="p-6 text-center py-20">
+          <p className="text-gray-600 mb-4">Sélectionnez une entreprise pour afficher la synthèse client.</p>
+          <Button variant="outline" onClick={() => navigate('/contacts/customers')}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Retour aux clients
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!loading && !data) {
+    return (
+      <AppLayout>
+        <div className="p-6">
+          <div className="text-center py-20">
+            <p className="text-gray-600 mb-4">{error || 'Client non trouvé'}</p>
+            <Button variant="outline" onClick={() => navigate('/contacts/customers')}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Retour aux clients
+            </Button>
+          </div>
+        </div>
       </AppLayout>
     );
   }

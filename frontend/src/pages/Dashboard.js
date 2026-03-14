@@ -44,15 +44,17 @@ const COLORS = ['#8b5cf6', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#6366f1'
 const Dashboard = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
-  const { currentCompany } = useCompany();
+  const { currentCompany, loading: companyLoading } = useCompany();
   const [seeding, setSeeding] = useState(false);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    if (currentCompany?.id) {
-      fetchStats();
+    if (!currentCompany?.id) {
+      setLoading(false);
+      return;
     }
+    fetchStats();
   }, [currentCompany]);
 
   const fetchStats = async () => {
@@ -100,11 +102,23 @@ const Dashboard = () => {
     return value?.toFixed(0) || '0';
   };
 
-  if (loading) {
+  if (companyLoading || loading) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-96">
           <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!currentCompany?.id) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center h-96 gap-4">
+          <Database className="w-12 h-12 text-gray-400" />
+          <p className="text-gray-600">Aucune entreprise sélectionnée ou disponible.</p>
+          <p className="text-sm text-gray-500">Créez une entreprise ou sélectionnez-en une dans le sélecteur.</p>
         </div>
       </AppLayout>
     );

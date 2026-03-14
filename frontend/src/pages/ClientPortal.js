@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { FileText, DollarSign, FileCheck, TrendingUp, Download, Calendar, AlertCircle } from 'lucide-react';
-
-const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+import { apiBaseUrl } from '../services/api';
 
 export default function ClientPortal() {
   const { token } = useParams();
@@ -33,7 +32,7 @@ export default function ClientPortal() {
       setError(null);
       
       // Vérifier le token
-      const verifyResponse = await axios.get(`${API_URL}/api/client-portal/verify/${token}`);
+      const verifyResponse = await axios.get(`${apiBaseUrl}/client-portal/verify/${token}`);
       
       if (verifyResponse.data) {
         setCustomer(verifyResponse.data.customer);
@@ -52,7 +51,7 @@ export default function ClientPortal() {
 
   const loadDashboard = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/client-portal/dashboard/${token}`);
+      const response = await axios.get(`${apiBaseUrl}/client-portal/dashboard/${token}`);
       setDashboardData(response.data);
     } catch (err) {
       console.error('Error loading dashboard:', err);
@@ -61,7 +60,7 @@ export default function ClientPortal() {
 
   const loadInvoices = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/client-portal/invoices/${token}`);
+      const response = await axios.get(`${apiBaseUrl}/client-portal/invoices/${token}`);
       setInvoices(response.data.invoices || []);
       if (!customer) {
         setCustomer(response.data.customer);
@@ -74,7 +73,7 @@ export default function ClientPortal() {
 
   const loadQuotes = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/client-portal/quotes/${token}`);
+      const response = await axios.get(`${apiBaseUrl}/client-portal/quotes/${token}`);
       setQuotes(response.data.quotes || []);
       if (!customer) {
         setCustomer(response.data.customer);
@@ -87,7 +86,7 @@ export default function ClientPortal() {
 
   const loadPayments = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/client-portal/payments/${token}`);
+      const response = await axios.get(`${apiBaseUrl}/client-portal/payments/${token}`);
       setPayments(response.data.payments || []);
       if (!customer) {
         setCustomer(response.data.customer);
