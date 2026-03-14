@@ -1,5 +1,5 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -19,6 +19,12 @@ import {
 const API = process.env.REACT_APP_BACKEND_URL;
 const token = () => localStorage.getItem('token');
 const fmt = n => Number(n || 0).toLocaleString('fr-TN', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+
+const PROCESSING_STEPS = [
+  { id: 'upload', label: 'Document reçu', desc: 'Fichier chargé' },
+  { id: 'analyze', label: 'Analyse IA en cours', desc: 'Extraction des données' },
+  { id: 'validate', label: 'Préparation', desc: 'Vérification des écritures' },
+];
 
 const ACTION_ICONS = {
   create_supplier: <UserPlus className="w-4 h-4 text-blue-500" />,
@@ -40,7 +46,9 @@ const ACTION_COLORS = {
 
 export default function InvoiceScanner() {
   const navigate = useNavigate();
+  const { state: locationState } = useLocation();
   const { currentCompany } = useCompany();
+  const preloadedResult = locationState?.preloadedResult;
   const fileInputRef = useRef(null);
   const dropZoneRef = useRef(null);
 
@@ -49,11 +57,14 @@ export default function InvoiceScanner() {
   const [file, setFile] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
   const [parsing, setParsing] = useState(false);
+  const [processingStep, setProcessingStep] = useState(0);
   const [parseResult, setParseResult] = useState(null);
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [activeTab, setActiveTab] = useState('supplier');
+  const [stepsVisited, setStepsVisited] = useState({ supplier: false, invoice: false, accounting: false });
+  const [vatExemptDocAck, setVatExemptDocAck] = useState(false);
 
   // Editable parsed data
   const [editedSupplier, setEditedSupplier] = useState(null);
@@ -115,7 +126,11 @@ export default function InvoiceScanner() {
   const handleParse = async () => {
     if (!file || !currentCompany) return;
     setParsing(true);
+    setProcessingStep(0);
     setParseResult(null);
+    const stepInterval = setInterval(() => {
+      setProcessingStep(prev => Math.min(prev + 1, 2));
+    }, 800);
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -131,10 +146,13 @@ export default function InvoiceScanner() {
       setEditedInvoice(data.invoice);
       setEditedJournalEntries(data.journal_entries);
       setEditedWorkflow(data.workflow);
+      setStepsVisited({ supplier: false, invoice: false, accounting: false });
+      setVatExemptDocAck(false);
       setShowConfirmModal(true);
     } catch (e) {
       toast.error(e.message || "Erreur lors de l'analyse du document");
     } finally {
+      clearInterval(stepInterval);
       setParsing(false);
     }
   };
@@ -215,6 +233,46 @@ export default function InvoiceScanner() {
     return 'text-red-600 bg-red-50';
   };
 
+  const extractionMethodLabel = (method) => {
+    if (!method) return '❓ Inconnue';
+    if (method.startsWith('gemini')) return '✨ Gemini Vision';
+    if (method.startsWith('anthropic')) return '🧠 Anthropic Claude';
+    if (method.startsWith('regex_fast_pdf')) return '⚡ PDF texte rapide';
+    if (method.startsWith('regex')) return '📝 Regex (PDF texte)';
+    return method;
+  };
+
+  useEffect(() => {
+    if (preloadedResult && !parseResult) {
+      setParseResult(preloadedResult);
+      setEditedSupplier(preloadedResult.supplier);
+      setEditedInvoice(preloadedResult.invoice);
+      setEditedJournalEntries(preloadedResult.journal_entries);
+      setEditedWorkflow(preloadedResult.workflow);
+      setShowConfirmModal(true);
+    }
+  }, [preloadedResult]);
+
+  useEffect(() => {
+    if (showConfirmModal && parseResult) {
+      setStepsVisited(prev => ({ ...prev, supplier: true }));
+    }
+  }, [showConfirmModal, parseResult]);
+
+  const allStepsVisited = stepsVisited.supplier && stepsVisited.invoice && stepsVisited.accounting;
+  const isDuplicate = !!parseResult?.duplicate_invoice;
+  const canConfirm = allStepsVisited && editedSupplier?.name && (!parseResult?.supplier_vat_exempt || vatExemptDocAck) && !isDuplicate;
+
+  const applySupplierCandidate = (candidate) => {
+    setEditedSupplier((prev) => ({
+      ...prev,
+      id: candidate.id,
+      name: candidate.name,
+      fiscal_id: candidate.fiscal_id || prev?.fiscal_id || '',
+      is_new: false,
+    }));
+  };
+
   return (
     <AppLayout>
       <div className="p-6 space-y-6 max-w-4xl mx-auto">
@@ -246,92 +304,127 @@ export default function InvoiceScanner() {
           ))}
         </div>
 
-        {/* Upload Zone */}
+        {/* Upload Zone ou animation Pennylane pendant l'analyse */}
         <Card>
           <CardContent className="p-6">
-            <div
-              ref={dropZoneRef}
-              onDrop={handleDrop}
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onClick={() => !file && fileInputRef.current?.click()}
-              className={`relative border-2 border-dashed rounded-xl p-10 text-center transition-all cursor-pointer ${
-                dragOver
-                  ? 'border-violet-500 bg-violet-50'
-                  : file
-                    ? 'border-green-400 bg-green-50'
-                    : 'border-gray-300 hover:border-violet-400 hover:bg-violet-50/30'
-              }`}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.webp"
-                className="hidden"
-                onChange={e => handleFileSelect(e.target.files[0])}
-              />
+            {parsing ? (
+              <div className="flex flex-col items-center justify-center py-8 space-y-8">
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-2xl bg-violet-100 flex items-center justify-center">
+                    <Loader2 className="w-10 h-10 text-violet-600 animate-spin" />
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-violet-500 animate-ping" />
+                </div>
+                <div className="text-center space-y-2">
+                  <p className="text-lg font-semibold text-slate-900">Analyse en cours</p>
+                  <p className="text-sm text-slate-500">L&apos;IA extrait les données de votre facture</p>
+                </div>
+                <div className="w-full max-w-xs space-y-3">
+                  {PROCESSING_STEPS.map((step, i) => (
+                    <div
+                      key={step.id}
+                      className={`flex items-center gap-3 rounded-xl border p-3 transition-all ${
+                        i <= processingStep
+                          ? 'border-violet-200 bg-violet-50'
+                          : 'border-slate-200 bg-slate-50'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                        i < processingStep ? 'bg-emerald-500 text-white' : i === processingStep ? 'bg-violet-500 text-white' : 'bg-slate-200 text-slate-500'
+                      }`}>
+                        {i < processingStep ? '✓' : i === processingStep ? <Loader2 className="w-4 h-4 animate-spin" /> : i + 1}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">{step.label}</p>
+                        <p className="text-xs text-slate-500">{step.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <>
+                <div
+                  ref={dropZoneRef}
+                  onDrop={handleDrop}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onClick={() => !file && fileInputRef.current?.click()}
+                  className={`relative border-2 border-dashed rounded-xl p-10 text-center transition-all cursor-pointer ${
+                    dragOver
+                      ? 'border-violet-500 bg-violet-50'
+                      : file
+                        ? 'border-green-400 bg-green-50'
+                        : 'border-gray-300 hover:border-violet-400 hover:bg-violet-50/30'
+                  }`}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    className="hidden"
+                    onChange={e => handleFileSelect(e.target.files?.[0])}
+                  />
 
-              {file ? (
-                <div className="space-y-3">
-                  {filePreview ? (
-                    <img src={filePreview} alt="Preview" className="max-h-40 mx-auto rounded-lg shadow-sm" />
+                  {file ? (
+                    <div className="space-y-3">
+                      {filePreview ? (
+                        <img src={filePreview} alt="Preview" className="max-h-40 mx-auto rounded-lg shadow-sm" />
+                      ) : (
+                        <FileText className="w-16 h-16 mx-auto text-violet-600" />
+                      )}
+                      <div>
+                        <p className="font-semibold text-gray-800">{file.name}</p>
+                        <p className="text-sm text-gray-500">{(file.size / 1024).toFixed(1)} Ko</p>
+                      </div>
+                      <div className="flex justify-center gap-2">
+                        <Button
+                          variant="outline" size="sm"
+                          onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                        >
+                          <RefreshCw className="w-3.5 h-3.5 mr-1" /> Changer
+                        </Button>
+                        <Button
+                          variant="outline" size="sm"
+                          onClick={(e) => { e.stopPropagation(); setFile(null); setFilePreview(null); setParseResult(null); }}
+                          className="text-red-500 border-red-200 hover:bg-red-50"
+                        >
+                          <XCircle className="w-3.5 h-3.5 mr-1" /> Supprimer
+                        </Button>
+                      </div>
+                    </div>
                   ) : (
-                    <FileText className="w-16 h-16 mx-auto text-violet-600" />
+                    <div className="space-y-3">
+                      <Upload className="w-12 h-12 mx-auto text-gray-400" />
+                      <div>
+                        <p className="font-semibold text-gray-700">Glisser-déposer ou cliquer pour sélectionner</p>
+                        <p className="text-sm text-gray-400 mt-1">PDF, JPEG, PNG, WebP — max 10 Mo</p>
+                      </div>
+                    </div>
                   )}
-                  <div>
-                    <p className="font-semibold text-gray-800">{file.name}</p>
-                    <p className="text-sm text-gray-500">{(file.size / 1024).toFixed(1)} Ko</p>
-                  </div>
-                  <div className="flex justify-center gap-2">
-                    <Button
-                      variant="outline" size="sm"
-                      onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-                    >
-                      <RefreshCw className="w-3.5 h-3.5 mr-1" /> Changer
-                    </Button>
-                    <Button
-                      variant="outline" size="sm"
-                      onClick={(e) => { e.stopPropagation(); setFile(null); setFilePreview(null); setParseResult(null); }}
-                      className="text-red-500 border-red-200 hover:bg-red-50"
-                    >
-                      <XCircle className="w-3.5 h-3.5 mr-1" /> Supprimer
-                    </Button>
-                  </div>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  <Upload className="w-12 h-12 mx-auto text-gray-400" />
-                  <div>
-                    <p className="font-semibold text-gray-700">Glisser-déposer ou cliquer pour sélectionner</p>
-                    <p className="text-sm text-gray-400 mt-1">PDF, JPEG, PNG, WebP — max 10 Mo</p>
-                  </div>
+
+                {/* Gemini tip */}
+                <div className="mt-3 flex items-start gap-2 text-xs text-gray-400 bg-gray-50 p-3 rounded-lg">
+                  <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  <span>
+                    Pour les images et PDF scannés, configurez <code className="bg-gray-200 px-1 rounded">GEMINI_API_KEY</code> dans le fichier <code className="bg-gray-200 px-1 rounded">.env</code> pour une extraction optimale.
+                    Sans clé, les PDF textuels sont supportés automatiquement.
+                  </span>
                 </div>
-              )}
-            </div>
 
-            {/* Gemini tip */}
-            <div className="mt-3 flex items-start gap-2 text-xs text-gray-400 bg-gray-50 p-3 rounded-lg">
-              <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-              <span>
-                Pour les images et PDF scannés, configurez <code className="bg-gray-200 px-1 rounded">GEMINI_API_KEY</code> dans le fichier <code className="bg-gray-200 px-1 rounded">.env</code> pour une extraction optimale.
-                Sans clé, les PDF textuels sont supportés automatiquement.
-              </span>
-            </div>
-
-            {/* Analyze button */}
-            <div className="mt-4 flex justify-end">
-              <Button
-                onClick={handleParse}
-                disabled={!file || parsing}
-                className="gap-2 bg-violet-600 hover:bg-violet-700 min-w-40"
-              >
-                {parsing ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Analyse en cours…</>
-                ) : (
-                  <><Scan className="w-4 h-4" /> Analyser la facture</>
-                )}
-              </Button>
-            </div>
+                {/* Analyze button */}
+                <div className="mt-4 flex justify-end">
+                  <Button
+                    onClick={handleParse}
+                    disabled={!file}
+                    className="gap-2 bg-violet-600 hover:bg-violet-700 min-w-40"
+                  >
+                    <Scan className="w-4 h-4" /> Analyser la facture
+                  </Button>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -411,11 +504,28 @@ export default function InvoiceScanner() {
                     Confiance : {Math.round((parseResult.confidence || 0) * 100)}%
                   </span>
                   <span className="text-xs text-gray-500">
-                    Méthode : {parseResult.extraction_method === 'gemini_vision' ? '✨ Gemini Vision' : parseResult.extraction_method === 'regex' ? '📝 Regex (PDF texte)' : '❓ Inconnue'}
+                    Méthode : {extractionMethodLabel(parseResult.extraction_method)}
                   </span>
                 </div>
                 <p className="text-xs text-gray-400">{parseResult.filename}</p>
               </div>
+
+              {/* Alerte doublon */}
+              {parseResult.duplicate_invoice && (
+                <div className="flex items-start gap-2 bg-red-50 border border-red-300 rounded-lg p-4 text-sm text-red-800">
+                  <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-semibold">Facture déjà enregistrée</p>
+                    <p className="mt-1">
+                      Une facture avec la même référence existe déjà : <strong>{parseResult.duplicate_invoice.supplier_number || parseResult.duplicate_invoice.number || parseResult.duplicate_invoice.id}</strong>.
+                      L&apos;enregistrement est bloqué pour éviter les doublons.
+                    </p>
+                    <Button variant="outline" size="sm" className="mt-3 border-red-300 text-red-700 hover:bg-red-100" onClick={() => navigate('/purchases/supplier-invoices')}>
+                      Voir les factures fournisseur
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {/* Warnings */}
               {parseResult.error && (
@@ -436,6 +546,29 @@ export default function InvoiceScanner() {
                 </div>
               )}
 
+              {parseResult.item_diagnostics && (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-sm font-semibold text-slate-800">Diagnostic extraction des lignes</p>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                    <Badge variant="secondary">Brut: {parseResult.item_diagnostics.raw_count}</Badge>
+                    <Badge variant="success">Acceptées: {parseResult.item_diagnostics.accepted_count}</Badge>
+                    <Badge variant={parseResult.item_diagnostics.rejected_count > 0 ? 'warning' : 'secondary'}>
+                      Rejetées: {parseResult.item_diagnostics.rejected_count}
+                    </Badge>
+                  </div>
+                  {parseResult.item_diagnostics.rejected_items?.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {parseResult.item_diagnostics.rejected_items.map((item, index) => (
+                        <div key={index} className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                          <p className="font-medium">{item.description}</p>
+                          <p className="mt-1">{item.reason}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Planned actions summary */}
               <div>
                 <p className="text-sm font-semibold text-gray-700 mb-2">Actions qui seront effectuées :</p>
@@ -449,8 +582,11 @@ export default function InvoiceScanner() {
                 </div>
               </div>
 
-              {/* Tabs for editing */}
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
+              {/* Tabs for editing — passage obligatoire par chaque étape */}
+              <Tabs value={activeTab} onValueChange={(v) => {
+                setActiveTab(v);
+                setStepsVisited(prev => ({ ...prev, [v]: true }));
+              }}>
                 <TabsList className="w-full">
                   <TabsTrigger value="supplier" className="flex-1">
                     {editedSupplier?.is_new
@@ -467,6 +603,26 @@ export default function InvoiceScanner() {
 
                 {/* Tab: Supplier */}
                 <TabsContent value="supplier" className="mt-4 space-y-3">
+                  {parseResult?.supplier_vat_exempt && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 mb-3">
+                      <p className="text-sm font-semibold text-amber-800 flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        Fournisseur non assujetti à la TVA (auto-entrepreneur ou exonéré)
+                      </p>
+                      <p className="text-xs text-amber-700 mt-2">
+                        Pour les auto-entrepreneurs : joignez la carte professionnelle ou le RNE (Registre National des Entreprises).
+                        Pour les sociétés exonérées : joignez l&apos;attestation d&apos;exonération.
+                      </p>
+                      <label className="mt-3 flex items-center gap-2 cursor-pointer text-sm text-amber-800">
+                        <input
+                          type="checkbox"
+                          checked={vatExemptDocAck}
+                          onChange={e => setVatExemptDocAck(e.target.checked)}
+                        />
+                        J&apos;ai joint ou je joindrai la pièce justificative (carte/RNE ou attestation)
+                      </label>
+                    </div>
+                  )}
                   {editedSupplier?.is_new ? (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700 flex items-center gap-2 mb-3">
                       <UserPlus className="w-4 h-4 shrink-0" />
@@ -506,6 +662,29 @@ export default function InvoiceScanner() {
                       />
                     </div>
                   </div>
+                  {!!parseResult.supplier_candidates?.length && (
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-sm font-semibold text-slate-800">Suggestions fournisseur</p>
+                      <div className="mt-2 space-y-2">
+                        {parseResult.supplier_candidates.map((candidate) => (
+                          <button
+                            key={candidate.id}
+                            type="button"
+                            onClick={() => applySupplierCandidate(candidate)}
+                            className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-left hover:bg-slate-50"
+                          >
+                            <div>
+                              <p className="text-sm font-medium text-slate-900">{candidate.name}</p>
+                              <p className="text-xs text-slate-500">{candidate.fiscal_id || 'Sans matricule fiscal'}</p>
+                            </div>
+                            <Badge variant={candidate.score >= 0.8 ? 'success' : candidate.score >= 0.5 ? 'warning' : 'secondary'}>
+                              {Math.round(candidate.score * 100)}%
+                            </Badge>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </TabsContent>
 
                 {/* Tab: Invoice */}
@@ -580,8 +759,9 @@ export default function InvoiceScanner() {
                             <th className="px-2 py-2 text-center font-medium text-gray-600 w-16">Qté</th>
                             <th className="px-2 py-2 text-center font-medium text-gray-600 w-24">P.U. HT</th>
                             <th className="px-2 py-2 text-center font-medium text-gray-600 w-16">TVA%</th>
-                            <th className="px-2 py-2 text-left font-medium text-gray-600 w-40">Produit lié</th>
+                            <th className="px-2 py-2 text-left font-medium text-gray-600 w-44">Suggestion EasyBill</th>
                             <th className="px-2 py-2 text-center font-medium text-gray-600 w-24">Entrée stock</th>
+                            <th className="px-2 py-2 text-center font-medium text-gray-600 w-24">État</th>
                             <th className="px-2 py-2 text-right font-medium text-gray-600 w-24">Total TTC</th>
                             <th className="w-8" />
                           </tr>
@@ -590,11 +770,16 @@ export default function InvoiceScanner() {
                           {editedInvoice?.items?.map((item, idx) => (
                             <tr key={idx}>
                               <td className="px-2 py-1.5">
-                                <Input
-                                  value={item.description}
-                                  onChange={e => updateItem(idx, 'description', e.target.value)}
-                                  className="h-7 text-xs border-0 focus-visible:ring-0 p-0 bg-transparent"
-                                />
+                                <div className="space-y-1">
+                                  <Input
+                                    value={item.description}
+                                    onChange={e => updateItem(idx, 'description', e.target.value)}
+                                    className="h-7 text-xs border-0 focus-visible:ring-0 p-0 bg-transparent"
+                                  />
+                                  {item.ocr_description && item.ocr_description !== item.description && (
+                                    <p className="text-[10px] text-slate-400">OCR: {item.ocr_description}</p>
+                                  )}
+                                </div>
                               </td>
                               <td className="px-2 py-1.5">
                                 <Input
@@ -622,7 +807,7 @@ export default function InvoiceScanner() {
                               </td>
                               <td className="px-2 py-1.5">
                                 <div className="text-[11px] leading-4">
-                                  <div className="font-medium text-gray-700">{item.product_name || 'Aucun produit trouvé'}</div>
+                                  <div className="font-medium text-gray-700">{item.product_name || 'Aucun produit lié'}</div>
                                   <div className="text-gray-500">{Math.round((item.product_match_confidence || 0) * 100)}% • {item.stock_reason}</div>
                                 </div>
                               </td>
@@ -635,6 +820,15 @@ export default function InvoiceScanner() {
                                     onChange={e => updateStockDecision(idx, e.target.checked)}
                                   />
                                 </label>
+                              </td>
+                              <td className="px-2 py-1.5 text-center">
+                                {item.review_required ? (
+                                  <Badge variant="warning">À revoir</Badge>
+                                ) : item.product_name ? (
+                                  <Badge variant="success">Lié</Badge>
+                                ) : (
+                                  <Badge variant="secondary">Libre</Badge>
+                                )}
                               </td>
                               <td className="px-2 py-1.5 text-right font-medium">{fmt(item.total)}</td>
                               <td className="px-1 py-1.5">
@@ -750,14 +944,22 @@ export default function InvoiceScanner() {
 
               {/* Action buttons */}
               <div className="flex justify-between pt-2 border-t">
-                <Button variant="outline" onClick={() => setShowConfirmModal(false)}>
-                  Annuler
-                </Button>
-                <Button
-                  onClick={handleConfirm}
-                  disabled={confirming || !editedSupplier?.name}
-                  className="gap-2 bg-green-600 hover:bg-green-700 min-w-40"
-                >
+                <div className="text-xs text-gray-500 flex items-center gap-2">
+                  {!stepsVisited.supplier && <span>1. Fournisseur</span>}
+                  {stepsVisited.supplier && !stepsVisited.invoice && <span>2. Facture</span>}
+                  {stepsVisited.invoice && !stepsVisited.accounting && <span>3. Écritures comptables</span>}
+                  {!allStepsVisited && <span className="text-amber-600">— Consultez chaque onglet avant de confirmer</span>}
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setShowConfirmModal(false)}>
+                    Annuler
+                  </Button>
+                  <Button
+                    onClick={handleConfirm}
+                    disabled={confirming || !canConfirm}
+                    className="gap-2 bg-green-600 hover:bg-green-700 min-w-40"
+                    title={!allStepsVisited ? 'Consultez les 3 onglets (Fournisseur, Facture, Écritures) avant de confirmer' : parseResult?.supplier_vat_exempt && !vatExemptDocAck ? 'Cochez la confirmation de pièce justificative' : undefined}
+                  >
                   {confirming ? (
                     <><Loader2 className="w-4 h-4 animate-spin" /> Enregistrement…</>
                   ) : (
@@ -765,6 +967,7 @@ export default function InvoiceScanner() {
                   )}
                 </Button>
               </div>
+            </div>
             </div>
           )}
         </DialogContent>

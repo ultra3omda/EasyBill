@@ -16,7 +16,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
-import { Plus, Search, Receipt, Edit, Trash2, MoreVertical, CreditCard, Banknote, Building2, CheckSquare, Upload, FileText, Eye, ExternalLink, CalendarDays, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Plus, Search, Receipt, Edit, Trash2, MoreVertical, CreditCard, Banknote, Building2, CheckSquare, Upload, FileText, Eye, ExternalLink, CalendarDays, ChevronLeft, ChevronRight, Loader2, Sparkles } from 'lucide-react';
+import InvoiceImportModal from '../components/invoice/InvoiceImportModal';
 import { toast } from '../hooks/use-toast';
 
 const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
@@ -45,7 +46,7 @@ const SupplierInvoicePdfPreview = ({ fileUrl, documentLabel }) => {
     const updateWidth = () => {
       const nextWidth = containerRef.current?.clientWidth;
       if (nextWidth) {
-        setPageWidth(Math.max(320, Math.floor(nextWidth - 32)));
+        setPageWidth(Math.max(320, Math.floor(nextWidth - 16)));
       }
     };
 
@@ -56,7 +57,7 @@ const SupplierInvoicePdfPreview = ({ fileUrl, documentLabel }) => {
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-      <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2">
         <div>
           <p className="text-sm font-semibold text-slate-900">Aperçu document</p>
           <p className="text-xs text-slate-500">
@@ -84,16 +85,16 @@ const SupplierInvoicePdfPreview = ({ fileUrl, documentLabel }) => {
           </Button>
         </div>
       </div>
-      <div ref={containerRef} className="flex h-[calc(100vh-19rem)] min-h-[620px] items-start justify-center overflow-auto bg-slate-100 p-4">
+      <div ref={containerRef} className="flex h-[calc(100vh-16rem)] min-h-[480px] items-start justify-center overflow-auto bg-slate-100 p-2">
         <Document
           file={fileUrl}
           loading={
-            <div className="flex min-h-[520px] items-center justify-center text-sm text-slate-500">
+            <div className="flex min-h-[400px] items-center justify-center text-sm text-slate-500">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Chargement du document
             </div>
           }
           error={
-            <div className="flex min-h-[520px] flex-col items-center justify-center px-6 text-center">
+            <div className="flex min-h-[400px] flex-col items-center justify-center px-6 text-center">
               <FileText className="mb-3 h-8 w-8 text-slate-300" />
               <p className="font-medium text-slate-900">Impossible de charger l’aperçu PDF</p>
               <p className="mt-2 text-sm text-slate-500">
@@ -113,15 +114,12 @@ const SupplierInvoicePdfPreview = ({ fileUrl, documentLabel }) => {
             renderAnnotationLayer={false}
             renderTextLayer={false}
             loading={
-              <div className="flex min-h-[520px] items-center justify-center text-sm text-slate-500">
+              <div className="flex min-h-[400px] items-center justify-center text-sm text-slate-500">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Chargement de la page
               </div>
             }
           />
         </Document>
-      </div>
-      <div className="border-t border-slate-200 bg-white px-4 py-3 text-xs text-slate-500">
-        Visualisation intégrée de {documentLabel}
       </div>
     </div>
   );
@@ -140,6 +138,7 @@ const SupplierInvoices = () => {
   const [loading, setLoading] = useState(true);
   // Payment modal
   const [paymentModal, setPaymentModal] = useState({ open: false, doc: null });
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('transfer');
   const [paymentReference, setPaymentReference] = useState('');
   const [paying, setPaying] = useState(false);
@@ -358,24 +357,37 @@ const SupplierInvoices = () => {
         <div className="page-header">
           <div><h1 className="page-header-title">Factures fournisseur</h1><p className="page-header-subtitle">{filteredDocs.length} facture(s) sur le périmètre courant</p></div>
           <div className="page-actions">
-            <Button variant="outline" onClick={() => navigate('/invoice-scanner')}>
-              <Upload className="w-4 h-4 mr-2" /> Importer des factures
+            <Button variant="outline" onClick={() => setImportModalOpen(true)} className="btn-ai-import gap-2">
+              <Sparkles className="w-4 h-4 text-violet-500" />
+              Importer des factures (IA)
             </Button>
             <Button onClick={openCreate} data-testid="create-si-btn"><Plus className="w-4 h-4 mr-2" /> Nouvelle facture</Button>
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-          <Card className="interactive-lift p-5"><p className="text-xs uppercase tracking-[0.12em] text-slate-400">Total facturé</p><p className="metric-value mt-2">{stats.total.toFixed(3)} TND</p><p className="mt-1 text-sm text-slate-500">{filteredDocs.length} facture(s)</p></Card>
-          <Card className="interactive-lift p-5"><p className="text-xs uppercase tracking-[0.12em] text-slate-400">Payé</p><p className="metric-value mt-2">{stats.paid.toFixed(3)} TND</p><p className="mt-1 text-sm text-slate-500">Décaissements confirmés</p></Card>
-          <Card className="interactive-lift p-5"><p className="text-xs uppercase tracking-[0.12em] text-slate-400">À payer</p><p className="metric-value mt-2">{stats.pending.toFixed(3)} TND</p><p className="mt-1 text-sm text-slate-500">Reste dû aux fournisseurs</p></Card>
+          <Card className="interactive-lift p-5 border-slate-200/80 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Total facturé</p>
+            <p className="metric-value mt-2 text-slate-900">{stats.total.toLocaleString('fr-TN', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} TND</p>
+            <p className="mt-1 text-sm text-slate-500">{filteredDocs.length} facture(s)</p>
+          </Card>
+          <Card className="interactive-lift p-5 border-slate-200/80 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Payé</p>
+            <p className="metric-value mt-2 text-emerald-700">{stats.paid.toLocaleString('fr-TN', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} TND</p>
+            <p className="mt-1 text-sm text-slate-500">Décaissements confirmés</p>
+          </Card>
+          <Card className="interactive-lift p-5 border-slate-200/80 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">À payer</p>
+            <p className="metric-value mt-2 text-rose-600">{stats.pending.toLocaleString('fr-TN', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} TND</p>
+            <p className="mt-1 text-sm text-slate-500">Reste dû aux fournisseurs</p>
+          </Card>
         </div>
 
         <Card className="p-4 md:p-5"><div className="flex flex-col gap-4 md:flex-row md:items-center"><div className="relative flex-1"><Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" /><Input placeholder="Rechercher par fournisseur, numéro ou référence..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-11" /></div><div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">Cliquez une facture pour ouvrir le panneau document</div></div></Card>
 
         <Card>
           {loading ? (<div className="p-4 md:p-5"><TableSkeleton rows={7} columns={6} /></div>
-          ) : filteredDocs.length === 0 ? (<div className="p-8 text-center"><Receipt className="w-12 h-12 text-slate-300 mx-auto mb-4" /><p className="text-base font-semibold text-slate-900">Aucune facture fournisseur</p><p className="mt-2 text-sm text-slate-500">Importez un document fournisseur ou créez une facture manuelle pour lancer le flux achat.</p><div className="mt-4 flex justify-center gap-2"><Button variant="outline" onClick={() => navigate('/invoice-scanner')}><Upload className="w-4 h-4 mr-2" /> Importer</Button><Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" /> Créer</Button></div></div>
+          ) : filteredDocs.length === 0 ? (<div className="p-8 text-center"><Receipt className="w-12 h-12 text-slate-300 mx-auto mb-4" /><p className="text-base font-semibold text-slate-900">Aucune facture fournisseur</p><p className="mt-2 text-sm text-slate-500">Importez un document fournisseur ou créez une facture manuelle pour lancer le flux achat.</p><div className="mt-4 flex justify-center gap-2"><Button variant="outline" onClick={() => setImportModalOpen(true)} className="btn-ai-import"><Sparkles className="w-4 h-4 mr-2 text-violet-500" /> Importer (IA)</Button><Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" /> Créer</Button></div></div>
           ) : selectedPreviewDoc ? (
             <div className="grid gap-4 p-4 lg:grid-cols-[320px_minmax(0,1fr)_340px]">
               <Card className="overflow-hidden border-slate-200">
@@ -385,8 +397,8 @@ const SupplierInvoices = () => {
                       <p className="text-sm font-semibold text-slate-900">Rubrique factures</p>
                       <p className="text-xs text-slate-500">Cliquez sur une facture pour l’ouvrir</p>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => navigate('/invoice-scanner')}>
-                      <Upload className="w-3.5 h-3.5 mr-1" /> Import
+                    <Button size="sm" variant="outline" onClick={() => setImportModalOpen(true)} className="btn-ai-import">
+                      <Sparkles className="w-3.5 h-3.5 mr-1 text-violet-500" /> Import IA
                     </Button>
                   </div>
                 </div>
@@ -424,7 +436,7 @@ const SupplierInvoices = () => {
                           </div>
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-semibold text-slate-900">{(doc.total || 0).toFixed(3)} TND</span>
-                            <span className="font-medium text-rose-600">Reste {(doc.balance_due || 0).toFixed(3)} TND</span>
+                            <span className="font-medium text-rose-600">Reste {(doc.balance_due ?? 0).toLocaleString('fr-TN', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} TND</span>
                           </div>
                           {doc.attachments?.length > 0 && (
                             <div className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-1 text-[11px] font-medium text-violet-700">
@@ -623,8 +635,8 @@ const SupplierInvoices = () => {
                       <p className="text-sm font-semibold text-slate-900">Liste des factures</p>
                       <p className="text-xs text-slate-500">Cliquez sur une facture pour ouvrir le visualiseur</p>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => navigate('/invoice-scanner')}>
-                      <Upload className="w-3.5 h-3.5 mr-1" /> Import
+                    <Button size="sm" variant="outline" onClick={() => setImportModalOpen(true)} className="btn-ai-import">
+                      <Sparkles className="w-3.5 h-3.5 mr-1 text-violet-500" /> Import IA
                     </Button>
                   </div>
                 </div>
@@ -657,7 +669,7 @@ const SupplierInvoices = () => {
                           </div>
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-semibold text-slate-900">{(doc.total || 0).toFixed(3)} TND</span>
-                            <span className="font-medium text-rose-600">Reste {(doc.balance_due || 0).toFixed(3)} TND</span>
+                            <span className="font-medium text-rose-600">Reste {(doc.balance_due ?? 0).toLocaleString('fr-TN', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} TND</span>
                           </div>
                           {doc.attachments?.length > 0 && (
                             <div className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-1 text-[11px] font-medium text-violet-700">
@@ -771,6 +783,12 @@ const SupplierInvoices = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      <InvoiceImportModal
+        open={importModalOpen}
+        onOpenChange={setImportModalOpen}
+        onSuccess={loadData}
+      />
 
       {/* ── Modal de paiement ─────────────────────────────────────────────── */}
       <Dialog open={paymentModal.open} onOpenChange={o => setPaymentModal(p => ({ ...p, open: o }))}>

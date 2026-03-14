@@ -11,6 +11,7 @@ import io
 import os
 import base64
 import logging
+import requests
 from typing import Optional, Dict, Any, List
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,8 @@ logger = logging.getLogger(__name__)
 AMOUNT_RE = re.compile(r"(\d[\d\s]*[,\.]?\d*)\s*(?:TND|DT|dinars?|EUR|€|\$)?", re.IGNORECASE)
 DATE_RE = re.compile(r"(\d{1,2})[/\-\.](\d{1,2})[/\-\.](\d{2,4})")
 VAT_RE = re.compile(r"(\d+(?:[,\.]\d+)?)\s*%")
+# Priorité : TVA 0% ou 0,00% (auto-entrepreneur, exonéré) — ne jamais inventer de TVA
+TVA_ZERO_RE = re.compile(r"(?:tva|taxe)\s*:?\s*0[,.]?\d*\s*%?", re.IGNORECASE)
 INVOICE_NUM_RE = re.compile(
     r"(?:facture|invoice|n[°o]?\.?\s*facture|ref(?:erence)?|num[eé]ro?|n°)\s*:?\s*([A-Z0-9\-/]{3,30})",
     re.IGNORECASE
@@ -37,6 +40,11 @@ ACCOUNT_TVA = {"19": "43620", "13": "43610", "7": "43611", "0": None}
 ACCOUNT_SUPPLIER = "401"
 ACCOUNT_PURCHASE = "601"   # Achats de marchandises
 ACCOUNT_SERVICES = "611"   # Services extérieurs
+
+KLIPPA_FINANCIAL_ENDPOINT = os.environ.get(
+    "KLIPPA_FINANCIAL_ENDPOINT",
+    "https://dochorizon.klippa.com/api/services/document_capturing/v1/financial"
+)
 
 
 def _parse_amount(text: str) -> Optional[float]:
@@ -117,9 +125,14 @@ def _extract_with_regex(text: str) -> Dict[str, Any]:
     tva_amount = None
     tva_rate = 19.0
 
+    # Priorité absolue : document indique TVA 0% (auto-entrepreneur, exonéré)
+    if TVA_ZERO_RE.search(text):
+        tva_rate = 0.0
+        tva_amount = 0.0
+
     # Explicit patterns
-    ttc_m = re.search(r"(?:total\s+ttc|total\s+toutes\s+taxes|montant\s+total)\s*:?\s*" + AMOUNT_RE.pattern, text, re.IGNORECASE)
-    ht_m = re.search(r"(?:total\s+ht|montant\s+ht|sous.total|subtotal)\s*:?\s*" + AMOUNT_RE.pattern, text, re.IGNORECASE)
+    ttc_m = re.search(r"(?:total\s+ttc|total\s+toutes\s+taxes|montant\s+total|co[uû]t\s+total)\s*:?\s*" + AMOUNT_RE.pattern, text, re.IGNORECASE)
+    ht_m = re.search(r"(?:total\s+ht|montant\s+ht|sous.total|subtotal|sous-total)\s*:?\s*" + AMOUNT_RE.pattern, text, re.IGNORECASE)
     tva_m = re.search(r"(?:tva|taxe\s+sur|tax)\s*(?:\d+\s*%)?\s*:?\s*" + AMOUNT_RE.pattern, text, re.IGNORECASE)
     rate_m = VAT_RE.search(text)
 
@@ -127,22 +140,33 @@ def _extract_with_regex(text: str) -> Dict[str, Any]:
         total_ttc = _parse_amount(ttc_m.group(0))
     if ht_m:
         total_ht = _parse_amount(ht_m.group(0))
-    if tva_m:
+    if tva_m and tva_rate > 0:
         tva_amount = _parse_amount(tva_m.group(0))
-    if rate_m:
+    if rate_m and tva_rate != 0:
         try:
             tva_rate = float(rate_m.group(1).replace(",", "."))
         except Exception:
             pass
 
-    # Infer missing values
-    if total_ttc and not total_ht:
-        total_ht = round(total_ttc / (1 + tva_rate / 100), 3)
-    elif total_ht and not total_ttc:
-        total_ttc = round(total_ht * (1 + tva_rate / 100), 3)
+    # Si total_ttc == total_ht (ex. 3 000,000 = 3 000,000), pas de TVA
+    if total_ttc and total_ht and abs(total_ttc - total_ht) < 0.02:
+        tva_rate = 0.0
+        tva_amount = 0.0
 
-    if total_ht and total_ttc and not tva_amount:
-        tva_amount = round(total_ttc - total_ht, 3)
+    # Infer missing values (sauf si TVA 0)
+    if tva_rate == 0:
+        if total_ht and not total_ttc:
+            total_ttc = total_ht
+        elif total_ttc and not total_ht:
+            total_ht = total_ttc
+        tva_amount = 0.0
+    else:
+        if total_ttc and not total_ht:
+            total_ht = round(total_ttc / (1 + tva_rate / 100), 3)
+        elif total_ht and not total_ttc:
+            total_ttc = round(total_ht * (1 + tva_rate / 100), 3)
+        if total_ht and total_ttc and not tva_amount:
+            tva_amount = round(total_ttc - total_ht, 3)
 
     # If we still have nothing, pick biggest amount
     if not total_ttc:
@@ -150,8 +174,12 @@ def _extract_with_regex(text: str) -> Dict[str, Any]:
         amounts = [a for a in amounts if a and a > 1]
         if amounts:
             total_ttc = max(amounts)
-            total_ht = round(total_ttc / (1 + tva_rate / 100), 3)
-            tva_amount = round(total_ttc - total_ht, 3)
+            if tva_rate == 0:
+                total_ht = total_ttc
+                tva_amount = 0.0
+            else:
+                total_ht = round(total_ttc / (1 + tva_rate / 100), 3)
+                tva_amount = round(total_ttc - total_ht, 3)
 
     # --- Items (basic: look for description + price lines) ---
     items = []
@@ -253,6 +281,13 @@ Format attendu :
   }
 }
 
+CRITIQUE - Prix unitaire (unit_price) et montants HT/TTC :
+- Si la facture affiche "PU HT" ou "Prix Unitaire HT" : unit_price = ce montant HT.
+- Si la facture affiche "PU TTC" ou "Prix Unitaire TTC" : unit_price = montant HT (TTC / (1 + tax_rate/100)), PAS le TTC.
+- total_ht = montant HT de la ligne (quantity * PU HT).
+- total_ttc = montant TTC de la ligne.
+- subtotal_ht = TOTAL HT du document (pas la somme des lignes TTC).
+
 IMPORTANT pour les factures tunisiennes :
 - "fodec" = FODEC (1% du HT net) - cherche "Total FODEC" ou "FODEC" sur la facture
 - "timbre_fiscal" = Droit de timbre (généralement 1 TND) - cherche "Timbre" sur la facture
@@ -260,6 +295,11 @@ IMPORTANT pour les factures tunisiennes :
 - "net_a_payer" = Montant final TTC + Timbre fiscal
 - Si une information est absente, utilise null ou 0.
 - Pour les montants, utilise des nombres décimaux (jamais de chaînes).
+
+CRITIQUE - TVA des auto-entrepreneurs et exonérés :
+- Si la facture indique "TVA 0%", "TVA 0,00%", "TVA 0.00%" ou que Sous-total = Coût total, le fournisseur n'est PAS assujetti à la TVA.
+- Dans ce cas : tax_rate = 0 pour TOUS les items, total_tax = 0, total_ttc = subtotal_ht.
+- NE JAMAIS inventer ou ajouter de TVA sur une facture qui indique 0%.
 """
 
 # Ordre de préférence des modèles Gemini (du plus récent au plus ancien)
@@ -466,6 +506,153 @@ async def extract_with_anthropic(file_bytes: bytes, mime_type: str, api_key: str
         return None
 
 
+def _first_non_empty(*values):
+    for value in values:
+        if value not in (None, "", [], {}):
+            return value
+    return None
+
+
+def _normalize_klippa_result(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """
+    Best-effort normalization of Klippa financial OCR output into EasyBill's invoice shape.
+    The exact response shape can vary depending on the enabled preset/components.
+    """
+    if not isinstance(payload, dict):
+        return None
+
+    documents = payload.get("documents") or payload.get("result") or []
+    doc = documents[0] if isinstance(documents, list) and documents else payload
+    financial = (
+        doc.get("financial")
+        or doc.get("document")
+        or doc.get("data")
+        or doc
+    )
+    supplier_obj = financial.get("supplier") or financial.get("vendor") or financial.get("seller") or {}
+    invoice_obj = financial.get("invoice") or financial.get("invoice_details") or financial
+    amount_obj = financial.get("amount_details") or financial.get("totals") or {}
+    item_list = (
+        financial.get("line_items")
+        or financial.get("items")
+        or invoice_obj.get("line_items", []) if isinstance(invoice_obj, dict) else []
+    ) or []
+
+    items = []
+    for item in item_list:
+        if not isinstance(item, dict):
+            continue
+        qty = _first_non_empty(item.get("quantity"), item.get("qty"), 1) or 1
+        unit_price = _first_non_empty(item.get("unit_price"), item.get("price"), item.get("price_per_unit"), 0) or 0
+        tr = _first_non_empty(item.get("tax_rate"), item.get("vat_rate"), item.get("tax_percentage"))
+        tax_rate = float(tr) if tr is not None else 19
+        discount = _first_non_empty(item.get("discount"), item.get("discount_percentage"), 0) or 0
+        total_ht = _first_non_empty(item.get("total_ht"), item.get("subtotal"), item.get("amount_excluding_vat"))
+        total_ttc = _first_non_empty(item.get("total_ttc"), item.get("total"), item.get("amount_including_vat"))
+        if total_ttc is None and total_ht is not None:
+            try:
+                total_ttc = float(total_ht) * (1 + float(tax_rate) / 100)
+            except Exception:
+                total_ttc = 0
+        items.append({
+            "description": _first_non_empty(item.get("description"), item.get("name"), item.get("label"), ""),
+            "quantity": float(str(qty).replace(",", ".")),
+            "unit_price": float(str(unit_price).replace(",", ".")),
+            "tax_rate": float(str(tax_rate).replace(",", ".")),
+            "discount": float(str(discount).replace(",", ".")),
+            "total_ht": float(str(total_ht or 0).replace(",", ".")),
+            "total_ttc": float(str(total_ttc or 0).replace(",", ".")),
+        })
+
+    supplier_name = _first_non_empty(
+        supplier_obj.get("name"),
+        supplier_obj.get("company_name"),
+        supplier_obj.get("display_name"),
+        financial.get("supplier_name"),
+        financial.get("vendor_name"),
+    )
+
+    result = {
+        "supplier": {
+            "name": supplier_name,
+            "fiscal_id": _first_non_empty(supplier_obj.get("fiscal_id"), supplier_obj.get("tax_id"), supplier_obj.get("vat_number")),
+            "phone": _first_non_empty(supplier_obj.get("phone"), supplier_obj.get("telephone")),
+            "email": supplier_obj.get("email"),
+            "address": _first_non_empty(supplier_obj.get("address"), supplier_obj.get("full_address")),
+        },
+        "invoice": {
+            "supplier_number": _first_non_empty(invoice_obj.get("number"), invoice_obj.get("invoice_number"), financial.get("invoice_number")),
+            "date": _first_non_empty(invoice_obj.get("date"), invoice_obj.get("invoice_date"), financial.get("invoice_date")),
+            "due_date": _first_non_empty(invoice_obj.get("due_date"), financial.get("due_date")),
+            "items": items,
+            "subtotal_ht": _first_non_empty(amount_obj.get("subtotal"), amount_obj.get("amount_excluding_vat"), financial.get("subtotal_ht"), invoice_obj.get("subtotal_ht")),
+            "fodec": _first_non_empty(amount_obj.get("fodec"), financial.get("fodec")),
+            "assiette_tva": _first_non_empty(amount_obj.get("taxable_amount"), financial.get("assiette_tva")),
+            "total_tax": _first_non_empty(amount_obj.get("vat"), amount_obj.get("tax"), financial.get("total_tax")),
+            "timbre_fiscal": _first_non_empty(amount_obj.get("stamp_duty"), financial.get("timbre_fiscal"), financial.get("timbre")),
+            "total_ttc": _first_non_empty(amount_obj.get("total"), amount_obj.get("amount_including_vat"), financial.get("total_ttc")),
+            "net_a_payer": _first_non_empty(amount_obj.get("amount_due"), financial.get("net_a_payer"), financial.get("amount_due")),
+        },
+        "confidence": 0.93,
+        "extraction_method": "klippa_financial",
+        "raw_text_length": 0,
+    }
+    return result
+
+
+async def extract_with_klippa(file_bytes: bytes, filename: str, mime_type: str, api_key: str) -> Optional[Dict[str, Any]]:
+    """
+    Use Klippa DocHorizon Financial OCR API.
+    """
+    import asyncio
+
+    preset_slug = os.environ.get("KLIPPA_FINANCIAL_PRESET_SLUG")
+    configuration_slug = os.environ.get("KLIPPA_FINANCIAL_CONFIGURATION_SLUG")
+
+    def _sync_extract() -> Optional[Dict[str, Any]]:
+        try:
+            payload = {
+                "documents": [{
+                    "filename": filename or "document.pdf",
+                    "content_type": mime_type,
+                    "data": base64.standard_b64encode(file_bytes).decode("utf-8"),
+                }]
+            }
+            if preset_slug:
+                payload["preset"] = {"slug": preset_slug}
+            if configuration_slug:
+                payload["configuration"] = {"slug": configuration_slug}
+
+            response = requests.post(
+                KLIPPA_FINANCIAL_ENDPOINT,
+                headers={
+                    "x-api-key": api_key,
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                },
+                json=payload,
+                timeout=120,
+            )
+            response.raise_for_status()
+            data = response.json()
+            normalized = _normalize_klippa_result(data)
+            if normalized:
+                normalized["extraction_method"] = "klippa_financial"
+            return normalized
+        except Exception as e:
+            logger.warning(f"Klippa extraction echec: {e}")
+            return None
+
+    try:
+        return await asyncio.wait_for(asyncio.to_thread(_sync_extract), timeout=130.0)
+    except asyncio.TimeoutError:
+        logger.warning("Klippa timeout apres 130s")
+        return None
+    except Exception as e:
+        logger.warning(f"Klippa asyncio.to_thread echec: {e}")
+        return None
+
+
 async def extract_text_from_pdf(file_bytes: bytes) -> str:
     """Extract raw text from PDF using pdfplumber."""
     try:
@@ -501,18 +688,29 @@ def _is_fast_pdf_result_good(result: Dict[str, Any]) -> bool:
 async def extract_invoice_data(
     file_bytes: bytes,
     filename: str,
-    mime_type: str
+    mime_type: str,
+    provider: str = "auto",
 ) -> Dict[str, Any]:
     """
     Main entry point: extract structured invoice data from a file.
     """
     gemini_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_AI_KEY")
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+    klippa_key = os.environ.get("KLIPPA_API_KEY")
     raw_text = ""
     regex_result = None
+    empty_error_result = lambda method, message: {
+        "supplier": {"name": None, "fiscal_id": None, "phone": None, "email": None},
+        "invoice": {"supplier_number": None, "date": None, "items": [], "subtotal": None, "total_tax": None, "total": None},
+        "confidence": 0.0,
+        "extraction_method": method,
+        "error": message,
+    }
+
+    is_pdf = mime_type == "application/pdf" or filename.lower().endswith(".pdf")
 
     # Fast path for digital PDFs: prefer native text parsing when quality is already good.
-    if mime_type == "application/pdf" or filename.lower().endswith(".pdf"):
+    if provider in ("auto", "regex") and is_pdf:
         raw_text = await extract_text_from_pdf(file_bytes)
         if raw_text.strip():
             regex_result = _extract_with_regex(raw_text)
@@ -521,22 +719,49 @@ async def extract_invoice_data(
                 regex_result["extraction_method"] = "regex_fast_pdf"
                 return regex_result
 
-    # Try Gemini Vision first (most accurate)
-    if gemini_key:
+    if provider == "regex":
+        if not raw_text and is_pdf:
+            raw_text = await extract_text_from_pdf(file_bytes)
+        result = regex_result or _extract_with_regex(raw_text) if raw_text.strip() else None
+        if result:
+            result["extraction_method"] = "regex"
+            result["raw_text_preview"] = raw_text[:500]
+            return result
+
+    # Klippa first when explicitly requested or when auto has access to it.
+    if provider == "klippa" and not klippa_key:
+        return empty_error_result("klippa_unavailable", "Klippa est sélectionné mais KLIPPA_API_KEY n'est pas configurée.")
+    if provider in ("auto", "klippa") and klippa_key:
+        result = await extract_with_klippa(file_bytes, filename, mime_type, klippa_key)
+        if result:
+            return result
+        if provider == "klippa":
+            return empty_error_result("klippa_failed", "Klippa n'a pas pu extraire le document.")
+
+    # Try Gemini Vision first (most accurate of the current generic LLM providers)
+    if provider == "gemini" and not gemini_key:
+        return empty_error_result("gemini_unavailable", "Gemini est sélectionné mais GEMINI_API_KEY n'est pas configurée.")
+    if provider in ("auto", "gemini") and gemini_key:
         result = await extract_with_gemini(file_bytes, mime_type, gemini_key)
         if result:
             result["extraction_method"] = "gemini_vision"
             return result
+        if provider == "gemini":
+            return empty_error_result("gemini_failed", "Gemini n'a pas pu extraire le document.")
 
     # Anthropic fallback for PDFs/images when Gemini is unavailable or fails.
-    if anthropic_key:
+    if provider == "anthropic" and not anthropic_key:
+        return empty_error_result("anthropic_unavailable", "Anthropic est sélectionné mais ANTHROPIC_API_KEY n'est pas configurée.")
+    if provider in ("auto", "anthropic") and anthropic_key:
         result = await extract_with_anthropic(file_bytes, mime_type, anthropic_key)
         if result:
             result["extraction_method"] = "anthropic_vision"
             return result
+        if provider == "anthropic":
+            return empty_error_result("anthropic_failed", "Anthropic n'a pas pu extraire le document.")
 
     # Fallback: extract text then parse with regex
-    if not raw_text and (mime_type == "application/pdf" or filename.lower().endswith(".pdf")):
+    if not raw_text and is_pdf:
         raw_text = await extract_text_from_pdf(file_bytes)
     elif mime_type.startswith("image/"):
         # For images without Gemini, try basic PIL-based approach
