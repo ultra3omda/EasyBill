@@ -273,7 +273,9 @@ const Products = () => {
     setFormData(prev => ({
       ...prev,
       components: (prev.components || []).filter((_, i) => i !== index)
-      
+    }));
+  };
+
   const addComponent = () => {
     if (!newComponentProductId || Number(newComponentQuantity) <= 0) {
       toast({ title: 'Erreur', description: 'Sélectionnez un article et une quantité supérieure à 0', variant: 'destructive' });
