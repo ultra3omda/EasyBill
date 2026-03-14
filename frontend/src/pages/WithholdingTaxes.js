@@ -84,11 +84,11 @@ const WithholdingTaxes = () => {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Retenues à la Source</h1>
-            <p className="text-gray-500 mt-1">Conformité fiscale tunisienne</p>
+            <h1 className="page-header-title">Retenues à la Source</h1>
+            <p className="page-header-subtitle">Conformité fiscale tunisienne</p>
           </div>
           <Button>
             <Plus className="w-4 h-4 mr-2" />
@@ -97,42 +97,42 @@ const WithholdingTaxes = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-6">
+          <Card className="stat-surface p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Total retenues</p>
-                <h3 className="text-2xl font-bold mt-1">{stats.total}</h3>
+                <p className="text-sm text-slate-500">Total retenues</p>
+                <h3 className="mt-1 text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.total}</h3>
               </div>
-              <FileText className="w-8 h-8 text-gray-400" />
+              <div className="rounded-2xl bg-violet-100 p-3"><FileText className="w-6 h-6 text-violet-700" /></div>
             </div>
           </Card>
-          <Card className="p-6">
-            <p className="text-sm text-gray-500">En attente</p>
-            <h3 className="text-2xl font-bold text-orange-600 mt-1">{stats.pending}</h3>
+          <Card className="stat-surface p-6">
+            <p className="text-sm text-slate-500">En attente</p>
+            <h3 className="mt-1 text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.pending}</h3>
           </Card>
-          <Card className="p-6">
-            <p className="text-sm text-gray-500">Payées</p>
-            <h3 className="text-2xl font-bold text-green-600 mt-1">{stats.paid}</h3>
+          <Card className="stat-surface p-6">
+            <p className="text-sm text-slate-500">Payées</p>
+            <h3 className="mt-1 text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.paid}</h3>
           </Card>
-          <Card className="p-6">
+          <Card className="stat-surface p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Montant total</p>
-                <h3 className="text-2xl font-bold text-purple-600 mt-1">{stats.total_amount?.toFixed(3)} TND</h3>
+                <p className="text-sm text-slate-500">Montant total</p>
+                <h3 className="mt-1 text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.total_amount?.toFixed(3)} TND</h3>
               </div>
-              <DollarSign className="w-8 h-8 text-purple-600" />
+              <div className="rounded-2xl bg-amber-100 p-3"><DollarSign className="w-6 h-6 text-amber-700" /></div>
             </div>
           </Card>
         </div>
 
         {rates.length > 0 && (
           <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Taux de retenue à la source (Tunisie)</h2>
+            <h2 className="mb-4 text-lg font-semibold text-slate-900">Taux de retenue à la source (Tunisie)</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {rates.map((rate, idx) => (
-                <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                  <span className="font-medium">{rate.type}</span>
-                  <Badge className="bg-purple-100 text-purple-800">{rate.rate}%</Badge>
+                <div key={idx} className="flex items-center justify-between rounded-2xl bg-slate-50 p-3">
+                  <span className="font-medium text-slate-900">{rate.type}</span>
+                  <Badge className="bg-violet-100 text-violet-800">{rate.rate}%</Badge>
                 </div>
               ))}
             </div>
@@ -141,22 +141,22 @@ const WithholdingTaxes = () => {
 
         <Card className="p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Liste des retenues</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Liste des retenues</h2>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
               <Input
                 placeholder="Rechercher..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-64"
+                className="w-64 pl-11"
               />
             </div>
           </div>
 
           {loading ? (
-            <div className="text-center py-8">Chargement...</div>
+            <div className="py-8 text-center text-slate-500">Chargement...</div>
           ) : filteredTaxes.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">Aucune retenue à la source</div>
+            <div className="py-8 text-center text-slate-500">Aucune retenue à la source</div>
           ) : (
             <Table>
               <TableHeader>
@@ -173,7 +173,7 @@ const WithholdingTaxes = () => {
               <TableBody>
                 {filteredTaxes.map((tax) => (
                   <TableRow key={tax.id}>
-                    <TableCell className="font-medium">{tax.reference}</TableCell>
+                    <TableCell className="font-medium text-slate-900">{tax.reference}</TableCell>
                     <TableCell>{new Date(tax.date).toLocaleDateString('fr-FR')}</TableCell>
                     <TableCell>{tax.tax_type}</TableCell>
                     <TableCell>{tax.rate}%</TableCell>

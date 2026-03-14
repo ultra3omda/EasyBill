@@ -98,26 +98,26 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 to-amber-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-8 shadow-xl">
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(123,92,255,0.14),_transparent_38%),linear-gradient(180deg,_#fcfbff_0%,_#f7f4ff_55%,_#fffaf0_100%)] p-4">
+      <Card className="w-full max-w-md p-8 shadow-2xl shadow-violet-100/60">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-violet-700 rounded-lg flex items-center justify-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-violet-700">
               <span className="text-white font-bold text-xl">E</span>
             </div>
             <span className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-amber-500 bg-clip-text text-transparent">
               EasyBill
             </span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('auth.loginTitle')}</h1>
-          <p className="text-gray-600">Accédez à votre espace de gestion</p>
+          <h1 className="mb-2 text-3xl font-bold tracking-[-0.03em] text-slate-900">{t('auth.loginTitle')}</h1>
+          <p className="text-slate-600">Accédez à votre espace de gestion</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6" data-testid="login-form">
           <div>
             <Label htmlFor="email">{t('auth.email')}</Label>
             <div className="relative mt-2">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <Input
                 id="email"
                 type="email"
@@ -134,7 +134,7 @@ const Login = () => {
           <div>
             <Label htmlFor="password">{t('auth.password')}</Label>
             <div className="relative mt-2">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <Input
                 id="password"
                 type="password"
@@ -151,7 +151,7 @@ const Login = () => {
           <div className="flex items-center justify-between">
             <label className="flex items-center">
               <input type="checkbox" className="mr-2 accent-violet-600" data-testid="login-remember-checkbox" />
-              <span className="text-sm text-gray-600">Se souvenir de moi</span>
+              <span className="text-sm text-slate-600">Se souvenir de moi</span>
             </label>
             <Link to="/forgot-password" className="text-sm text-violet-600 hover:text-violet-700">
               {t('auth.forgotPassword')}
@@ -160,7 +160,7 @@ const Login = () => {
 
           <Button 
             type="submit" 
-            className="w-full bg-violet-600 hover:bg-violet-700 text-white py-6"
+            className="w-full py-6"
             disabled={loading}
             data-testid="login-submit-button"
           >
@@ -170,10 +170,10 @@ const Login = () => {
 
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
+            <div className="w-full border-t border-slate-200"></div>
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">{t('auth.orContinueWith')}</span>
+            <span className="bg-white px-2 text-slate-500">{t('auth.orContinueWith')}</span>
           </div>
         </div>
 
@@ -181,7 +181,7 @@ const Login = () => {
           <Button
             type="button"
             variant="outline"
-            className="w-full py-6 border-2 hover:bg-red-50 border-gray-300"
+            className="w-full border-2 border-slate-300 py-6 hover:bg-red-50"
             onClick={redirectToGoogle}
             disabled={loading}
             data-testid="login-google-button"
@@ -196,7 +196,7 @@ const Login = () => {
           </Button>
         </div>
 
-        <p className="text-center mt-6 text-gray-600">
+        <p className="mt-6 text-center text-slate-600">
           {t('auth.noAccount')}{' '}
           <Link to="/register" className="text-violet-600 hover:text-violet-700 font-semibold">
             {t('auth.registerButton')}

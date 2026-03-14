@@ -302,7 +302,7 @@ const ChartOfAccounts = () => {
     return (
       <div key={node.code}>
         <div
-          className={`flex items-center py-2 px-3 hover:bg-gray-50 border-b border-gray-100 transition-colors ${
+          className={`flex items-center border-b border-slate-100 px-3 py-2 hover:bg-slate-50 transition-colors ${
             node.is_group ? 'font-medium' : ''
           }`}
           style={{ paddingLeft: `${paddingLeft + 12}px` }}
@@ -312,13 +312,13 @@ const ChartOfAccounts = () => {
             {hasChildren ? (
               <button
                 onClick={() => toggleNode(node.code)}
-                className="p-0.5 hover:bg-gray-200 rounded"
+                className="rounded p-0.5 hover:bg-slate-200"
                 data-testid={`toggle-${node.code}`}
               >
                 {isExpanded ? (
-                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                  <ChevronDown className="w-4 h-4 text-slate-500" />
                 ) : (
-                  <ChevronRight className="w-4 h-4 text-gray-500" />
+                  <ChevronRight className="w-4 h-4 text-slate-500" />
                 )}
               </button>
             ) : null}
@@ -333,17 +333,17 @@ const ChartOfAccounts = () => {
                 <Folder className="w-4 h-4 text-amber-500" />
               )
             ) : (
-              <FileText className="w-4 h-4 text-gray-400" />
+              <FileText className="w-4 h-4 text-slate-400" />
             )}
           </div>
 
           {/* Code */}
-          <div className="w-20 flex-shrink-0 font-mono text-sm text-violet-600">
+          <div className="w-20 flex-shrink-0 font-mono text-sm text-violet-700">
             {node.code}
           </div>
 
           {/* Name */}
-          <div className="flex-1 text-sm text-gray-800 truncate" title={node.name}>
+          <div className="flex-1 truncate text-sm text-slate-800" title={node.name}>
             {node.name}
           </div>
 
@@ -357,9 +357,9 @@ const ChartOfAccounts = () => {
           {/* System indicator */}
           <div className="w-20 flex-shrink-0 text-center">
             {node.is_system ? (
-              <span className="text-xs text-gray-400">Système</span>
+              <span className="text-xs text-slate-400">Système</span>
             ) : (
-              <span className="text-xs text-green-600">Personnalisé</span>
+              <span className="text-xs text-violet-600">Personnalisé</span>
             )}
           </div>
 
@@ -367,7 +367,7 @@ const ChartOfAccounts = () => {
           <div className="w-20 flex-shrink-0 flex gap-1 justify-end">
             <button
               onClick={() => openEditModal(node)}
-              className="p-1 hover:bg-gray-200 rounded text-gray-500 hover:text-violet-600"
+              className="rounded p-1 text-slate-500 hover:bg-slate-200 hover:text-violet-600"
               title="Modifier"
               data-testid={`edit-${node.code}`}
             >
@@ -376,7 +376,7 @@ const ChartOfAccounts = () => {
             {!node.is_system && (
               <button
                 onClick={() => handleDelete(node)}
-                className="p-1 hover:bg-gray-200 rounded text-gray-500 hover:text-red-600"
+                className="rounded p-1 text-slate-500 hover:bg-slate-200 hover:text-red-600"
                 title="Supprimer"
                 data-testid={`delete-${node.code}`}
               >
@@ -416,8 +416,8 @@ const ChartOfAccounts = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Plan Comptable</h1>
-            <p className="text-gray-500 mt-1">
+            <h1 className="page-header-title">Plan Comptable</h1>
+            <p className="page-header-subtitle">
               Plan comptable configurable par société et pays
             </p>
             {chartMeta && (
@@ -434,7 +434,6 @@ const ChartOfAccounts = () => {
               setEditingAccount(null);
               setShowAddModal(true);
             }}
-            className="bg-violet-600 hover:bg-violet-700"
             data-testid="add-account-btn"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -444,22 +443,22 @@ const ChartOfAccounts = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-          <Card className="p-4">
+          <Card className="stat-surface p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-violet-100 rounded-lg">
-                <BookOpen className="w-5 h-5 text-violet-600" />
+              <div className="rounded-2xl bg-violet-100 p-2.5">
+                <BookOpen className="w-5 h-5 text-violet-700" />
               </div>
               <div>
-                <p className="text-xs text-gray-500">Total</p>
-                <p className="text-xl font-bold text-gray-900">{stats.total}</p>
+                <p className="text-xs text-slate-500">Total</p>
+                <p className="text-xl font-bold tracking-[-0.03em] text-slate-900">{stats.total}</p>
               </div>
             </div>
           </Card>
           {stats.byType.map((type) => (
-            <Card key={type.value} className="p-4">
+            <Card key={type.value} className="stat-surface p-4">
               <div>
-                <p className="text-xs text-gray-500">{type.label}</p>
-                <p className="text-xl font-bold text-gray-900">{type.count}</p>
+                <p className="text-xs text-slate-500">{type.label}</p>
+                <p className="text-xl font-bold tracking-[-0.03em] text-slate-900">{type.count}</p>
               </div>
             </Card>
           ))}
@@ -469,12 +468,12 @@ const ChartOfAccounts = () => {
         <Card className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 placeholder="Rechercher par code ou nom..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
+                className="pl-11"
                 data-testid="search-input"
               />
             </div>
@@ -508,7 +507,7 @@ const ChartOfAccounts = () => {
         {/* Accounts Tree */}
         <Card className="overflow-hidden">
           {/* Header */}
-          <div className="flex items-center py-3 px-3 bg-gray-50 border-b font-medium text-sm text-gray-600">
+          <div className="flex items-center border-b bg-slate-50/80 px-3 py-3 text-sm font-medium text-slate-600">
             <div className="w-6 flex-shrink-0"></div>
             <div className="w-6 flex-shrink-0"></div>
             <div className="w-20 flex-shrink-0">Code</div>
@@ -522,33 +521,33 @@ const ChartOfAccounts = () => {
           <div className="max-h-[600px] overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-12">
-                <RefreshCw className="w-6 h-6 animate-spin text-violet-600" />
-                <span className="ml-2 text-gray-600">Chargement...</span>
+                <RefreshCw className="w-6 h-6 animate-spin text-primary" />
+                <span className="ml-2 text-slate-600">Chargement...</span>
               </div>
             ) : searchTerm ? (
               // Flat search results
               accountTree.length === 0 ? (
-                <div className="py-12 text-center text-gray-500">
+                <div className="py-12 text-center text-slate-500">
                   Aucun compte trouvé pour "{searchTerm}"
                 </div>
               ) : (
                 accountTree.map((account) => (
                   <div
                     key={account.code}
-                    className="flex items-center py-2 px-3 hover:bg-gray-50 border-b border-gray-100"
+                    className="flex items-center border-b border-slate-100 px-3 py-2 hover:bg-slate-50"
                   >
                     <div className="w-6 flex-shrink-0"></div>
                     <div className="w-6 flex-shrink-0">
                       {account.is_group ? (
                         <Folder className="w-4 h-4 text-amber-500" />
                       ) : (
-                        <FileText className="w-4 h-4 text-gray-400" />
+                        <FileText className="w-4 h-4 text-slate-400" />
                       )}
                     </div>
-                    <div className="w-20 flex-shrink-0 font-mono text-sm text-violet-600">
+                    <div className="w-20 flex-shrink-0 font-mono text-sm text-violet-700">
                       {account.code}
                     </div>
-                    <div className="flex-1 text-sm text-gray-800 truncate">
+                    <div className="flex-1 truncate text-sm text-slate-800">
                       {account.name}
                     </div>
                     <div className="w-24 flex-shrink-0">
@@ -558,22 +557,22 @@ const ChartOfAccounts = () => {
                     </div>
                     <div className="w-20 flex-shrink-0 text-center">
                       {account.is_system ? (
-                        <span className="text-xs text-gray-400">Système</span>
+                        <span className="text-xs text-slate-400">Système</span>
                       ) : (
-                        <span className="text-xs text-green-600">Personnalisé</span>
+                        <span className="text-xs text-violet-600">Personnalisé</span>
                       )}
                     </div>
                     <div className="w-20 flex-shrink-0 flex gap-1 justify-end">
                       <button
                         onClick={() => openEditModal(account)}
-                        className="p-1 hover:bg-gray-200 rounded text-gray-500 hover:text-violet-600"
+                        className="rounded p-1 text-slate-500 hover:bg-slate-200 hover:text-violet-600"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                       {!account.is_system && (
                         <button
                           onClick={() => handleDelete(account)}
-                          className="p-1 hover:bg-gray-200 rounded text-gray-500 hover:text-red-600"
+                          className="rounded p-1 text-slate-500 hover:bg-slate-200 hover:text-red-600"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -584,17 +583,16 @@ const ChartOfAccounts = () => {
               )
             ) : accountTree.length === 0 && !loading ? (
               <div className="py-16 text-center">
-                <BookOpen className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                <BookOpen className="mx-auto mb-4 w-16 h-16 text-slate-300" />
+                <h3 className="mb-2 text-lg font-semibold text-slate-700">
                   Plan comptable vide
                 </h3>
-                <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                <p className="mx-auto mb-6 max-w-md text-slate-500">
                   Votre plan comptable n'a pas encore été initialisé. Cliquez sur le bouton ci-dessous pour créer automatiquement le plan comptable tunisien (SCE).
                 </p>
                 <Button
                   onClick={handleSeedChartOfAccounts}
                   disabled={seeding}
-                  className="bg-violet-600 hover:bg-violet-700"
                   data-testid="seed-chart-btn"
                 >
                   {seeding ? (
@@ -728,7 +726,6 @@ const ChartOfAccounts = () => {
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-violet-600 hover:bg-violet-700"
                   data-testid="save-account-btn"
                 >
                   {editingAccount ? 'Mettre à jour' : 'Créer'}

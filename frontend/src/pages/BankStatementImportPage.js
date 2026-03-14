@@ -172,27 +172,27 @@ export default function BankStatementImportPage() {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <FileSpreadsheet className="w-6 h-6 text-violet-600" />
+            <h1 className="page-header-title flex items-center gap-2">
+              <FileSpreadsheet className="w-6 h-6 text-violet-700" />
               Import extraits bancaires
             </h1>
-            <p className="text-gray-500 text-sm mt-1">
+            <p className="page-header-subtitle">
               Import PDF · Extraction Document AI · Rapprochement automatique
             </p>
           </div>
         </div>
 
-        <div className="flex gap-2 border-b">
-          <Button variant={tab === 'imports' ? 'default' : 'ghost'} onClick={() => setTab('imports')} className={tab === 'imports' ? 'bg-violet-600' : ''}>
+        <div className="flex gap-2 border-b border-slate-200">
+          <Button variant={tab === 'imports' ? 'default' : 'ghost'} onClick={() => setTab('imports')}>
             <Upload className="w-4 h-4 mr-1" /> Imports
           </Button>
-          <Button variant={tab === 'transactions' ? 'default' : 'ghost'} onClick={() => setTab('transactions')} className={tab === 'transactions' ? 'bg-violet-600' : ''}>
+          <Button variant={tab === 'transactions' ? 'default' : 'ghost'} onClick={() => setTab('transactions')}>
             <FileText className="w-4 h-4 mr-1" /> Transactions
           </Button>
-          <Button variant={tab === 'suggestions' ? 'default' : 'ghost'} onClick={() => setTab('suggestions')} className={tab === 'suggestions' ? 'bg-violet-600' : ''}>
+          <Button variant={tab === 'suggestions' ? 'default' : 'ghost'} onClick={() => setTab('suggestions')}>
             <Link2 className="w-4 h-4 mr-1" /> Suggestions
           </Button>
         </div>
@@ -201,24 +201,24 @@ export default function BankStatementImportPage() {
           <Card>
             <CardHeader>
               <CardTitle>Imports d'extraits bancaires</CardTitle>
-              <p className="text-sm text-gray-500">Uploadez un PDF ou une image d'extrait de compte</p>
+              <p className="text-sm text-slate-500">Uploadez un PDF ou une image d'extrait de compte</p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-2">
                 <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleUpload} />
-                <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="bg-violet-600">
+                <Button onClick={() => fileInputRef.current?.click()} disabled={uploading}>
                   {uploading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Upload className="w-4 h-4 mr-1" />}
                   Importer un extrait
                 </Button>
                 <Button variant="outline" onClick={loadImports}><RefreshCw className="w-4 h-4 mr-1" /> Actualiser</Button>
               </div>
               {loading ? (
-                <div className="py-8 text-center text-gray-400"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
+                <div className="py-8 text-center text-slate-400"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></div>
               ) : imports.length === 0 ? (
-                <div className="py-8 text-center text-gray-400">Aucun import</div>
+                <div className="py-8 text-center text-slate-400">Aucun import</div>
               ) : (
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b"><tr>
+                  <thead className="border-b bg-slate-50/80"><tr>
                     <th className="px-4 py-2 text-left">Fichier</th>
                     <th className="px-4 py-2 text-left">Statut</th>
                     <th className="px-4 py-2 text-left">Complexité</th>
@@ -232,7 +232,7 @@ export default function BankStatementImportPage() {
                       const st = STATUS_BADGE[imp.status] || STATUS_BADGE.pending;
                       const Icon = st.icon;
                       return (
-                        <tr key={imp.id} className="hover:bg-gray-50">
+                        <tr key={imp.id} className="hover:bg-slate-50">
                           <td className="px-4 py-2 font-medium">{imp.file_name || imp.id}</td>
                           <td className="px-4 py-2">
                             <Badge className={st.class}>
@@ -241,20 +241,20 @@ export default function BankStatementImportPage() {
                             </Badge>
                           </td>
                           <td className="px-4 py-2 text-xs">
-                            <div className="text-gray-700">{imp.processing_complexity || '—'}</div>
-                            <div className="text-gray-400">{imp.ocr_provider || 'n/a'}</div>
+                            <div className="text-slate-700">{imp.processing_complexity || '—'}</div>
+                            <div className="text-slate-400">{imp.ocr_provider || 'n/a'}</div>
                           </td>
                           <td className="px-4 py-2 text-right">
                             <div>{imp.transaction_count}</div>
                             {imp.estimated_transaction_count > imp.transaction_count && (
-                              <div className="text-[11px] text-gray-400">estimé {imp.estimated_transaction_count}</div>
+                              <div className="text-[11px] text-slate-400">estimé {imp.estimated_transaction_count}</div>
                             )}
                           </td>
-                          <td className="px-4 py-2 text-gray-500">{imp.created_at?.slice(0, 10)}</td>
+                          <td className="px-4 py-2 text-slate-500">{imp.created_at?.slice(0, 10)}</td>
                           <td className="px-4 py-2 text-xs">
                             <div className="text-red-600">{imp.error_message || ''}</div>
                             <div className="text-amber-700">{imp.import_warning || '—'}</div>
-                            {imp.suggested_split && <div className="text-gray-500">Scinder: {imp.suggested_split}</div>}
+                            {imp.suggested_split && <div className="text-slate-500">Scinder: {imp.suggested_split}</div>}
                           </td>
                           <td className="px-4 py-2 text-center">
                             {(imp.status === 'failed' || imp.status === 'processing') && (
@@ -304,13 +304,13 @@ export default function BankStatementImportPage() {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="py-8 text-center text-gray-400"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
+                <div className="py-8 text-center text-slate-400"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></div>
               ) : transactions.length === 0 ? (
-                <div className="py-8 text-center text-gray-400">Aucune transaction</div>
+                <div className="py-8 text-center text-slate-400">Aucune transaction</div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50 border-b"><tr>
+                    <thead className="border-b bg-slate-50/80"><tr>
                       <th className="px-3 py-2 text-left">Date</th>
                       <th className="px-3 py-2 text-left">Libellé</th>
                       <th className="px-3 py-2 text-right bg-red-50/50"><span className="flex items-center justify-end gap-1"><ArrowDownLeft className="w-3.5 h-3.5 text-red-600" /> Débit (sortie)</span></th>
@@ -322,13 +322,13 @@ export default function BankStatementImportPage() {
                     </tr></thead>
                     <tbody className="divide-y">
                       {transactions.map(tx => (
-                        <tr key={tx.id} className="hover:bg-gray-50">
-                          <td className="px-3 py-2 text-gray-500">{tx.txn_date}</td>
+                        <tr key={tx.id} className="hover:bg-slate-50">
+                          <td className="px-3 py-2 text-slate-500">{tx.txn_date}</td>
                           <td className="px-3 py-2 max-w-xs truncate" title={tx.label_raw}>{tx.label_raw}</td>
-                          <td className="px-3 py-2 text-right bg-red-50/30">{tx.debit > 0 ? <span className="font-medium text-red-700">{fmt(tx.debit)}</span> : <span className="text-gray-300">—</span>}</td>
-                          <td className="px-3 py-2 text-right bg-green-50/30">{tx.credit > 0 ? <span className="font-medium text-green-700">{fmt(tx.credit)}</span> : <span className="text-gray-300">—</span>}</td>
-                          <td className="px-3 py-2 text-right text-gray-500">{tx.balance != null ? fmt(tx.balance) : '—'}</td>
-                          <td className="px-3 py-2 text-gray-600">{tx.transaction_type || '—'}</td>
+                          <td className="px-3 py-2 text-right bg-red-50/30">{tx.debit > 0 ? <span className="font-medium text-red-700">{fmt(tx.debit)}</span> : <span className="text-slate-300">—</span>}</td>
+                          <td className="px-3 py-2 text-right bg-green-50/30">{tx.credit > 0 ? <span className="font-medium text-green-700">{fmt(tx.credit)}</span> : <span className="text-slate-300">—</span>}</td>
+                          <td className="px-3 py-2 text-right text-slate-500">{tx.balance != null ? fmt(tx.balance) : '—'}</td>
+                          <td className="px-3 py-2 text-slate-600">{tx.transaction_type || '—'}</td>
                           <td className="px-3 py-2">
                             {tx.confidence != null ? (
                               <Badge className={tx.confidence >= 90 ? 'bg-green-100 text-green-700' : tx.confidence >= 75 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}>
@@ -351,27 +351,27 @@ export default function BankStatementImportPage() {
           <Card>
             <CardHeader>
               <CardTitle>Suggestions de rapprochement</CardTitle>
-              <p className="text-sm text-gray-500">Approuvez, rejetez ou ignorez les correspondances proposées</p>
+              <p className="text-sm text-slate-500">Approuvez, rejetez ou ignorez les correspondances proposées</p>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="py-8 text-center text-gray-400"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
+                <div className="py-8 text-center text-slate-400"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></div>
               ) : suggestions.length === 0 ? (
-                <div className="py-8 text-center text-gray-400">Aucune suggestion en attente</div>
+                <div className="py-8 text-center text-slate-400">Aucune suggestion en attente</div>
               ) : (
                 <div className="space-y-3">
                   {suggestions.map(s => (
                     <div key={s.id} className="border rounded-lg p-4 flex items-center justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{s.candidate_summary}</p>
-                        <p className="text-sm text-gray-500">{s.reason}</p>
-                        <p className="text-xs text-gray-400">{s.match_pass || '—'} {s.confidence ? `· ${s.confidence}` : ''}</p>
+                        <p className="text-sm text-slate-500">{s.reason}</p>
+                        <p className="text-xs text-slate-400">{s.match_pass || '—'} {s.confidence ? `· ${s.confidence}` : ''}</p>
                       </div>
                       <Badge className={s.score >= 85 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}>
                         Score {Math.round(s.score)}
                       </Badge>
                       <div className="flex gap-2 shrink-0">
-                        <Button size="sm" className="bg-green-600" onClick={() => setApproveModal({ open: true, suggestion: s })} disabled={actioning}>
+                        <Button size="sm" className="bg-green-600 text-white hover:bg-green-700" onClick={() => setApproveModal({ open: true, suggestion: s })} disabled={actioning}>
                           <Check className="w-4 h-4 mr-0.5" /> Approuver
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => handleReject(s.id)} disabled={actioning}>

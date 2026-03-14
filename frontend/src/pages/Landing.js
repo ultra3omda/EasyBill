@@ -96,21 +96,21 @@ const Landing = () => {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-b from-gray-50 to-white py-20 px-4">
+      <section className="bg-[radial-gradient(circle_at_top,_rgba(123,92,255,0.12),_transparent_35%),linear-gradient(180deg,_#fcfbff_0%,_#ffffff_100%)] py-20 px-4">
         <div className="max-w-7xl mx-auto text-center">
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+          <h1 className="mb-6 text-5xl font-bold tracking-[-0.04em] text-slate-900 md:text-6xl">
             {t('landing.title')}<br />
-            <span className="text-gray-900">{t('landing.titleHighlight')}</span>
+            <span className="text-violet-700">{t('landing.titleHighlight')}</span>
           </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+          <p className="mx-auto mb-8 max-w-3xl text-xl text-slate-600">
             {t('landing.subtitle')}
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
-            <Button className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-6 text-lg rounded-lg">
+            <Button className="px-8 py-6 text-lg">
               {t('landing.requestDemo')}
             </Button>
-            <Button variant="outline" className="border-violet-600 text-violet-600 hover:bg-violet-50 px-8 py-6 text-lg rounded-lg">
+            <Button variant="outline" className="border-violet-300 px-8 py-6 text-lg text-violet-700 hover:bg-violet-50">
               {t('landing.watchDemo')}
             </Button>
             <div className="flex gap-3">
@@ -119,11 +119,11 @@ const Landing = () => {
             </div>
           </div>
 
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="mb-4 text-sm text-slate-500">
             Obtenez une démonstration de la version premium avec un conseiller qualifié.
           </p>
 
-          <Button variant="outline" className="rounded-lg px-6 py-3 mb-8">
+          <Button variant="outline" className="mb-8 px-6 py-3">
             {t('landing.createAccount')}
           </Button>
 
@@ -157,7 +157,7 @@ const Landing = () => {
       {/* Companies Section */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-center text-2xl font-semibold text-gray-900 mb-12">
+          <h2 className="mb-12 text-center text-2xl font-semibold text-slate-900">
             {t('landing.adoptedBy')}
           </h2>
           <div className="flex flex-wrap justify-center items-center gap-12 opacity-60">
@@ -173,12 +173,12 @@ const Landing = () => {
       </section>
 
       {/* Easy Fast Complete Section */}
-      <section className="py-20 bg-gray-50">
+      <section className="bg-slate-50/70 py-20">
         <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center text-gray-900 mb-4">
+          <h2 className="mb-4 text-center text-4xl font-bold tracking-[-0.04em] text-slate-900">
             {t('landing.easyFastComplete')}
           </h2>
-          <p className="text-center text-gray-600 text-lg mb-16">
+          <p className="mb-16 text-center text-lg text-slate-600">
             {t('landing.easySubtitle')}
           </p>
 
@@ -191,12 +191,12 @@ const Landing = () => {
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="bg-teal-100 p-3 rounded-lg">
-                      <feature.icon className="w-6 h-6 text-teal-600" />
+                    <div className="rounded-2xl bg-violet-100 p-3">
+                      <feature.icon className="w-6 h-6 text-violet-700" />
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-900">{feature.title}</h3>
+                    <h3 className="text-2xl font-bold text-slate-900">{feature.title}</h3>
                   </div>
-                  <p className="text-gray-600 text-lg leading-relaxed">{feature.description}</p>
+                  <p className="text-lg leading-relaxed text-slate-600">{feature.description}</p>
                 </div>
                 {feature.image && (
                   <div className="flex-1">
@@ -216,22 +216,22 @@ const Landing = () => {
       {/* Testimonials Section */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4">
-          <p className="text-teal-600 text-center font-semibold mb-2">{t('landing.testimonials')}</p>
-          <h2 className="text-4xl font-bold text-center text-gray-900 mb-16">
+          <p className="mb-2 text-center font-semibold text-violet-700">{t('landing.testimonials')}</p>
+          <h2 className="mb-16 text-center text-4xl font-bold tracking-[-0.04em] text-slate-900">
             {t('landing.feelTheChange')}
           </h2>
           
           <div className="grid md:grid-cols-3 gap-8">
             {[1, 2, 3].map((i) => (
-              <Card key={i} className="p-6 hover:shadow-xl transition-shadow duration-300">
+              <Card key={i} className="p-6 transition-shadow duration-300 hover:shadow-xl">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-teal-100 rounded-full"></div>
+                  <div className="h-12 w-12 rounded-full bg-violet-100"></div>
                   <div>
                     <p className="font-semibold">Client {i}</p>
-                    <p className="text-sm text-gray-500">Entreprise {i}</p>
+                    <p className="text-sm text-slate-500">Entreprise {i}</p>
                   </div>
                 </div>
-                <p className="text-gray-600">
+                <p className="text-slate-600">
                   "Iberis a transformé notre gestion quotidienne. Un outil indispensable pour toute entreprise moderne."
                 </p>
               </Card>
@@ -241,23 +241,23 @@ const Landing = () => {
       </section>
 
       {/* Highlights Section */}
-      <section className="py-20 bg-gray-50">
+      <section className="bg-slate-50/70 py-20">
         <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center text-gray-900 mb-4">
+          <h2 className="mb-4 text-center text-4xl font-bold tracking-[-0.04em] text-slate-900">
             {t('landing.feelTheChange')}
           </h2>
-          <p className="text-center text-gray-600 text-lg mb-16">
+          <p className="mb-16 text-center text-lg text-slate-600">
             {t('landing.structuredForGrowth')}
           </p>
 
           <div className="grid md:grid-cols-3 gap-8">
             {highlights.map((highlight, index) => (
-              <Card key={index} className="p-8 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                <div className="bg-teal-100 w-14 h-14 rounded-lg flex items-center justify-center mb-4">
-                  <highlight.icon className="w-7 h-7 text-teal-600" />
+              <Card key={index} className="p-8 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100">
+                  <highlight.icon className="w-7 h-7 text-violet-700" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">{highlight.title}</h3>
-                <p className="text-gray-600">{highlight.description}</p>
+                <h3 className="mb-3 text-xl font-bold text-slate-900">{highlight.title}</h3>
+                <p className="text-slate-600">{highlight.description}</p>
               </Card>
             ))}
           </div>
@@ -267,28 +267,28 @@ const Landing = () => {
       {/* Pricing Section */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center text-gray-900 mb-4">
+          <h2 className="mb-4 text-center text-4xl font-bold tracking-[-0.04em] text-slate-900">
             Des tarifs adaptées à vos besoins
           </h2>
-          <p className="text-center text-gray-600 text-lg mb-12">
+          <p className="mb-12 text-center text-lg text-slate-600">
             Nos plans sont simples, directs et conçus pour s'adapter à l'évolution de votre entreprise
           </p>
 
           <div className="flex justify-center gap-4 mb-12">
             <Button variant="outline">Mensuel</Button>
-            <Button className="bg-teal-600 hover:bg-teal-700 text-white">Annuel</Button>
+            <Button>Annuel</Button>
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {/* Free Plan */}
-            <Card className="p-8 border-2 border-gray-200">
+            <Card className="border-2 border-slate-200 p-8">
               <h3 className="text-2xl font-bold mb-2">Gratuit</h3>
-              <p className="text-gray-600 mb-6">Le meilleur plan pour essayer Iberis</p>
+              <p className="mb-6 text-slate-600">Le meilleur plan pour essayer Iberis</p>
               <div className="mb-6">
                 <span className="text-4xl font-bold">0 DT</span>
-                <span className="text-gray-500"> HT / Mois</span>
+                <span className="text-slate-500"> HT / Mois</span>
               </div>
-              <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white mb-6">
+              <Button className="mb-6 w-full">
                 Rejoignez-nous
               </Button>
               <ul className="space-y-3 text-sm">
@@ -308,17 +308,17 @@ const Landing = () => {
             </Card>
 
             {/* Premium Plan */}
-            <Card className="p-8 border-2 border-teal-600 relative">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-teal-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
+            <Card className="relative border-2 border-violet-600 p-8">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-violet-600 px-4 py-1 text-sm font-semibold text-white">
                 LE PLUS POPULAIRE
               </div>
               <h3 className="text-2xl font-bold mb-2">Premium</h3>
-              <p className="text-gray-600 mb-6">Pour les entreprises en croissance</p>
+              <p className="mb-6 text-slate-600">Pour les entreprises en croissance</p>
               <div className="mb-6">
                 <span className="text-4xl font-bold">39 DT</span>
-                <span className="text-gray-500"> HT / Mois</span>
+                <span className="text-slate-500"> HT / Mois</span>
               </div>
-              <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white mb-6">
+              <Button className="mb-6 w-full">
                 Rejoignez-nous
               </Button>
               <ul className="space-y-3 text-sm">

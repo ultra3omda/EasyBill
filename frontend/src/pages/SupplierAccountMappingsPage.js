@@ -63,14 +63,14 @@ export default function SupplierAccountMappingsPage() {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Settings2 className="w-6 h-6 text-violet-600" />
+            <h1 className="page-header-title flex items-center gap-2">
+              <Settings2 className="w-6 h-6 text-violet-700" />
               Mappings fournisseurs
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="page-header-subtitle">
               Associez des fournisseurs/libellés récurrents aux comptes de charge de la société.
             </p>
           </div>
@@ -103,7 +103,7 @@ export default function SupplierAccountMappingsPage() {
                 <Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="marketing" />
               </div>
               <div className="md:col-span-4">
-                <Button type="submit" className="bg-violet-600" disabled={saving}>
+                <Button type="submit" disabled={saving}>
                   {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                   Enregistrer
                 </Button>
@@ -118,13 +118,13 @@ export default function SupplierAccountMappingsPage() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="py-8 text-center text-gray-400"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
+              <div className="py-8 text-center text-slate-400"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></div>
             ) : mappings.length === 0 ? (
-              <div className="py-8 text-center text-gray-400">Aucun mapping</div>
+              <div className="py-8 text-center text-slate-400">Aucun mapping</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b">
+                  <thead className="border-b bg-slate-50/80">
                     <tr>
                       <th className="px-3 py-2 text-left">Pattern</th>
                       <th className="px-3 py-2 text-left">Compte</th>
@@ -136,8 +136,8 @@ export default function SupplierAccountMappingsPage() {
                   </thead>
                   <tbody className="divide-y">
                     {mappings.map((mapping) => (
-                      <tr key={mapping.id} className="hover:bg-gray-50">
-                        <td className="px-3 py-2 font-medium">{mapping.supplier_pattern}</td>
+                      <tr key={mapping.id} className="hover:bg-slate-50">
+                        <td className="px-3 py-2 font-medium text-slate-900">{mapping.supplier_pattern}</td>
                         <td className="px-3 py-2 font-mono">{mapping.default_expense_account_code || '—'}</td>
                         <td className="px-3 py-2">{mapping.semantic_key || '—'}</td>
                         <td className="px-3 py-2">{mapping.source}</td>

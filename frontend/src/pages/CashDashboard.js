@@ -143,12 +143,12 @@ export default function CashDashboard() {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Caisse & Paiements</h1>
-            <p className="text-gray-500 text-sm mt-1">Suivi des espèces, soldes clients, rapport journalier</p>
+            <h1 className="page-header-title">Caisse & Paiements</h1>
+            <p className="page-header-subtitle">Suivi des espèces, soldes clients, rapport journalier</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" asChild>
@@ -163,18 +163,18 @@ export default function CashDashboard() {
               variant="outline" size="sm"
               onClick={fixPaidInvoicesCash}
               disabled={migrating}
-              className="border-orange-300 text-orange-700 hover:bg-orange-50"
+              className="border-amber-300 text-amber-700 hover:bg-amber-50"
               title="Créer les transactions caisse manquantes pour les factures déjà payées en espèces"
             >
               {migrating ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <Wrench className="h-4 w-4 mr-1" />}
               Corriger caisse
             </Button>
             <Button size="sm" onClick={() => { setTransactionType('in'); setShowTransactionModal(true); }}
-              className="bg-green-600 hover:bg-green-700">
+              className="bg-green-600 text-white hover:bg-green-700">
               <ArrowUpRight className="h-4 w-4 mr-1" /> Encaisser
             </Button>
             <Button size="sm" onClick={() => { setTransactionType('out'); setShowTransactionModal(true); }}
-              className="bg-red-600 hover:bg-red-700">
+              className="bg-red-600 text-white hover:bg-red-700">
               <ArrowDownRight className="h-4 w-4 mr-1" /> Décaisser
             </Button>
             <Button size="sm" onClick={() => setShowAccountModal(true)}>
@@ -185,12 +185,12 @@ export default function CashDashboard() {
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-4">
+          <Card className="stat-surface p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Solde total caisse</p>
-                <p className="text-2xl font-bold text-gray-900">{totalBalance.toFixed(3)}</p>
-                <p className="text-xs text-gray-400">TND</p>
+                <p className="text-sm text-slate-500">Solde total caisse</p>
+                <p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{totalBalance.toFixed(3)}</p>
+                <p className="text-xs text-slate-400">TND</p>
               </div>
               <div className="bg-blue-100 p-3 rounded-full"><Wallet className="h-6 w-6 text-blue-600" /></div>
             </div>
@@ -198,22 +198,22 @@ export default function CashDashboard() {
 
           {dailyReport && (
             <>
-              <Card className="p-4">
+              <Card className="stat-surface p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-500">Encaissements aujourd'hui</p>
+                    <p className="text-sm text-slate-500">Encaissements aujourd'hui</p>
                     <p className="text-2xl font-bold text-green-600">{dailyReport.total_in?.toFixed(3)}</p>
-                    <p className="text-xs text-gray-400">TND</p>
+                    <p className="text-xs text-slate-400">TND</p>
                   </div>
                   <div className="bg-green-100 p-3 rounded-full"><TrendingUp className="h-6 w-6 text-green-600" /></div>
                 </div>
               </Card>
-              <Card className="p-4">
+              <Card className="stat-surface p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-500">Décaissements aujourd'hui</p>
+                    <p className="text-sm text-slate-500">Décaissements aujourd'hui</p>
                     <p className="text-2xl font-bold text-red-600">{dailyReport.total_out?.toFixed(3)}</p>
-                    <p className="text-xs text-gray-400">TND</p>
+                    <p className="text-xs text-slate-400">TND</p>
                   </div>
                   <div className="bg-red-100 p-3 rounded-full"><TrendingDown className="h-6 w-6 text-red-600" /></div>
                 </div>
@@ -221,12 +221,12 @@ export default function CashDashboard() {
             </>
           )}
 
-          <Card className="p-4">
+          <Card className="stat-surface p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Créances clients</p>
+                <p className="text-sm text-slate-500">Créances clients</p>
                 <p className="text-2xl font-bold text-orange-600">{totalDue.toFixed(3)}</p>
-                <p className="text-xs text-gray-400">{customerBalances.length} client(s)</p>
+                <p className="text-xs text-slate-400">{customerBalances.length} client(s)</p>
               </div>
               <div className="bg-orange-100 p-3 rounded-full"><Users className="h-6 w-6 text-orange-600" /></div>
             </div>
@@ -242,7 +242,7 @@ export default function CashDashboard() {
               className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.id
                   ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
             >
               {tab.label}
@@ -259,7 +259,7 @@ export default function CashDashboard() {
               </h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between border-b pb-2">
-                  <span className="text-gray-500">Solde ouverture</span>
+                  <span className="text-slate-500">Solde ouverture</span>
                   <span className="font-medium">{dailyReport.opening_balance?.toFixed(3)} TND</span>
                 </div>
                 <div className="flex justify-between text-green-600">
@@ -274,7 +274,7 @@ export default function CashDashboard() {
                   <span>Solde clôture</span>
                   <span>{dailyReport.closing_balance?.toFixed(3)} TND</span>
                 </div>
-                <div className="text-xs text-gray-400 mt-2">{dailyReport.transaction_count} transaction(s)</div>
+                <div className="mt-2 text-xs text-slate-400">{dailyReport.transaction_count} transaction(s)</div>
               </div>
             </Card>
 
@@ -286,13 +286,13 @@ export default function CashDashboard() {
                 <div key={c.customer_id} className="flex justify-between py-2 border-b last:border-0 text-sm">
                   <div>
                     <div className="font-medium">{c.customer_name}</div>
-                    <div className="text-xs text-gray-400">{c.invoice_count} facture(s) · {c.overdue_days}j de retard</div>
+                    <div className="text-xs text-slate-400">{c.invoice_count} facture(s) · {c.overdue_days}j de retard</div>
                   </div>
                   <span className="font-semibold text-red-600">{c.total_due?.toFixed(3)}</span>
                 </div>
               ))}
               {customerBalances.length === 0 && (
-                <p className="text-gray-400 text-sm text-center py-4">Aucune créance en cours</p>
+                <p className="py-4 text-center text-sm text-slate-400">Aucune créance en cours</p>
               )}
             </Card>
           </div>

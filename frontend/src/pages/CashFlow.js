@@ -91,15 +91,15 @@ export default function CashFlow() {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Activity className="w-6 h-6 text-violet-600" />
+            <h1 className="page-header-title flex items-center gap-2">
+              <Activity className="w-6 h-6 text-violet-700" />
               État des flux de trésorerie
             </h1>
-            <p className="text-gray-500 text-sm mt-1">
+            <p className="page-header-subtitle">
               Méthode indirecte — Exploitation · Investissement · Financement
             </p>
           </div>
@@ -113,23 +113,23 @@ export default function CashFlow() {
           <CardContent className="p-4">
             <div className="flex flex-wrap items-end gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">
+                <label className="mb-1 block text-sm font-medium text-slate-700">
                   <Calendar className="w-3.5 h-3.5 inline mr-1" />Du
                 </label>
                 <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-40" />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">Au</label>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Au</label>
                 <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-40" />
               </div>
-              <Button onClick={fetchData} className="bg-violet-600 hover:bg-violet-700">Actualiser</Button>
+              <Button onClick={fetchData}>Actualiser</Button>
             </div>
           </CardContent>
         </Card>
 
         {loading ? (
-          <div className="text-center py-16 text-gray-400">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-600 mx-auto mb-3" />
+          <div className="py-16 text-center text-slate-400">
+            <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-b-2 border-primary" />
             Calcul des flux de trésorerie…
           </div>
         ) : !data ? null : (
@@ -166,11 +166,11 @@ export default function CashFlow() {
                   bg: data.flux_financement?.total >= 0 ? 'bg-indigo-50' : 'bg-pink-50'
                 },
               ].map(kpi => (
-                <Card key={kpi.label}>
-                  <CardContent className={`p-4 ${kpi.bg} rounded-xl`}>
+                <Card key={kpi.label} className="stat-surface">
+                  <CardContent className={`rounded-2xl p-4 ${kpi.bg}`}>
                     <div className="flex items-center gap-2 mb-1">
                       <kpi.icon className={`w-4 h-4 ${kpi.color}`} />
-                      <p className="text-xs text-gray-500">{kpi.label}</p>
+                      <p className="text-xs text-slate-500">{kpi.label}</p>
                     </div>
                     <p className={`text-xl font-bold ${kpi.color}`}>
                       {kpi.value >= 0 ? '+' : ''}{fmt(kpi.value)} TND

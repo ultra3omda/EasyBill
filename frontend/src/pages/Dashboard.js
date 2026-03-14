@@ -220,14 +220,14 @@ const Dashboard = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6 p-6" data-testid="dashboard">
+      <div className="space-y-6" data-testid="dashboard">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="page-header-title">
               {t('dashboard.welcome')}, {user?.name?.split(' ')[0]}
             </h1>
-            <p className="text-gray-500 mt-1">{currentCompany?.name || 'EasyBill'}</p>
+            <p className="page-header-subtitle">{currentCompany?.name || 'EasyBill'}</p>
           </div>
           <div className="flex items-center gap-2">
             <Button 
@@ -243,7 +243,7 @@ const Dashboard = () => {
               onClick={handleSeedData}
               disabled={seeding}
               variant="outline"
-              className="flex items-center gap-2 border-violet-300 text-violet-600 hover:bg-violet-50"
+              className="flex items-center gap-2"
               data-testid="seed-data-btn"
             >
               {seeding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Database className="w-4 h-4" />}
@@ -257,15 +257,15 @@ const Dashboard = () => {
           {topStats.map((stat, index) => {
             const Icon = stat.icon;
             return (
-              <Card key={index} className={`p-6 ${stat.bgColor} border-none`}>
+              <Card key={index} className="stat-surface border-none p-6">
                 <div className="flex items-start justify-between mb-4">
-                  <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+                  <div className={`rounded-2xl p-3 ${stat.bgColor}`}>
                     <Icon className={`w-6 h-6 ${stat.iconColor}`} />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                  <p className="text-sm text-gray-600">{stat.label}</p>
+                  <p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stat.value}</p>
+                  <p className="text-sm text-slate-600">{stat.label}</p>
                   {stat.change !== undefined && (
                     <div className="flex items-center gap-1 text-xs">
                       {stat.change > 0 ? (
@@ -289,14 +289,14 @@ const Dashboard = () => {
           {entityStats.map((stat, index) => {
             const Icon = stat.icon;
             return (
-              <Card key={index} className={`p-4 ${stat.bg} border-none`}>
+              <Card key={index} className="stat-surface border-none p-4">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${stat.bg}`}>
+                  <div className={`rounded-2xl p-2.5 ${stat.bg}`}>
                     <Icon className={`w-5 h-5 ${stat.color}`} />
                   </div>
                   <div>
-                    <p className={`text-lg font-bold text-gray-900 ${stat.isValue ? 'text-sm' : ''}`}>{stat.count}</p>
-                    <p className="text-xs text-gray-600">{stat.label}</p>
+                    <p className={`font-bold tracking-[-0.03em] text-slate-900 ${stat.isValue ? 'text-sm' : 'text-lg'}`}>{stat.count}</p>
+                    <p className="text-xs text-slate-600">{stat.label}</p>
                     {stat.new > 0 && <span className="text-xs text-green-600">+{stat.new} ce mois</span>}
                     {stat.alert > 0 && <span className="text-xs text-red-600">{stat.alert} en alerte</span>}
                   </div>
@@ -311,15 +311,15 @@ const Dashboard = () => {
           {businessMetrics.map((metric, index) => {
             const Icon = metric.icon;
             return (
-              <Card key={index} className={`p-6 ${metric.bgColor} border-none`}>
+              <Card key={index} className="stat-surface border-none p-6">
                 <div className="flex items-start gap-4">
-                  <div className={`p-3 rounded-lg ${metric.bgColor}`}>
+                  <div className={`rounded-2xl p-3 ${metric.bgColor}`}>
                     <Icon className={`w-6 h-6 ${metric.iconColor}`} />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm text-gray-600">{metric.label}</p>
-                    <p className="text-xl font-bold text-gray-900 mt-1">{metric.amount}</p>
-                    <p className="text-xs text-gray-500 mt-1">{metric.subtitle}</p>
+                    <p className="text-sm text-slate-600">{metric.label}</p>
+                    <p className="mt-1 text-xl font-bold tracking-[-0.03em] text-slate-900">{metric.amount}</p>
+                    <p className="mt-1 text-xs text-slate-500">{metric.subtitle}</p>
                     {metric.details && (
                       <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
@@ -336,11 +336,11 @@ const Dashboard = () => {
         {/* Payment Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {paymentMetrics.map((metric, index) => (
-            <Card key={index} className={`p-6 ${metric.bgColor} border-none`}>
+            <Card key={index} className="stat-surface border-none p-6">
               <div className="space-y-2">
-                <p className="text-sm text-gray-600">{metric.label}</p>
-                <p className="text-xl font-bold text-gray-900">{metric.amount}</p>
-                <p className="text-xs text-gray-500">{metric.subtitle}</p>
+                <p className="text-sm text-slate-600">{metric.label}</p>
+                <p className="text-xl font-bold tracking-[-0.03em] text-slate-900">{metric.amount}</p>
+                <p className="text-xs text-slate-500">{metric.subtitle}</p>
               </div>
             </Card>
           ))}

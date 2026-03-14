@@ -107,15 +107,15 @@ export default function FinancialStatements() {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <FileBarChart className="w-6 h-6 text-violet-600" />
+            <h1 className="page-header-title flex items-center gap-2">
+              <FileBarChart className="w-6 h-6 text-violet-700" />
               États financiers
             </h1>
-            <p className="text-gray-500 text-sm mt-1">
+            <p className="page-header-subtitle">
               Vue consolidée — Bilan · Résultat · Flux de trésorerie
             </p>
           </div>
@@ -129,16 +129,16 @@ export default function FinancialStatements() {
           <CardContent className="p-4">
             <div className="flex flex-wrap items-end gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">
+                <label className="mb-1 block text-sm font-medium text-slate-700">
                   <Calendar className="w-3.5 h-3.5 inline mr-1" />Période du
                 </label>
                 <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-40" />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">au</label>
+                <label className="mb-1 block text-sm font-medium text-slate-700">au</label>
                 <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-40" />
               </div>
-              <Button onClick={fetchOverview} className="bg-violet-600 hover:bg-violet-700">
+              <Button onClick={fetchOverview}>
                 Appliquer
               </Button>
               {(dateFrom || dateTo) && (
@@ -152,7 +152,7 @@ export default function FinancialStatements() {
 
         {/* Result indicator */}
         {data && (
-          <div className={`flex items-center gap-4 p-5 rounded-xl border-2 ${
+          <div className={`flex items-center gap-4 rounded-2xl border-2 p-5 ${
             kpis.benefice ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'
           }`}>
             {kpis.benefice
@@ -163,7 +163,7 @@ export default function FinancialStatements() {
                 {kpis.benefice ? 'Résultat bénéficiaire' : 'Résultat déficitaire'} :
                 {kpis.net_result >= 0 ? ' +' : ' '}{fmt(kpis.net_result)} TND
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-slate-500">
                 {kpis.total_entries} écriture(s) comptable(s) dans la période
               </p>
             </div>
@@ -180,13 +180,13 @@ export default function FinancialStatements() {
             { label: 'Créances clients', value: kpis.clients_balance, icon: Users, color: 'text-blue-600' },
             { label: 'Dettes fournisseurs', value: kpis.suppliers_balance, icon: Building2, color: 'text-orange-600' },
           ].map(kpi => (
-            <Card key={kpi.label}>
+            <Card key={kpi.label} className="stat-surface">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-1">
                   <kpi.icon className={`w-4 h-4 ${kpi.color}`} />
                 </div>
                 <p className={`text-lg font-bold ${kpi.color}`}>{fmt(kpi.value)}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{kpi.label}</p>
+                <p className="mt-0.5 text-xs text-slate-500">{kpi.label}</p>
               </CardContent>
             </Card>
           ))}
@@ -194,7 +194,7 @@ export default function FinancialStatements() {
 
         {/* Navigation cards */}
         <div>
-          <h2 className="text-base font-semibold text-gray-700 mb-4">Accéder aux états détaillés</h2>
+          <h2 className="mb-4 text-base font-semibold text-slate-700">Accéder aux états détaillés</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {STATEMENTS.map(stmt => {
               const Icon = stmt.icon;
@@ -202,16 +202,16 @@ export default function FinancialStatements() {
                 <button
                   key={stmt.key}
                   onClick={() => navigate(stmt.path)}
-                  className={`text-left p-5 rounded-xl border-2 ${stmt.border} ${stmt.bg} hover:shadow-md transition-all group`}
+                  className={`group rounded-2xl border-2 p-5 text-left transition-all hover:shadow-md ${stmt.border} ${stmt.bg}`}
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <div className={`p-2.5 rounded-lg bg-white shadow-sm`}>
+                    <div className="rounded-2xl bg-white p-2.5 shadow-sm">
                       <Icon className={`w-5 h-5 ${stmt.color}`} />
                     </div>
                     <ArrowRight className={`w-4 h-4 ${stmt.color} opacity-0 group-hover:opacity-100 transition-opacity`} />
                   </div>
-                  <p className={`font-semibold text-gray-900`}>{stmt.label}</p>
-                  <p className="text-sm text-gray-500 mt-1">{stmt.description}</p>
+                  <p className="font-semibold text-slate-900">{stmt.label}</p>
+                  <p className="mt-1 text-sm text-slate-500">{stmt.description}</p>
                 </button>
               );
             })}
@@ -223,22 +223,22 @@ export default function FinancialStatements() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-violet-600" />
+                <BookOpen className="w-4 h-4 text-violet-700" />
                 Répartition par type de journal
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b">
+                <thead className="border-b bg-slate-50/80">
                   <tr>
                     <th className="px-4 py-2 text-left font-medium text-gray-600">Journal</th>
                     <th className="px-4 py-2 text-right font-medium text-gray-600">Écritures</th>
                     <th className="px-4 py-2 text-right font-medium text-gray-600">Total Débit</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-slate-100">
                   {data.by_journal_type.map(row => (
-                    <tr key={row.journal_type} className="hover:bg-gray-50">
+                    <tr key={row.journal_type} className="hover:bg-slate-50">
                       <td className="px-4 py-2.5 capitalize font-medium">{row.journal_type}</td>
                       <td className="px-4 py-2.5 text-right">{row.count}</td>
                       <td className="px-4 py-2.5 text-right font-medium">{fmt(row.total_debit)} TND</td>

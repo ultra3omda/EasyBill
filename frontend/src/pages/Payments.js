@@ -230,12 +230,12 @@ const Payments = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6 p-6" data-testid="payments-page">
+      <div className="space-y-6" data-testid="payments-page">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Paiements reçus</h1>
-            <p className="text-gray-500">{payments.length} paiements • {formatCurrency(totalAmount)}</p>
+            <h1 className="page-header-title">Paiements reçus</h1>
+            <p className="page-header-subtitle">{payments.length} paiements • {formatCurrency(totalAmount)}</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline">
@@ -269,7 +269,7 @@ const Payments = () => {
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button className="bg-violet-600 hover:bg-violet-700" onClick={() => setModalOpen(true)}>
+            <Button onClick={() => setModalOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Nouveau paiement
             </Button>
@@ -279,9 +279,9 @@ const Payments = () => {
         {/* KPI Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Payment Methods Stats */}
-          <Card className="p-6 col-span-2">
+          <Card className="stat-surface col-span-2 p-6">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-violet-600" />
+              <CreditCard className="w-5 h-5 text-violet-700" />
               Répartition par mode de paiement
             </h3>
             {stats.byMethod.length > 0 ? (
@@ -304,7 +304,7 @@ const Payments = () => {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className="h-48 flex items-center justify-center text-gray-400">
+              <div className="flex h-48 items-center justify-center text-slate-400">
                 Aucune donnée de paiement
               </div>
             )}
@@ -315,12 +315,12 @@ const Payments = () => {
                 const data = stats.byMethod.find(m => m.method === method.value);
                 const Icon = method.icon;
                 return (
-                  <div key={method.value} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50">
-                    <div className="p-2 rounded-lg" style={{ backgroundColor: `${method.color}20` }}>
+                  <div key={method.value} className="flex items-center gap-2 rounded-2xl bg-slate-50 p-2">
+                    <div className="rounded-2xl p-2" style={{ backgroundColor: `${method.color}20` }}>
                       <Icon className="w-4 h-4" style={{ color: method.color }} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">{method.label}</p>
+                      <p className="text-xs text-slate-500">{method.label}</p>
                       <p className="font-semibold text-sm">{data ? formatCurrency(data.total) : '0.000 TND'}</p>
                     </div>
                   </div>
@@ -330,21 +330,21 @@ const Payments = () => {
           </Card>
 
           {/* Year Comparison */}
-          <Card className="p-6">
+          <Card className="stat-surface p-6">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-green-600" />
               Comparaison annuelle
             </h3>
             <div className="space-y-4">
-              <div className="p-4 bg-violet-50 rounded-lg">
-                <p className="text-sm text-gray-600">Cette année</p>
-                <p className="text-2xl font-bold text-violet-600">{formatCurrency(stats.yearComparison.current)}</p>
+              <div className="rounded-2xl bg-violet-50 p-4">
+                <p className="text-sm text-slate-600">Cette année</p>
+                <p className="text-2xl font-bold text-violet-700">{formatCurrency(stats.yearComparison.current)}</p>
               </div>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">Année précédente</p>
-                <p className="text-xl font-semibold text-gray-700">{formatCurrency(stats.yearComparison.previous)}</p>
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <p className="text-sm text-slate-600">Année précédente</p>
+                <p className="text-xl font-semibold text-slate-700">{formatCurrency(stats.yearComparison.previous)}</p>
               </div>
-              <div className={`flex items-center gap-2 p-3 rounded-lg ${stats.yearComparison.change >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+              <div className={`flex items-center gap-2 rounded-2xl p-3 ${stats.yearComparison.change >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
                 {stats.yearComparison.change >= 0 ? (
                   <ArrowUpRight className="w-5 h-5 text-green-600" />
                 ) : (
@@ -353,7 +353,7 @@ const Payments = () => {
                 <span className={`font-semibold ${stats.yearComparison.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {stats.yearComparison.change >= 0 ? '+' : ''}{stats.yearComparison.change}%
                 </span>
-                <span className="text-sm text-gray-600">vs année précédente</span>
+                <span className="text-sm text-slate-600">vs année précédente</span>
               </div>
             </div>
           </Card>
@@ -363,12 +363,12 @@ const Payments = () => {
         <Card className="p-4">
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 placeholder="Rechercher par N°, client, référence..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-11"
               />
             </div>
             <Button variant="outline">
@@ -386,11 +386,11 @@ const Payments = () => {
         <Card>
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50">
+              <TableRow className="bg-slate-50/80">
                 <TableHead className="w-12">
                   <input
                     type="checkbox"
-                    className="rounded border-gray-300"
+                    className="rounded border-slate-300"
                     checked={selectedPayments.length === filteredPayments.length && filteredPayments.length > 0}
                     onChange={toggleSelectAll}
                   />
@@ -414,7 +414,7 @@ const Payments = () => {
                 </TableRow>
               ) : filteredPayments.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-gray-400">
+                  <TableCell colSpan={9} className="py-8 text-center text-slate-400">
                     Aucun paiement trouvé
                   </TableCell>
                 </TableRow>
@@ -423,17 +423,17 @@ const Payments = () => {
                   const methodInfo = getMethodInfo(payment.payment_method);
                   const MethodIcon = methodInfo.icon;
                   return (
-                    <TableRow key={payment.id} className="hover:bg-gray-50">
+                    <TableRow key={payment.id} className="hover:bg-slate-50">
                       <TableCell>
                         <input
                           type="checkbox"
-                          className="rounded border-gray-300"
+                          className="rounded border-slate-300"
                           checked={selectedPayments.includes(payment.id)}
                           onChange={() => toggleSelectPayment(payment.id)}
                         />
                       </TableCell>
                       <TableCell>
-                        <span className="font-medium text-violet-600">{payment.number || payment.payment_number}</span>
+                        <span className="font-medium text-violet-700">{payment.number || payment.payment_number}</span>
                       </TableCell>
                       <TableCell>
                         {(payment.allocations?.[0]?.invoice_number || payment.invoice_number) ? (
@@ -441,11 +441,11 @@ const Payments = () => {
                             {payment.allocations?.[0]?.invoice_number || payment.invoice_number}
                           </Badge>
                         ) : (
-                          <span className="text-gray-400">-</span>
+                          <span className="text-slate-400">-</span>
                         )}
                       </TableCell>
                       <TableCell>
-                        <span className="text-gray-400">-</span>
+                        <span className="text-slate-400">-</span>
                       </TableCell>
                       <TableCell>
                         <div>
@@ -510,7 +510,7 @@ const Payments = () => {
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Receipt className="w-5 h-5 text-violet-600" />
+                <Receipt className="w-5 h-5 text-violet-700" />
                 Nouveau paiement
               </DialogTitle>
             </DialogHeader>
@@ -585,7 +585,7 @@ const Payments = () => {
                       min="0"
                       className="pr-16"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">TND</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">TND</span>
                   </div>
                 </div>
 
@@ -638,7 +638,7 @@ const Payments = () => {
               <Button variant="outline" onClick={() => { setModalOpen(false); resetForm(); }}>
                 Annuler
               </Button>
-              <Button className="bg-violet-600 hover:bg-violet-700" onClick={handleSubmit}>
+              <Button onClick={handleSubmit}>
                 <Plus className="w-4 h-4 mr-2" />
                 Enregistrer le paiement
               </Button>

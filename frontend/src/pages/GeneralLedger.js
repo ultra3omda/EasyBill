@@ -194,8 +194,8 @@ const GeneralLedger = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Grand Livre</h1>
-            <p className="text-gray-500 mt-1">
+            <h1 className="page-header-title">Grand Livre</h1>
+            <p className="page-header-subtitle">
               Détail des mouvements par compte comptable
             </p>
           </div>
@@ -215,7 +215,7 @@ const GeneralLedger = () => {
         <Card className="p-4">
           <form onSubmit={handleFilter} className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
-              <Label className="text-xs text-gray-500">Compte</Label>
+              <Label className="text-xs text-slate-500">Compte</Label>
               <Select
                 value={filters.account_code}
                 onValueChange={(value) =>
@@ -236,7 +236,7 @@ const GeneralLedger = () => {
               </Select>
             </div>
             <div>
-              <Label className="text-xs text-gray-500">Date début</Label>
+              <Label className="text-xs text-slate-500">Date début</Label>
               <Input
                 type="date"
                 value={filters.date_from}
@@ -244,7 +244,7 @@ const GeneralLedger = () => {
               />
             </div>
             <div>
-              <Label className="text-xs text-gray-500">Date fin</Label>
+              <Label className="text-xs text-slate-500">Date fin</Label>
               <Input
                 type="date"
                 value={filters.date_to}
@@ -252,7 +252,7 @@ const GeneralLedger = () => {
               />
             </div>
             <div className="flex items-end gap-2">
-              <Button type="submit" className="bg-violet-600 hover:bg-violet-700">
+              <Button type="submit">
                 <Filter className="w-4 h-4 mr-1" />
                 Filtrer
               </Button>
@@ -271,20 +271,17 @@ const GeneralLedger = () => {
         {/* Ledger Content */}
         {loading ? (
           <Card className="p-12 text-center">
-            <RefreshCw className="w-8 h-8 animate-spin mx-auto text-violet-600" />
-            <p className="mt-2 text-gray-500">Chargement...</p>
+            <RefreshCw className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <p className="mt-2 text-slate-500">Chargement...</p>
           </Card>
         ) : ledger.length === 0 ? (
           <Card className="p-12 text-center">
-            <BookOpen className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-700">Aucune écriture</h3>
-            <p className="text-gray-500 mt-1">
+            <BookOpen className="mx-auto mb-4 h-16 w-16 text-slate-300" />
+            <h3 className="text-lg font-semibold text-slate-700">Aucune écriture</h3>
+            <p className="mt-1 text-slate-500">
               Aucune écriture comptable validée pour la période sélectionnée
             </p>
-            <Button
-              className="mt-4 bg-violet-600 hover:bg-violet-700"
-              onClick={() => navigate('/journal-entries?action=new')}
-            >
+            <Button className="mt-4" onClick={() => navigate('/journal-entries?action=new')}>
               Créer une écriture
             </Button>
           </Card>
@@ -294,38 +291,38 @@ const GeneralLedger = () => {
               <Card key={account.account_code} className="overflow-hidden">
                 {/* Account Header */}
                 <div
-                  className="flex items-center justify-between p-4 bg-gray-50 cursor-pointer hover:bg-gray-100"
+                  className="flex cursor-pointer items-center justify-between bg-slate-50/80 p-4 hover:bg-slate-100"
                   onClick={() => toggleAccount(account.account_code)}
                 >
                   <div className="flex items-center gap-3">
                     {expandedAccounts.has(account.account_code) ? (
-                      <ChevronDown className="w-5 h-5 text-gray-500" />
+                      <ChevronDown className="w-5 h-5 text-slate-500" />
                     ) : (
-                      <ChevronRight className="w-5 h-5 text-gray-500" />
+                      <ChevronRight className="w-5 h-5 text-slate-500" />
                     )}
-                    <span className="font-mono text-violet-600 font-bold">
+                    <span className="font-mono font-bold text-violet-700">
                       {account.account_code}
                     </span>
-                    <span className="font-medium">{account.account_name}</span>
+                    <span className="font-medium text-slate-900">{account.account_name}</span>
                     <Badge variant="outline" className={getTypeColor(account.account_type)}>
                       {account.account_type}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-6 text-sm">
                     <div>
-                      <span className="text-gray-500">Débit:</span>{' '}
+                      <span className="text-slate-500">Débit:</span>{' '}
                       <span className="font-mono font-medium">
                         {formatCurrency(account.total_debit)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Crédit:</span>{' '}
+                      <span className="text-slate-500">Crédit:</span>{' '}
                       <span className="font-mono font-medium">
                         {formatCurrency(account.total_credit)}
                       </span>
                     </div>
                     <div className="font-bold">
-                      <span className="text-gray-500">Solde:</span>{' '}
+                      <span className="text-slate-500">Solde:</span>{' '}
                       <span
                         className={`font-mono ${
                           account.balance >= 0 ? 'text-green-600' : 'text-red-600'
@@ -341,37 +338,37 @@ const GeneralLedger = () => {
                 {expandedAccounts.has(account.account_code) && (
                   <div className="border-t">
                     <table className="w-full">
-                      <thead className="bg-gray-50/50">
+                      <thead className="bg-slate-50/80">
                         <tr>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                          <th className="px-4 py-2 text-left text-xs font-medium text-slate-500">
                             Date
                           </th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                          <th className="px-4 py-2 text-left text-xs font-medium text-slate-500">
                             N° Écriture
                           </th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                          <th className="px-4 py-2 text-left text-xs font-medium text-slate-500">
                             Libellé
                           </th>
-                          <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
+                          <th className="px-4 py-2 text-right text-xs font-medium text-slate-500">
                             Débit
                           </th>
-                          <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
+                          <th className="px-4 py-2 text-right text-xs font-medium text-slate-500">
                             Crédit
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y">
+                      <tbody className="divide-y divide-slate-200/80">
                         {account.transactions.map((tx, idx) => (
                           <tr
                             key={idx}
-                            className="hover:bg-gray-50 cursor-pointer"
+                            className="cursor-pointer hover:bg-slate-50"
                             onClick={() => navigate(`/journal-entries?id=${tx.entry_id}`)}
                           >
                             <td className="px-4 py-2 text-sm">{formatDate(tx.date)}</td>
-                            <td className="px-4 py-2 text-sm font-mono text-violet-600">
+                            <td className="px-4 py-2 text-sm font-mono text-violet-700">
                               {tx.entry_number}
                             </td>
-                            <td className="px-4 py-2 text-sm">
+                            <td className="px-4 py-2 text-sm text-slate-700">
                               {tx.line_description || tx.description}
                             </td>
                             <td className="px-4 py-2 text-sm text-right font-mono">

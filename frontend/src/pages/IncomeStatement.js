@@ -106,15 +106,15 @@ export default function IncomeStatement() {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <TrendingUp className="w-6 h-6 text-violet-600" />
+            <h1 className="page-header-title flex items-center gap-2">
+              <TrendingUp className="w-6 h-6 text-violet-700" />
               État de résultat
             </h1>
-            <p className="text-gray-500 text-sm mt-1">
+            <p className="page-header-subtitle">
               Compte de résultat selon le SCE tunisien
             </p>
           </div>
@@ -134,29 +134,29 @@ export default function IncomeStatement() {
           <CardContent className="p-4">
             <div className="flex flex-wrap items-end gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">
+                <label className="mb-1 block text-sm font-medium text-slate-700">
                   <Calendar className="w-3.5 h-3.5 inline mr-1" />Du
                 </label>
                 <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-40" />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">Au</label>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Au</label>
                 <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-40" />
               </div>
-              <Button onClick={fetchData} className="bg-violet-600 hover:bg-violet-700">Actualiser</Button>
+              <Button onClick={fetchData}>Actualiser</Button>
             </div>
           </CardContent>
         </Card>
 
         {loading ? (
-          <div className="text-center py-16 text-gray-400">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-600 mx-auto mb-3" />
+          <div className="py-16 text-center text-slate-400">
+            <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-b-2 border-primary" />
             Calcul de l'état de résultat…
           </div>
         ) : !data ? null : (
           <>
             {/* Result Banner */}
-            <div className={`p-5 rounded-xl border-2 ${data.benefice ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}>
+            <div className={`rounded-2xl border-2 p-5 ${data.benefice ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {data.benefice
@@ -166,7 +166,7 @@ export default function IncomeStatement() {
                     <p className={`text-2xl font-bold ${data.benefice ? 'text-green-700' : 'text-red-700'}`}>
                       {data.benefice ? 'Bénéfice' : 'Déficit'} : {data.resultat_net >= 0 ? '+' : ''}{fmt(data.resultat_net)} TND
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-slate-500">
                       Marge brute : {fmt(data.marge_brute)} TND ({pct(data.taux_marge)})
                     </p>
                   </div>
@@ -186,12 +186,12 @@ export default function IncomeStatement() {
                 { label: 'Marge brute', value: data.marge_brute, color: 'text-blue-600' },
                 { label: 'Résultat net', value: data.resultat_net, color: data.benefice ? 'text-green-600' : 'text-red-600' },
               ].map(kpi => (
-                <Card key={kpi.label}>
+                <Card key={kpi.label} className="stat-surface">
                   <CardContent className="p-4 text-center">
                     <p className={`text-xl font-bold ${kpi.color}`}>
                       {kpi.value >= 0 ? '+' : ''}{fmt(kpi.value)}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">{kpi.label}</p>
+                    <p className="mt-1 text-xs text-slate-500">{kpi.label}</p>
                   </CardContent>
                 </Card>
               ))}

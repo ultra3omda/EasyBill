@@ -77,11 +77,11 @@ const Disbursements = () => {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Notes de Débours</h1>
-            <p className="text-gray-500 mt-1">Gérez les débours client</p>
+            <h1 className="page-header-title">Notes de Débours</h1>
+            <p className="page-header-subtitle">Gérez les débours client</p>
           </div>
           <Button>
             <Plus className="w-4 h-4 mr-2" />
@@ -90,43 +90,43 @@ const Disbursements = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-6">
+          <Card className="stat-surface p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Total</p>
-                <h3 className="text-2xl font-bold mt-1">{stats.total}</h3>
+                <p className="text-sm text-slate-500">Total</p>
+                <h3 className="mt-1 text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.total}</h3>
               </div>
-              <FileText className="w-8 h-8 text-gray-400" />
+              <div className="rounded-2xl bg-violet-100 p-3"><FileText className="w-6 h-6 text-violet-700" /></div>
             </div>
           </Card>
-          <Card className="p-6">
-            <p className="text-sm text-gray-500">En attente</p>
-            <h3 className="text-2xl font-bold text-orange-600 mt-1">{stats.pending}</h3>
+          <Card className="stat-surface p-6">
+            <p className="text-sm text-slate-500">En attente</p>
+            <h3 className="mt-1 text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.pending}</h3>
           </Card>
-          <Card className="p-6">
-            <p className="text-sm text-gray-500">Facturés</p>
-            <h3 className="text-2xl font-bold text-green-600 mt-1">{stats.invoiced}</h3>
+          <Card className="stat-surface p-6">
+            <p className="text-sm text-slate-500">Facturés</p>
+            <h3 className="mt-1 text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.invoiced}</h3>
           </Card>
         </div>
 
         <Card className="p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Liste des notes de débours</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Liste des notes de débours</h2>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
               <Input
                 placeholder="Rechercher..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-64"
+                className="w-64 pl-11"
               />
             </div>
           </div>
 
           {loading ? (
-            <div className="text-center py-8">Chargement...</div>
+            <div className="py-8 text-center text-slate-500">Chargement...</div>
           ) : filteredDisbursements.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">Aucune note de débours</div>
+            <div className="py-8 text-center text-slate-500">Aucune note de débours</div>
           ) : (
             <Table>
               <TableHeader>
@@ -142,7 +142,7 @@ const Disbursements = () => {
               <TableBody>
                 {filteredDisbursements.map((disb) => (
                   <TableRow key={disb.id}>
-                    <TableCell className="font-medium">{disb.number}</TableCell>
+                    <TableCell className="font-medium text-slate-900">{disb.number}</TableCell>
                     <TableCell>{new Date(disb.date).toLocaleDateString('fr-FR')}</TableCell>
                     <TableCell>{disb.customer_name || '-'}</TableCell>
                     <TableCell>{disb.total?.toFixed(3)} TND</TableCell>

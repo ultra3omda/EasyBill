@@ -123,15 +123,15 @@ export default function LegalJournals() {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <BookOpen className="w-6 h-6 text-violet-600" />
+            <h1 className="page-header-title flex items-center gap-2">
+              <BookOpen className="w-6 h-6 text-violet-700" />
               Journaux légaux
             </h1>
-            <p className="text-gray-500 text-sm mt-1">
+            <p className="page-header-subtitle">
               Journal des ventes, achats, caisse, banque et opérations diverses
             </p>
           </div>
@@ -149,16 +149,16 @@ export default function LegalJournals() {
           <CardContent className="p-4">
             <div className="flex flex-wrap items-end gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">
+                <label className="mb-1 block text-sm font-medium text-slate-700">
                   <Calendar className="w-3.5 h-3.5 inline mr-1" />Du
                 </label>
                 <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-40" />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">Au</label>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Au</label>
                 <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-40" />
               </div>
-              <Button onClick={fetchSummary} className="gap-2 bg-violet-600 hover:bg-violet-700">
+              <Button onClick={fetchSummary} className="gap-2">
                 <Filter className="w-4 h-4" /> Appliquer
               </Button>
               {(dateFrom || dateTo) && (
@@ -173,9 +173,9 @@ export default function LegalJournals() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left: Journal list */}
           <div className="lg:col-span-1 space-y-3">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Journaux</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Journaux</h2>
             {loading ? (
-              <div className="text-center py-8 text-gray-400">Chargement…</div>
+              <div className="py-8 text-center text-slate-400">Chargement…</div>
             ) : (
               journals.map(journal => {
                 const Icon = JOURNAL_ICONS[journal.key] || BookOpen;
@@ -188,18 +188,18 @@ export default function LegalJournals() {
                     className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                       isSelected
                         ? 'border-violet-500 bg-violet-50 shadow-md'
-                        : 'border-gray-200 bg-white hover:border-violet-300 hover:shadow-sm'
+                        : 'border-slate-200 bg-white hover:border-violet-300 hover:shadow-sm'
                     }`}
                   >
                     <div className="flex items-center gap-3 mb-2">
                       <div className={`p-2 rounded-lg ${colorClass}`}>
                         <Icon className="w-4 h-4" />
                       </div>
-                      <span className="font-medium text-sm text-gray-900">{journal.label}</span>
+                      <span className="text-sm font-medium text-slate-900">{journal.label}</span>
                     </div>
-                    <div className="flex justify-between text-xs text-gray-500">
+                    <div className="flex justify-between text-xs text-slate-500">
                       <span>{journal.count} écriture{journal.count !== 1 ? 's' : ''}</span>
-                      <span className="font-medium text-gray-700">{fmt(journal.total_debit)} TND</span>
+                      <span className="font-medium text-slate-700">{fmt(journal.total_debit)} TND</span>
                     </div>
                   </button>
                 );
@@ -211,7 +211,7 @@ export default function LegalJournals() {
           <div className="lg:col-span-3">
             {!selectedJournal ? (
               <Card>
-                <CardContent className="py-16 text-center text-gray-400">
+                <CardContent className="py-16 text-center text-slate-400">
                   <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
                   <p className="text-lg font-medium">Sélectionnez un journal</p>
                   <p className="text-sm">Cliquez sur un journal à gauche pour afficher ses écritures</p>
@@ -225,28 +225,28 @@ export default function LegalJournals() {
                       {currentJournal?.label}
                       <Badge variant="secondary" className="ml-2">{totals.total} entrées</Badge>
                     </CardTitle>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <span>Total Débit : <strong className="text-gray-900">{fmt(totals.debit)}</strong></span>
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                      <span>Total Débit : <strong className="text-slate-900">{fmt(totals.debit)}</strong></span>
                       <span>|</span>
-                      <span>Total Crédit : <strong className="text-gray-900">{fmt(totals.credit)}</strong></span>
+                      <span>Total Crédit : <strong className="text-slate-900">{fmt(totals.credit)}</strong></span>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   {loadingEntries ? (
-                    <div className="text-center py-12 text-gray-400">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600 mx-auto mb-2" />
+                    <div className="py-12 text-center text-slate-400">
+                      <div className="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
                       Chargement…
                     </div>
                   ) : entries.length === 0 ? (
-                    <div className="text-center py-12 text-gray-400">
+                    <div className="py-12 text-center text-slate-400">
                       <BookOpen className="w-10 h-10 mx-auto mb-2 opacity-30" />
                       Aucune écriture dans ce journal pour la période sélectionnée
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
-                        <thead className="bg-gray-50 border-b">
+                        <thead className="border-b bg-slate-50/80">
                           <tr>
                             <th className="px-4 py-3 text-left font-medium text-gray-600">N°</th>
                             <th className="px-4 py-3 text-left font-medium text-gray-600">Date</th>
@@ -256,22 +256,22 @@ export default function LegalJournals() {
                             <th className="px-4 py-3 text-center font-medium text-gray-600">Détail</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-slate-100">
                           {entries.map(entry => (
                             <React.Fragment key={entry.id}>
                               <tr
-                                className="hover:bg-gray-50 cursor-pointer"
+                                className="cursor-pointer hover:bg-slate-50"
                                 onClick={() => setExpandedEntry(expandedEntry === entry.id ? null : entry.id)}
                               >
                                 <td className="px-4 py-3 font-mono text-xs text-violet-700">{entry.entry_number}</td>
-                                <td className="px-4 py-3 text-gray-600">
+                                <td className="px-4 py-3 text-slate-600">
                                   {entry.date ? new Date(entry.date).toLocaleDateString('fr-TN') : '-'}
                                 </td>
-                                <td className="px-4 py-3 text-gray-800 max-w-xs truncate">{entry.description || entry.reference || '-'}</td>
-                                <td className="px-4 py-3 text-right font-medium text-gray-800">{fmt(entry.total_debit)}</td>
-                                <td className="px-4 py-3 text-right font-medium text-gray-800">{fmt(entry.total_credit)}</td>
+                                <td className="max-w-xs truncate px-4 py-3 text-slate-800">{entry.description || entry.reference || '-'}</td>
+                                <td className="px-4 py-3 text-right font-medium text-slate-800">{fmt(entry.total_debit)}</td>
+                                <td className="px-4 py-3 text-right font-medium text-slate-800">{fmt(entry.total_credit)}</td>
                                 <td className="px-4 py-3 text-center">
-                                  <Eye className={`w-4 h-4 mx-auto ${expandedEntry === entry.id ? 'text-violet-600' : 'text-gray-400'}`} />
+                                  <Eye className={`mx-auto w-4 h-4 ${expandedEntry === entry.id ? 'text-violet-700' : 'text-slate-400'}`} />
                                 </td>
                               </tr>
                               {expandedEntry === entry.id && entry.lines?.length > 0 && (

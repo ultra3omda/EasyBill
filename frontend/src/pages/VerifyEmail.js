@@ -40,33 +40,33 @@ const VerifyEmail = () => {
   }, [token, navigate]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 to-amber-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-8 shadow-xl">
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(123,92,255,0.14),_transparent_38%),linear-gradient(180deg,_#fcfbff_0%,_#f7f4ff_55%,_#fffaf0_100%)] p-4">
+      <Card className="w-full max-w-md p-8 shadow-2xl shadow-violet-100/60">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-violet-700 rounded-lg flex items-center justify-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-violet-700">
               <span className="text-white font-bold text-xl">E</span>
             </div>
             <span className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-amber-500 bg-clip-text text-transparent">
               EasyBill
             </span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Vérification d'email</h1>
+          <h1 className="mb-2 text-3xl font-bold tracking-[-0.03em] text-slate-900">Vérification d'email</h1>
         </div>
 
         <div className="text-center space-y-6">
           {status === 'loading' && (
             <>
               <div className="flex justify-center">
-                <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-violet-100">
                   <Loader2 className="w-10 h-10 text-violet-600 animate-spin" />
                 </div>
               </div>
               <div className="space-y-2">
-                <p className="text-gray-700 font-medium">
+                <p className="font-medium text-slate-700">
                   Vérification en cours...
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-slate-600">
                   Veuillez patienter pendant que nous vérifions votre email.
                 </p>
               </div>
@@ -76,20 +76,20 @@ const VerifyEmail = () => {
           {status === 'success' && (
             <>
               <div className="flex justify-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
                   <CheckCircle className="w-10 h-10 text-green-600" />
                 </div>
               </div>
               <div className="space-y-2">
-                <p className="text-gray-700 font-medium">
+                <p className="font-medium text-slate-700">
                   Email vérifié avec succès !
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-slate-600">
                   Vous allez être redirigé vers la page de connexion...
                 </p>
               </div>
               <Link to="/login">
-                <Button className="w-full bg-violet-600 hover:bg-violet-700 text-white">
+                <Button className="w-full">
                   Se connecter maintenant
                 </Button>
               </Link>
@@ -99,21 +99,21 @@ const VerifyEmail = () => {
           {status === 'error' && (
             <>
               <div className="flex justify-center">
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
                   <AlertCircle className="w-10 h-10 text-red-600" />
                 </div>
               </div>
               <div className="space-y-2">
-                <p className="text-gray-700 font-medium">
+                <p className="font-medium text-slate-700">
                   Erreur de vérification
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-slate-600">
                   {message}
                 </p>
               </div>
               <div className="space-y-3">
                 <Link to="/login">
-                  <Button className="w-full bg-violet-600 hover:bg-violet-700 text-white">
+                  <Button className="w-full">
                     Retour à la connexion
                   </Button>
                 </Link>

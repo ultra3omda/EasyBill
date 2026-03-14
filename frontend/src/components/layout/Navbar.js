@@ -23,11 +23,11 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <nav className="sticky top-0 z-50 border-b border-violet-100/80 bg-white/85 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-violet-600 to-violet-700 rounded-lg flex items-center justify-center">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-violet-700">
               <span className="text-white font-bold text-lg">E</span>
             </div>
             <span className="text-xl font-bold bg-gradient-to-r from-violet-600 to-amber-500 bg-clip-text text-transparent">
@@ -36,32 +36,32 @@ const Navbar = () => {
           </Link>
 
           <div className="hidden md:flex items-center space-x-8">
-            <Link to="/features" className="text-gray-700 hover:text-violet-600 transition-colors">
+            <Link to="/features" className="text-slate-700 transition-colors hover:text-violet-600">
               {t('nav.features')}
             </Link>
-            <Link to="/mobile" className="text-gray-700 hover:text-violet-600 transition-colors flex items-center gap-1">
+            <Link to="/mobile" className="flex items-center gap-1 text-slate-700 transition-colors hover:text-violet-600">
               {t('nav.mobile')}
               <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-medium">New</span>
             </Link>
-            <Link to="/pricing" className="text-gray-700 hover:text-violet-600 transition-colors">
+            <Link to="/pricing" className="text-slate-700 transition-colors hover:text-violet-600">
               {t('nav.pricing')}
             </Link>
-            <Link to="/blog" className="text-gray-700 hover:text-violet-600 transition-colors">
+            <Link to="/blog" className="text-slate-700 transition-colors hover:text-violet-600">
               {t('nav.blog')}
             </Link>
-            <Link to="/help" className="text-gray-700 hover:text-violet-600 transition-colors">
+            <Link to="/help" className="text-slate-700 transition-colors hover:text-violet-600">
               {t('nav.help')}
             </Link>
           </div>
 
           <div className="flex items-center space-x-4">
-            <button onClick={toggleTheme} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              {theme === 'light' ? <Moon className="w-5 h-5 text-gray-600" /> : <Sun className="w-5 h-5 text-gray-600" />}
+            <button onClick={toggleTheme} className="rounded-xl p-2 transition-colors hover:bg-violet-50">
+              {theme === 'light' ? <Moon className="h-5 w-5 text-slate-600" /> : <Sun className="h-5 w-5 text-slate-600" />}
             </button>
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center space-x-1 p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <button className="flex items-center space-x-1 rounded-xl p-2 transition-colors hover:bg-violet-50">
                   <img 
                     src={language === 'fr' ? 'https://flagcdn.com/w40/fr.png' : 'https://flagcdn.com/w40/gb.png'}
                     alt={language}
@@ -83,7 +83,7 @@ const Navbar = () => {
 
             {user ? (
               <Link to="/dashboard">
-                <Button className="bg-violet-600 hover:bg-violet-700 text-white gap-2">
+                <Button className="gap-2">
                   <LayoutDashboard className="w-4 h-4" />
                   Tableau de bord
                 </Button>
@@ -91,12 +91,12 @@ const Navbar = () => {
             ) : (
               <>
                 <Link to="/login">
-                  <Button variant="ghost" className="text-gray-700">
+                  <Button variant="ghost" className="text-slate-700">
                     {t('nav.login')}
                   </Button>
                 </Link>
                 <Link to="/register">
-                  <Button className="bg-violet-600 hover:bg-violet-700 text-white">
+                  <Button>
                     {t('nav.register')}
                   </Button>
                 </Link>

@@ -1,13 +1,17 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query, Request
+from fastapi.responses import FileResponse
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import os
 import logging
 from typing import Optional
+from pathlib import Path
+import mimetypes
 from models.supplier_invoice import SupplierInvoice, SupplierInvoiceCreate, SupplierInvoiceUpdate
 from services.accounting_sync_service import accounting_sync_service
 from utils.dependencies import get_current_user, get_current_company
+from utils.auth import decode_token
 from utils.helpers import generate_document_number, calculate_document_totals
 
 logger = logging.getLogger(__name__)
@@ -17,6 +21,7 @@ router = APIRouter(prefix="/api/supplier-invoices", tags=["Supplier Invoices"])
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
+SUPPLIER_IMPORT_UPLOAD_DIR = Path(__file__).resolve().parent.parent / "uploads" / "supplier_invoice_imports"
 
 
 def serialize_si(s: dict) -> dict:
@@ -42,10 +47,288 @@ def serialize_si(s: dict) -> dict:
         "balance_due": s.get("balance_due", 0),
         "notes": s.get("notes"),
         "status": s.get("status", "draft"),
+        "attachments": s.get("attachments", []),
+        "source": s.get("source"),
         "paid_at": s["paid_at"].isoformat() if isinstance(s.get("paid_at"), datetime) else s.get("paid_at"),
         "created_at": s["created_at"].isoformat() if isinstance(s.get("created_at"), datetime) else s.get("created_at"),
         "updated_at": s["updated_at"].isoformat() if isinstance(s.get("updated_at"), datetime) else s.get("updated_at")
     }
+
+
+async def _get_current_user_from_token(token: str) -> dict:
+    payload = decode_token(token)
+    if payload is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication credentials")
+
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication credentials")
+
+    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    return user
+
+
+def _as_object_id(value):
+    if not value:
+        return None
+    if isinstance(value, ObjectId):
+        return value
+    try:
+        return ObjectId(value)
+    except Exception:
+        return None
+
+
+def _delete_attachment_files(attachments: list[str]) -> None:
+    for rel_path in attachments or []:
+        try:
+            file_path = (SUPPLIER_IMPORT_UPLOAD_DIR / rel_path).resolve()
+            upload_root = SUPPLIER_IMPORT_UPLOAD_DIR.resolve()
+            if str(file_path).startswith(str(upload_root)) and file_path.exists():
+                file_path.unlink()
+                parent = file_path.parent
+                if parent != upload_root and parent.exists() and not any(parent.iterdir()):
+                    parent.rmdir()
+        except Exception:
+            logger.warning("Impossible de supprimer la pièce jointe %s", rel_path, exc_info=True)
+
+
+def _is_scanner_auto_created(document: Optional[dict]) -> bool:
+    if not document:
+        return False
+    return bool(document.get("auto_created") or document.get("source") in {"scanner", "invoice_scanner"})
+
+
+async def _revert_stock_movement(company_id: str, movement: dict) -> None:
+    product_id = movement.get("product_id")
+    warehouse_id = movement.get("warehouse_id")
+    quantity = float(movement.get("quantity") or 0)
+    if not product_id or not warehouse_id or quantity <= 0:
+        return
+
+    stock_level = await db.stock_levels.find_one({
+        "warehouse_id": warehouse_id,
+        "product_id": product_id
+    })
+    now = datetime.now(timezone.utc)
+
+    if stock_level:
+        current_qty = float(stock_level.get("quantity") or 0)
+        new_qty = max(0, current_qty - quantity)
+        await db.stock_levels.update_one(
+            {"_id": stock_level["_id"]},
+            {"$set": {"quantity": new_qty, "updated_at": now}}
+        )
+
+    all_levels = await db.stock_levels.find({"product_id": product_id}).to_list(100)
+    total_stock = sum(float(level.get("quantity") or 0) for level in all_levels)
+    await db.products.update_one(
+        {"_id": product_id},
+        {"$set": {"quantity_in_stock": total_stock, "stock_quantity": total_stock, "updated_at": now}}
+    )
+
+
+async def _delete_scanner_stock_movements(company_id: str, supplier_invoice: dict, receipt_id=None, receipt_number: Optional[str] = None) -> int:
+    company_object_id = ObjectId(company_id)
+    receipt_id = _as_object_id(receipt_id)
+    product_ids = [_as_object_id(item.get("product_id")) for item in (supplier_invoice.get("items") or [])]
+    product_ids = [product_id for product_id in product_ids if product_id]
+
+    references = {
+        str(value).strip()
+        for value in [
+            supplier_invoice.get("supplier_number"),
+            supplier_invoice.get("number"),
+            receipt_number,
+        ]
+        if value
+    }
+
+    query = {
+        "company_id": company_object_id,
+        "source": {"$in": ["scanner", "invoice_scanner"]},
+    }
+    if product_ids:
+        query["product_id"] = {"$in": product_ids}
+
+    movement_filters = []
+    if receipt_id:
+        movement_filters.append({"reference_id": receipt_id})
+    if references:
+        movement_filters.append({"reference": {"$in": list(references)}})
+
+    created_at = supplier_invoice.get("created_at")
+    if not movement_filters and isinstance(created_at, datetime):
+        query["created_at"] = {
+            "$gte": created_at - timedelta(minutes=5),
+            "$lte": created_at + timedelta(minutes=5),
+        }
+    elif movement_filters:
+        query["$or"] = movement_filters
+    else:
+        return 0
+
+    stock_movements = await db.stock_movements.find(query).to_list(200)
+    for movement in stock_movements:
+        await _revert_stock_movement(company_id, movement)
+
+    if stock_movements:
+        await db.stock_movements.delete_many({
+            "_id": {"$in": [movement["_id"] for movement in stock_movements]}
+        })
+    return len(stock_movements)
+
+
+async def _delete_auto_created_receipt_chain(company_id: str, supplier_invoice: dict, supplier_invoice_id) -> dict:
+    summary = {"deleted_receipt": False, "deleted_stock_movements": 0, "deleted_purchase_order": False}
+    company_object_id = ObjectId(company_id)
+    receipt_id = _as_object_id(supplier_invoice.get("receipt_id") or (supplier_invoice.get("regulated_purchase_chain") or {}).get("receipt_id"))
+    receipt = await db.receipts.find_one({"_id": receipt_id, "company_id": ObjectId(company_id)})
+    summary["deleted_stock_movements"] = await _delete_scanner_stock_movements(
+        company_id,
+        supplier_invoice,
+        receipt_id=receipt_id,
+        receipt_number=receipt.get("number") if receipt else None
+    )
+
+    if receipt_id and receipt and _is_scanner_auto_created(receipt):
+        other_invoices = await db.supplier_invoices.count_documents({
+            "company_id": company_object_id,
+            "receipt_id": receipt_id,
+            "_id": {"$ne": supplier_invoice_id}
+        })
+        if other_invoices == 0:
+            await db.receipts.delete_one({"_id": receipt_id})
+            summary["deleted_receipt"] = True
+
+    po_id = _as_object_id(
+        supplier_invoice.get("purchase_order_id")
+        or (supplier_invoice.get("regulated_purchase_chain") or {}).get("purchase_order_id")
+        or (receipt or {}).get("purchase_order_id")
+    )
+    if po_id:
+        other_receipts = await db.receipts.count_documents({
+            "company_id": company_object_id,
+            "purchase_order_id": po_id,
+            **({"_id": {"$ne": receipt_id}} if receipt_id else {})
+        })
+        other_invoices_for_po = await db.supplier_invoices.count_documents({
+            "company_id": company_object_id,
+            "purchase_order_id": po_id,
+            "_id": {"$ne": supplier_invoice_id}
+        })
+        if other_receipts == 0 and other_invoices_for_po == 0:
+            purchase_order = await db.purchase_orders.find_one({"_id": po_id, "company_id": company_object_id})
+            if purchase_order and _is_scanner_auto_created(purchase_order):
+                await db.purchase_orders.delete_one({"_id": po_id})
+                summary["deleted_purchase_order"] = True
+
+    return summary
+
+
+async def _delete_auto_created_products(company_id: str, supplier_invoice: dict, supplier_invoice_id) -> int:
+    company_object_id = ObjectId(company_id)
+    candidate_product_ids = [
+        _as_object_id(product_id)
+        for product_id in (supplier_invoice.get("auto_created_product_ids") or [])
+    ]
+    candidate_product_ids.extend(
+        _as_object_id(item.get("product_id"))
+        for item in (supplier_invoice.get("items") or [])
+    )
+
+    deleted_count = 0
+    seen_ids = set()
+    for product_id in candidate_product_ids:
+        if not product_id or str(product_id) in seen_ids:
+            continue
+        seen_ids.add(str(product_id))
+
+        product = await db.products.find_one({"_id": product_id, "company_id": company_object_id})
+        if not product or not _is_scanner_auto_created(product):
+            continue
+
+        product_id_str = str(product_id)
+        other_invoices = await db.supplier_invoices.count_documents({
+            "company_id": company_object_id,
+            "_id": {"$ne": supplier_invoice_id},
+            "items.product_id": product_id_str
+        })
+        other_receipts = await db.receipts.count_documents({
+            "company_id": company_object_id,
+            "items.product_id": product_id_str
+        })
+        other_purchase_orders = await db.purchase_orders.count_documents({
+            "company_id": company_object_id,
+            "items.product_id": product_id_str
+        })
+        remaining_stock = await db.stock_levels.count_documents({
+            "product_id": product_id,
+            "quantity": {"$gt": 0}
+        })
+        remaining_movements = await db.stock_movements.count_documents({
+            "company_id": company_object_id,
+            "product_id": product_id
+        })
+
+        if other_invoices or other_receipts or other_purchase_orders or remaining_stock or remaining_movements:
+            continue
+
+        await db.stock_levels.delete_many({"product_id": product_id})
+        await db.products.delete_one({"_id": product_id})
+        deleted_count += 1
+
+    return deleted_count
+
+
+async def _delete_auto_created_supplier(company_id: str, supplier_invoice: dict, supplier_invoice_id) -> bool:
+    company_object_id = ObjectId(company_id)
+    supplier_id = _as_object_id(supplier_invoice.get("auto_created_supplier_id") or supplier_invoice.get("supplier_id"))
+    if not supplier_id:
+        return False
+
+    supplier = await db.suppliers.find_one({"_id": supplier_id, "company_id": company_object_id})
+    if not supplier:
+        return False
+
+    supplier_created_at = supplier.get("created_at")
+    invoice_created_at = supplier_invoice.get("created_at")
+    is_probably_scanner_supplier = _is_scanner_auto_created(supplier)
+    if not is_probably_scanner_supplier:
+        is_probably_scanner_supplier = bool(
+            supplier_invoice.get("source") == "scanner"
+            and isinstance(supplier_created_at, datetime)
+            and isinstance(invoice_created_at, datetime)
+            and abs((invoice_created_at - supplier_created_at).total_seconds()) <= 600
+        )
+    if not is_probably_scanner_supplier:
+        return False
+
+    other_invoices = await db.supplier_invoices.count_documents({
+        "company_id": company_object_id,
+        "supplier_id": supplier_id,
+        "_id": {"$ne": supplier_invoice_id}
+    })
+    other_payments = await db.supplier_payments.count_documents({
+        "company_id": company_object_id,
+        "supplier_id": supplier_id
+    })
+    other_purchase_orders = await db.purchase_orders.count_documents({
+        "company_id": company_object_id,
+        "supplier_id": supplier_id
+    })
+    other_receipts = await db.receipts.count_documents({
+        "company_id": company_object_id,
+        "supplier_id": supplier_id
+    })
+
+    if other_invoices or other_payments or other_purchase_orders or other_receipts:
+        return False
+
+    await db.suppliers.delete_one({"_id": supplier_id})
+    return True
 
 
 async def log_action(company_id, user_id, user_name, action, element, ip_address=None):
@@ -194,6 +477,34 @@ async def get_supplier_invoice(doc_id: str, company_id: str = Query(...), curren
     return serialize_si(doc)
 
 
+@router.get("/{doc_id}/attachment")
+async def get_supplier_invoice_attachment(
+    doc_id: str,
+    company_id: str = Query(...),
+    index: int = Query(0, ge=0),
+    token: str = Query(...)
+):
+    current_user = await _get_current_user_from_token(token)
+    await get_current_company(current_user=current_user, company_id=company_id)
+
+    doc = await db.supplier_invoices.find_one({"_id": ObjectId(doc_id), "company_id": ObjectId(company_id)})
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier invoice not found")
+
+    attachments = doc.get("attachments") or []
+    if index >= len(attachments):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found")
+
+    rel_path = attachments[index]
+    file_path = (SUPPLIER_IMPORT_UPLOAD_DIR / rel_path).resolve()
+    upload_root = SUPPLIER_IMPORT_UPLOAD_DIR.resolve()
+    if not str(file_path).startswith(str(upload_root)) or not file_path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Attachment file not found")
+
+    media_type = mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
+    return FileResponse(path=file_path, media_type=media_type, filename=file_path.name)
+
+
 @router.put("/{doc_id}")
 async def update_supplier_invoice(doc_id: str, data: SupplierInvoiceUpdate, request: Request, company_id: str = Query(...), current_user: dict = Depends(get_current_user)):
     company = await get_current_company(current_user, company_id)
@@ -230,17 +541,79 @@ async def update_supplier_invoice(doc_id: str, data: SupplierInvoiceUpdate, requ
 @router.delete("/{doc_id}")
 async def delete_supplier_invoice(doc_id: str, request: Request, company_id: str = Query(...), current_user: dict = Depends(get_current_user)):
     company = await get_current_company(current_user, company_id)
-    doc = await db.supplier_invoices.find_one({"_id": ObjectId(doc_id), "company_id": ObjectId(company_id)})
+    company_object_id = ObjectId(company_id)
+    supplier_invoice_id = ObjectId(doc_id)
+    doc = await db.supplier_invoices.find_one({"_id": supplier_invoice_id, "company_id": company_object_id})
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier invoice not found")
-    
+
+    deleted_journal_entries = 0
+    deleted_payment_entries = 0
+    deleted_attachment_count = len(doc.get("attachments") or [])
+    deleted_products_count = 0
+    deleted_supplier = False
+
+    # Delete accounting entries linked to this invoice import/payment chain.
+    invoice_entry_ids = [_as_object_id(entry_id) for entry_id in (doc.get("proposed_journal_entry_ids") or [])]
+    invoice_entry_ids = [entry_id for entry_id in invoice_entry_ids if entry_id]
+    if invoice_entry_ids:
+        result = await db.journal_entries.delete_many({
+            "company_id": company_object_id,
+            "_id": {"$in": invoice_entry_ids}
+        })
+        deleted_journal_entries += result.deleted_count
+
+    result = await db.journal_entries.delete_many({
+        "company_id": company_object_id,
+        "document_type": "supplier_invoice",
+        "document_id": supplier_invoice_id
+    })
+    deleted_journal_entries += result.deleted_count
+
+    result = await db.journal_entries.delete_many({
+        "company_id": company_object_id,
+        "document_type": "supplier_payment",
+        "document_id": supplier_invoice_id
+    })
+    deleted_payment_entries += result.deleted_count
+
+    # Delete auto-generated receipt / stock / PO even if the stock entry exists without a BR.
+    receipt_summary = await _delete_auto_created_receipt_chain(
+        company_id,
+        doc,
+        supplier_invoice_id
+    )
+
     # Update supplier stats
     if doc.get("supplier_id"):
-        await db.suppliers.update_one({"_id": doc["supplier_id"]}, {"$inc": {"invoice_count": -1, "total_invoiced": -doc.get("total", 0), "balance": -doc.get("balance_due", 0)}})
-    
-    await db.supplier_invoices.delete_one({"_id": ObjectId(doc_id)})
+        await db.suppliers.update_one(
+            {"_id": doc["supplier_id"]},
+            {"$inc": {
+                "invoice_count": -1,
+                "total_invoiced": -doc.get("total", 0),
+                "balance": -doc.get("balance_due", 0),
+                "total_paid": -(doc.get("amount_paid", 0) or 0)
+            }}
+        )
+
+    await db.supplier_invoices.delete_one({"_id": supplier_invoice_id})
+    deleted_products_count = await _delete_auto_created_products(company_id, doc, supplier_invoice_id)
+    deleted_supplier = await _delete_auto_created_supplier(company_id, doc, supplier_invoice_id)
+    _delete_attachment_files(doc.get("attachments") or [])
     await log_action(company_id, str(current_user["_id"]), current_user.get("full_name", ""), "Supprimer", doc.get("number", ""), request.client.host if request.client else None)
-    return {"message": "Supplier invoice deleted"}
+    return {
+        "message": "Supplier invoice deleted",
+        "cascade": {
+            "journal_entries_deleted": deleted_journal_entries,
+            "payment_entries_deleted": deleted_payment_entries,
+            "receipt_deleted": receipt_summary["deleted_receipt"],
+            "purchase_order_deleted": receipt_summary["deleted_purchase_order"],
+            "stock_movements_deleted": receipt_summary["deleted_stock_movements"],
+            "products_deleted": deleted_products_count,
+            "supplier_deleted": deleted_supplier,
+            "attachments_deleted": deleted_attachment_count,
+        }
+    }
 
 
 # ─── Paiement d'une facture fournisseur ───────────────────────────────────────

@@ -407,8 +407,8 @@ const JournalEntries = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Écritures Comptables</h1>
-            <p className="text-gray-500 mt-1">Gestion des écritures du journal général</p>
+            <h1 className="page-header-title">Écritures Comptables</h1>
+            <p className="page-header-subtitle">Gestion des écritures du journal général</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={exportToExcel}>
@@ -419,7 +419,7 @@ const JournalEntries = () => {
               variant="outline"
               onClick={fixPaidInvoices}
               disabled={fixing}
-              className="border-orange-300 text-orange-700 hover:bg-orange-50"
+              className="border-amber-300 text-amber-700 hover:bg-amber-50"
               title="Corriger les écritures de règlement manquantes pour les factures payées"
             >
               {fixing ? (
@@ -434,7 +434,6 @@ const JournalEntries = () => {
                 resetForm();
                 setShowModal(true);
               }}
-              className="bg-violet-600 hover:bg-violet-700"
               data-testid="new-entry-btn"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -447,12 +446,12 @@ const JournalEntries = () => {
         <Card className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 placeholder="Rechercher par numéro, description..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
+                className="pl-11"
               />
             </div>
             <Select value={journalFilter} onValueChange={setJournalFilter}>
@@ -490,52 +489,52 @@ const JournalEntries = () => {
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="border-b bg-slate-50/80">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
                     Numéro
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
                     Date
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
                     Journal
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
                     Description
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
                     Débit
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
                     Crédit
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
                     Statut
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody className="divide-y divide-slate-200/80">
                 {loading ? (
                   <tr>
                     <td colSpan={8} className="px-4 py-12 text-center">
-                      <RefreshCw className="w-6 h-6 animate-spin mx-auto text-violet-600" />
+                      <RefreshCw className="mx-auto w-6 h-6 animate-spin text-primary" />
                     </td>
                   </tr>
                 ) : filteredEntries.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
+                    <td colSpan={8} className="px-4 py-12 text-center text-slate-500">
                       Aucune écriture trouvée
                     </td>
                   </tr>
                 ) : (
                   filteredEntries.map((entry) => (
-                    <tr key={entry.id} className="hover:bg-gray-50">
+                    <tr key={entry.id} className="hover:bg-slate-50/70">
                       <td className="px-4 py-3">
-                        <span className="font-mono text-violet-600 font-medium">
+                        <span className="font-mono font-medium text-violet-700">
                           {entry.entry_number}
                         </span>
                       </td>
@@ -544,7 +543,7 @@ const JournalEntries = () => {
                         {journalTypes.find((j) => j.value === entry.journal_type)?.label ||
                           entry.journal_type}
                       </td>
-                      <td className="px-4 py-3 text-sm max-w-xs truncate">
+                      <td className="max-w-xs truncate px-4 py-3 text-sm text-slate-700">
                         {entry.description}
                       </td>
                       <td className="px-4 py-3 text-sm text-right font-mono">
@@ -559,7 +558,7 @@ const JournalEntries = () => {
                             entry.status === 'posted'
                               ? 'bg-green-100 text-green-800'
                               : entry.status === 'draft'
-                              ? 'bg-yellow-100 text-yellow-800'
+                              ? 'bg-violet-100 text-violet-800'
                               : 'bg-red-100 text-red-800'
                           }
                         >
@@ -615,7 +614,7 @@ const JournalEntries = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleCancel(entry)}
-                              className="text-orange-600 hover:text-orange-700"
+                                className="text-violet-600 hover:text-violet-700"
                               title="Annuler"
                             >
                               <XCircle className="w-4 h-4" />
@@ -696,18 +695,18 @@ const JournalEntries = () => {
               {/* Lines */}
               <div className="border rounded-lg overflow-hidden">
                 <table className="w-full">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-slate-50/80">
                     <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">
                         Compte
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">
                         Libellé
                       </th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 w-32">
+                      <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 w-32">
                         Débit
                       </th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 w-32">
+                      <th className="px-3 py-2 text-right text-xs font-medium text-slate-500 w-32">
                         Crédit
                       </th>
                       <th className="px-3 py-2 w-10"></th>
@@ -775,7 +774,7 @@ const JournalEntries = () => {
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-gray-50">
+                  <tfoot className="bg-slate-50/80">
                     <tr>
                       <td colSpan={2} className="px-3 py-2">
                         <Button
@@ -783,7 +782,7 @@ const JournalEntries = () => {
                           variant="ghost"
                           size="sm"
                           onClick={addLine}
-                          className="text-violet-600"
+                          className="text-violet-700"
                         >
                           <PlusCircle className="w-4 h-4 mr-1" />
                           Ajouter une ligne
@@ -820,7 +819,6 @@ const JournalEntries = () => {
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-violet-600 hover:bg-violet-700"
                   disabled={!balanced}
                 >
                   {selectedEntry ? 'Mettre à jour' : 'Créer'}
@@ -842,21 +840,21 @@ const JournalEntries = () => {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-500">Date</p>
+                    <p className="text-sm text-slate-500">Date</p>
                     <p className="font-medium">{formatDate(selectedEntry.date)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Journal</p>
+                    <p className="text-sm text-slate-500">Journal</p>
                     <p className="font-medium capitalize">
                       {journalTypes.find((j) => j.value === selectedEntry.journal_type)?.label}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Référence</p>
+                    <p className="text-sm text-slate-500">Référence</p>
                     <p className="font-medium">{selectedEntry.reference || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Statut</p>
+                    <p className="text-sm text-slate-500">Statut</p>
                     <Badge
                       className={
                         selectedEntry.status === 'posted'
@@ -875,23 +873,23 @@ const JournalEntries = () => {
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Description</p>
+                  <p className="text-sm text-slate-500">Description</p>
                   <p className="font-medium">{selectedEntry.description}</p>
                 </div>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-slate-50/80">
                       <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">
                           Compte
                         </th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">
                           Libellé
                         </th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">
+                        <th className="px-3 py-2 text-right text-xs font-medium text-slate-500">
                           Débit
                         </th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">
+                        <th className="px-3 py-2 text-right text-xs font-medium text-slate-500">
                           Crédit
                         </th>
                       </tr>
@@ -899,7 +897,7 @@ const JournalEntries = () => {
                     <tbody className="divide-y">
                       {selectedEntry.lines?.map((line, index) => (
                         <tr key={index}>
-                          <td className="px-3 py-2 font-mono text-violet-600">
+                          <td className="px-3 py-2 font-mono text-violet-700">
                             {line.account_code}
                           </td>
                           <td className="px-3 py-2 text-sm">
@@ -914,7 +912,7 @@ const JournalEntries = () => {
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot className="bg-gray-50 font-bold">
+                    <tfoot className="bg-slate-50/80 font-bold">
                       <tr>
                         <td colSpan={2} className="px-3 py-2 text-right">
                           Total
@@ -940,7 +938,7 @@ const JournalEntries = () => {
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Wrench className="w-5 h-5 text-orange-600" />
+              <Wrench className="w-5 h-5 text-amber-600" />
               Rapport de correction des règlements
             </DialogTitle>
           </DialogHeader>
@@ -948,38 +946,38 @@ const JournalEntries = () => {
           {fixReport && (
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-blue-50 rounded-lg p-3 text-center">
+                <div className="rounded-2xl bg-blue-50 p-3 text-center">
                   <p className="text-2xl font-bold text-blue-700">{fixReport.analyzed}</p>
                   <p className="text-xs text-blue-600">Factures analysées</p>
                 </div>
-                <div className="bg-green-50 rounded-lg p-3 text-center">
+                <div className="rounded-2xl bg-green-50 p-3 text-center">
                   <p className="text-2xl font-bold text-green-700">
                     {fixReport.details?.filter(d => d.action === 'règlement_créé').length || 0}
                   </p>
                   <p className="text-xs text-green-600">Règlements créés</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3 text-center">
-                  <p className="text-2xl font-bold text-gray-700">
+                <div className="rounded-2xl bg-slate-50 p-3 text-center">
+                  <p className="text-2xl font-bold text-slate-700">
                     {fixReport.details?.filter(d => d.action === 'règlement_déjà_présent').length || 0}
                   </p>
-                  <p className="text-xs text-gray-600">Déjà corrects</p>
+                  <p className="text-xs text-slate-600">Déjà corrects</p>
                 </div>
               </div>
 
-              <div className="border rounded-lg overflow-hidden">
+              <div className="overflow-hidden rounded-2xl border border-slate-200">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-slate-50/80">
                     <tr>
-                      <th className="px-3 py-2 text-left font-medium text-gray-600">Facture</th>
-                      <th className="px-3 py-2 text-left font-medium text-gray-600">Action</th>
-                      <th className="px-3 py-2 text-left font-medium text-gray-600">Mode / Compte</th>
-                      <th className="px-3 py-2 text-right font-medium text-gray-600">Montant</th>
+                      <th className="px-3 py-2 text-left font-medium text-slate-600">Facture</th>
+                      <th className="px-3 py-2 text-left font-medium text-slate-600">Action</th>
+                      <th className="px-3 py-2 text-left font-medium text-slate-600">Mode / Compte</th>
+                      <th className="px-3 py-2 text-right font-medium text-slate-600">Montant</th>
                     </tr>
                   </thead>
                   <tbody>
                     {fixReport.details?.map((d, i) => (
                       <tr key={i} className="border-t">
-                        <td className="px-3 py-2 font-mono text-violet-600">{d.invoice}</td>
+                        <td className="px-3 py-2 font-mono text-violet-700">{d.invoice}</td>
                         <td className="px-3 py-2">
                           {d.action === 'règlement_créé' && (
                             <span className="inline-flex items-center gap-1 text-green-700 bg-green-50 px-2 py-0.5 rounded-full text-xs">
@@ -987,7 +985,7 @@ const JournalEntries = () => {
                             </span>
                           )}
                           {d.action === 'règlement_déjà_présent' && (
-                            <span className="inline-flex items-center gap-1 text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full text-xs">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
                               OK déjà présent
                             </span>
                           )}
@@ -997,9 +995,9 @@ const JournalEntries = () => {
                             </span>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-xs text-gray-500">
+                        <td className="px-3 py-2 text-xs text-slate-500">
                           {d.payment_method && <span className="font-medium">{d.payment_method}</span>}
-                          {d.account && <span className="ml-1 font-mono text-violet-600">{d.account}</span>}
+                          {d.account && <span className="ml-1 font-mono text-violet-700">{d.account}</span>}
                           {d.entry_ref && <span className="font-mono">{d.entry_ref}</span>}
                         </td>
                         <td className="px-3 py-2 text-right font-mono text-sm">

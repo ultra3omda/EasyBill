@@ -390,15 +390,15 @@ export default function BankReconciliation() {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Building2 className="w-6 h-6 text-violet-600" />
+            <h1 className="page-header-title flex items-center gap-2">
+              <Building2 className="w-6 h-6 text-violet-700" />
               Lettrage bancaire
             </h1>
-            <p className="text-gray-500 text-sm mt-1">
+            <p className="page-header-subtitle">
               Upload de l'extrait de compte · Proposition d'écritures · Lettrage des virements fournisseurs
             </p>
           </div>
@@ -406,14 +406,14 @@ export default function BankReconciliation() {
             <Button
               variant={tab === 'upload' ? 'default' : 'outline'}
               onClick={() => setTab('upload')}
-              className={tab === 'upload' ? 'bg-violet-600' : ''}
+              className={tab === 'upload' ? '' : ''}
             >
               <Upload className="w-4 h-4 mr-1" /> Nouvel extrait
             </Button>
             <Button
               variant={tab === 'history' ? 'default' : 'outline'}
               onClick={() => setTab('history')}
-              className={tab === 'history' ? 'bg-violet-600' : ''}
+              className={tab === 'history' ? '' : ''}
             >
               <History className="w-4 h-4 mr-1" /> Historique
             </Button>
@@ -428,7 +428,7 @@ export default function BankReconciliation() {
               <Card>
                 <CardContent className="p-6">
                   <div className="mb-4 flex items-center gap-2">
-                    <Label className="text-sm text-gray-600">API d'extraction :</Label>
+                    <Label className="text-sm text-slate-600">API d'extraction :</Label>
                     <select
                       value={provider}
                       onChange={e => setProvider(e.target.value)}
@@ -459,20 +459,20 @@ export default function BankReconciliation() {
                       <div className="space-y-2">
                         <FileText className="w-12 h-12 mx-auto text-green-600" />
                         <p className="font-semibold">{file.name}</p>
-                        <p className="text-sm text-gray-500">{(file.size / 1024).toFixed(1)} Ko</p>
+                        <p className="text-sm text-slate-500">{(file.size / 1024).toFixed(1)} Ko</p>
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <Building2 className="w-12 h-12 mx-auto text-gray-400" />
-                        <p className="font-semibold text-gray-700">Glisser-déposer ou cliquer</p>
-                        <p className="text-sm text-gray-400">Extrait de compte PDF ou image — max 15 Mo</p>
+                        <Building2 className="mx-auto h-12 w-12 text-slate-400" />
+                        <p className="font-semibold text-slate-700">Glisser-déposer ou cliquer</p>
+                        <p className="text-sm text-slate-400">Extrait de compte PDF ou image — max 15 Mo</p>
                       </div>
                     )}
                   </div>
                   {file && (
                     <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
                       <Button variant="outline" onClick={() => { setFile(null); setStatement(null); }}>Annuler</Button>
-                      <Button onClick={handleParse} disabled={parsing} className="bg-violet-600 hover:bg-violet-700 min-w-36">
+                      <Button onClick={handleParse} disabled={parsing} className="min-w-36">
                         {provider === 'benchmark' ? 'Lancer le benchmark' : 'Analyser l\'extrait'}
                       </Button>
                     </div>

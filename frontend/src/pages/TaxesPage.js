@@ -129,14 +129,14 @@ const TaxesPage = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Taxes</h1>
-            <p className="text-gray-500 mt-1">Gérez les taxes applicables à vos documents</p>
+            <h1 className="page-header-title">Taxes</h1>
+            <p className="page-header-subtitle">Gérez les taxes applicables à vos documents</p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button 
                 onClick={openNewDialog}
-                className="bg-violet-600 hover:bg-violet-700 text-white flex items-center gap-2"
+                className="flex items-center gap-2"
                 data-testid="add-tax-button"
               >
                 <Plus className="w-4 h-4" />
@@ -191,7 +191,7 @@ const TaxesPage = () => {
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Annuler
                   </Button>
-                  <Button type="submit" className="bg-violet-600 hover:bg-violet-700" data-testid="tax-submit-button">
+                  <Button type="submit" data-testid="tax-submit-button">
                     {editingTax ? 'Mettre à jour' : 'Créer'}
                   </Button>
                 </div>
@@ -204,12 +204,12 @@ const TaxesPage = () => {
         <Card>
           {loading ? (
             <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600 mx-auto"></div>
+              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
             </div>
           ) : taxes.length === 0 ? (
             <div className="p-8 text-center">
-              <Percent className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">Aucune taxe configurée</p>
+              <Percent className="mx-auto mb-4 h-12 w-12 text-slate-300" />
+              <p className="text-slate-500">Aucune taxe configurée</p>
             </div>
           ) : (
             <Table>
@@ -226,29 +226,29 @@ const TaxesPage = () => {
               <TableBody>
                 {taxes.map((tax) => (
                   <TableRow key={tax.id} data-testid={`tax-row-${tax.id}`}>
-                    <TableCell className="font-medium">{tax.name}</TableCell>
+                    <TableCell className="font-medium text-slate-900">{tax.name}</TableCell>
                     <TableCell>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-800">
+                      <span className="inline-flex items-center rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-medium text-violet-800">
                         {tax.rate}%
                       </span>
                     </TableCell>
-                    <TableCell className="text-gray-500">{tax.description || '-'}</TableCell>
+                    <TableCell className="text-slate-500">{tax.description || '-'}</TableCell>
                     <TableCell>
                       {tax.is_default ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                        <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
                           Oui
                         </span>
                       ) : (
-                        <span className="text-gray-400">Non</span>
+                        <span className="text-slate-400">Non</span>
                       )}
                     </TableCell>
                     <TableCell>
                       {tax.is_active ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                        <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
                           Actif
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-800">
                           Inactif
                         </span>
                       )}

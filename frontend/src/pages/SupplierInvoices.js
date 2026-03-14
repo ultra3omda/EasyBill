@@ -1,4 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 import { useCompany } from '../hooks/useCompany';
 import AppLayout from '../components/layout/AppLayout';
 import { Card } from '../components/ui/card';
@@ -11,8 +15,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
-import { Plus, Search, Receipt, Edit, Trash2, MoreVertical, CreditCard, Banknote, Building2, CheckSquare } from 'lucide-react';
+import { Plus, Search, Receipt, Edit, Trash2, MoreVertical, CreditCard, Banknote, Building2, CheckSquare, Upload, FileText, Eye, ExternalLink, CalendarDays, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
+
+const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 const PAYMENT_METHODS = [
   { value: 'transfer', label: 'Virement bancaire', icon: Building2, account: '521 — Banques' },
@@ -22,7 +29,105 @@ const PAYMENT_METHODS = [
   { value: 'e_dinar',  label: 'E-Dinar',            icon: Banknote, account: '531 — Caisse' },
 ];
 
+const SupplierInvoicePdfPreview = ({ fileUrl, documentLabel }) => {
+  const containerRef = useRef(null);
+  const [numPages, setNumPages] = useState(0);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageWidth, setPageWidth] = useState(720);
+
+  useEffect(() => {
+    setNumPages(0);
+    setPageNumber(1);
+  }, [fileUrl]);
+
+  useEffect(() => {
+    const updateWidth = () => {
+      const nextWidth = containerRef.current?.clientWidth;
+      if (nextWidth) {
+        setPageWidth(Math.max(320, Math.floor(nextWidth - 32)));
+      }
+    };
+
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">Aperçu document</p>
+          <p className="text-xs text-slate-500">
+            {numPages ? `Page ${pageNumber} sur ${numPages}` : 'Chargement du PDF'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={pageNumber <= 1}
+            onClick={() => setPageNumber((current) => Math.max(1, current - 1))}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!numPages || pageNumber >= numPages}
+            onClick={() => setPageNumber((current) => Math.min(numPages, current + 1))}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      <div ref={containerRef} className="flex h-[calc(100vh-19rem)] min-h-[620px] items-start justify-center overflow-auto bg-slate-100 p-4">
+        <Document
+          file={fileUrl}
+          loading={
+            <div className="flex min-h-[520px] items-center justify-center text-sm text-slate-500">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Chargement du document
+            </div>
+          }
+          error={
+            <div className="flex min-h-[520px] flex-col items-center justify-center px-6 text-center">
+              <FileText className="mb-3 h-8 w-8 text-slate-300" />
+              <p className="font-medium text-slate-900">Impossible de charger l’aperçu PDF</p>
+              <p className="mt-2 text-sm text-slate-500">
+                Ouvrez le document dans un nouvel onglet si le fichier source bloque le rendu intégré.
+              </p>
+            </div>
+          }
+          onLoadSuccess={({ numPages: totalPages }) => {
+            setNumPages(totalPages);
+            setPageNumber((current) => Math.min(current, totalPages || 1));
+          }}
+        >
+          <Page
+            key={`${fileUrl}-${pageNumber}-${pageWidth}`}
+            pageNumber={pageNumber}
+            width={pageWidth}
+            renderAnnotationLayer={false}
+            renderTextLayer={false}
+            loading={
+              <div className="flex min-h-[520px] items-center justify-center text-sm text-slate-500">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Chargement de la page
+              </div>
+            }
+          />
+        </Document>
+      </div>
+      <div className="border-t border-slate-200 bg-white px-4 py-3 text-xs text-slate-500">
+        Visualisation intégrée de {documentLabel}
+      </div>
+    </div>
+  );
+};
+
 const SupplierInvoices = () => {
+  const navigate = useNavigate();
   const { currentCompany } = useCompany();
   const [docs, setDocs] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -30,6 +135,7 @@ const SupplierInvoices = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState(null);
+  const [selectedPreviewId, setSelectedPreviewId] = useState(null);
   const [loading, setLoading] = useState(true);
   // Payment modal
   const [paymentModal, setPaymentModal] = useState({ open: false, doc: null });
@@ -220,6 +326,23 @@ const SupplierInvoices = () => {
     paid: filteredDocs.filter(d => d.status === 'paid').reduce((s, d) => s + (d.total || 0), 0),
     pending: filteredDocs.filter(d => d.status !== 'paid').reduce((s, d) => s + (d.balance_due || 0), 0)
   };
+  const selectedPreviewDoc = filteredDocs.find((doc) => doc.id === selectedPreviewId) || null;
+  const previewHasAttachment = !!selectedPreviewDoc?.attachments?.length;
+  const previewAttachment = selectedPreviewDoc?.attachments?.[0] || '';
+  const previewIsPdf = /\.pdf$/i.test(previewAttachment);
+  const previewUrl = selectedPreviewDoc && previewHasAttachment && currentCompany
+    ? `${API_BASE}/api/supplier-invoices/${selectedPreviewDoc.id}/attachment?company_id=${currentCompany.id}&token=${encodeURIComponent(localStorage.getItem('token') || '')}`
+    : null;
+
+  useEffect(() => {
+    if (!filteredDocs.length) {
+      if (selectedPreviewId !== null) setSelectedPreviewId(null);
+      return;
+    }
+    if (selectedPreviewId && !filteredDocs.some((doc) => doc.id === selectedPreviewId)) {
+      setSelectedPreviewId(null);
+    }
+  }, [filteredDocs, selectedPreviewId]);
 
   if (!currentCompany) return <AppLayout><div className="text-center py-20">Aucune entreprise sélectionnée</div></AppLayout>;
 
@@ -227,65 +350,321 @@ const SupplierInvoices = () => {
     <AppLayout>
       <div className="space-y-6" data-testid="supplier-invoices-page">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div><h1 className="text-3xl font-bold text-gray-900">Factures fournisseur</h1><p className="text-gray-500 mt-1">{filteredDocs.length} factures</p></div>
-          <Button className="bg-violet-600 hover:bg-violet-700 text-white" onClick={openCreate} data-testid="create-si-btn"><Plus className="w-4 h-4 mr-2" /> Nouvelle facture</Button>
+          <div><h1 className="page-header-title">Factures fournisseur</h1><p className="page-header-subtitle">{filteredDocs.length} factures</p></div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => navigate('/invoice-scanner')}>
+              <Upload className="w-4 h-4 mr-2" /> Importer des factures
+            </Button>
+            <Button onClick={openCreate} data-testid="create-si-btn"><Plus className="w-4 h-4 mr-2" /> Nouvelle facture</Button>
+          </div>
         </div>
 
-        <Card className="p-4"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><Input placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" /></div></Card>
+        <Card className="p-4"><div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" /><Input placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-11" /></div></Card>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-violet-100 rounded-lg"><Receipt className="w-5 h-5 text-violet-600" /></div><div><p className="text-sm text-gray-600">Total facturé</p><p className="text-2xl font-bold text-violet-600">{stats.total.toFixed(3)} TND</p></div></div></Card>
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-green-100 rounded-lg"><CreditCard className="w-5 h-5 text-green-600" /></div><div><p className="text-sm text-gray-600">Payé</p><p className="text-2xl font-bold text-green-600">{stats.paid.toFixed(3)} TND</p></div></div></Card>
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-red-100 rounded-lg"><Receipt className="w-5 h-5 text-red-600" /></div><div><p className="text-sm text-gray-600">À payer</p><p className="text-2xl font-bold text-red-600">{stats.pending.toFixed(3)} TND</p></div></div></Card>
+          <Card className="stat-surface p-6"><div className="flex items-center gap-3"><div className="rounded-2xl bg-violet-100 p-3"><Receipt className="w-5 h-5 text-violet-700" /></div><div><p className="text-sm text-slate-600">Total facturé</p><p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.total.toFixed(3)} TND</p></div></div></Card>
+          <Card className="stat-surface p-6"><div className="flex items-center gap-3"><div className="rounded-2xl bg-green-100 p-3"><CreditCard className="w-5 h-5 text-green-700" /></div><div><p className="text-sm text-slate-600">Payé</p><p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.paid.toFixed(3)} TND</p></div></div></Card>
+          <Card className="stat-surface p-6"><div className="flex items-center gap-3"><div className="rounded-2xl bg-rose-100 p-3"><Receipt className="w-5 h-5 text-rose-700" /></div><div><p className="text-sm text-slate-600">À payer</p><p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.pending.toFixed(3)} TND</p></div></div></Card>
         </div>
 
         <Card>
-          {loading ? (<div className="p-8 text-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600 mx-auto"></div></div>
-          ) : filteredDocs.length === 0 ? (<div className="p-8 text-center"><Receipt className="w-12 h-12 text-gray-300 mx-auto mb-4" /><p className="text-gray-500">Aucune facture fournisseur</p><Button onClick={openCreate} className="mt-4 bg-violet-600 hover:bg-violet-700"><Plus className="w-4 h-4 mr-2" /> Créer</Button></div>
-          ) : (
-            <Table>
-              <TableHeader><TableRow><TableHead>N° Interne</TableHead><TableHead>N° Fournisseur</TableHead><TableHead>Fournisseur</TableHead><TableHead>Date</TableHead><TableHead>Échéance</TableHead><TableHead>Montant</TableHead><TableHead>Reste</TableHead><TableHead>Statut</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {filteredDocs.map((doc) => {
-                  const statusConfig = getStatusBadge(doc.status);
-                  return (
-                    <TableRow key={doc.id}>
-                      <TableCell><div className="flex items-center gap-3"><div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center"><Receipt className="w-5 h-5 text-red-600" /></div><span className="font-medium">{doc.number}</span></div></TableCell>
-                      <TableCell>{doc.supplier_number || '-'}</TableCell>
-                      <TableCell>{doc.supplier_name}</TableCell>
-                      <TableCell>{doc.date ? new Date(doc.date).toLocaleDateString('fr-FR') : '-'}</TableCell>
-                      <TableCell>{doc.due_date ? new Date(doc.due_date).toLocaleDateString('fr-FR') : '-'}</TableCell>
-                      <TableCell className="font-semibold">{(doc.total || 0).toFixed(3)} TND</TableCell>
-                      <TableCell className="font-semibold text-red-600">{(doc.balance_due || 0).toFixed(3)} TND</TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-0.5">
+          {loading ? (<div className="p-8 text-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div></div>
+          ) : filteredDocs.length === 0 ? (<div className="p-8 text-center"><Receipt className="w-12 h-12 text-slate-300 mx-auto mb-4" /><p className="text-slate-500">Aucune facture fournisseur</p><div className="mt-4 flex justify-center gap-2"><Button variant="outline" onClick={() => navigate('/invoice-scanner')}><Upload className="w-4 h-4 mr-2" /> Importer</Button><Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" /> Créer</Button></div></div>
+          ) : selectedPreviewDoc ? (
+            <div className="grid gap-4 p-4 lg:grid-cols-[320px_minmax(0,1fr)_340px]">
+              <Card className="overflow-hidden border-slate-200">
+                <div className="border-b border-slate-200 px-4 py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Rubrique factures</p>
+                      <p className="text-xs text-slate-500">Cliquez sur une facture pour l’ouvrir</p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => navigate('/invoice-scanner')}>
+                      <Upload className="w-3.5 h-3.5 mr-1" /> Import
+                    </Button>
+                  </div>
+                </div>
+                <div className="max-h-[calc(100vh-18rem)] space-y-2 overflow-y-auto p-3">
+                  {filteredDocs.map((doc) => {
+                    const statusConfig = getStatusBadge(doc.status);
+                    const isActive = selectedPreviewDoc?.id === doc.id;
+                    return (
+                      <button
+                        key={doc.id}
+                        type="button"
+                        onClick={() => setSelectedPreviewId(doc.id)}
+                        className={`w-full rounded-2xl border p-4 text-left transition-all ${
+                          isActive
+                            ? 'border-violet-300 bg-violet-50 shadow-sm'
+                            : 'border-slate-200 bg-white hover:border-violet-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${isActive ? 'bg-violet-100' : 'bg-slate-100'}`}>
+                              <Receipt className={`w-5 h-5 ${isActive ? 'text-violet-700' : 'text-slate-700'}`} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate font-semibold text-slate-900">{doc.number}</p>
+                              <p className="truncate text-xs text-slate-500">{doc.supplier_name || 'Fournisseur non renseigné'}</p>
+                            </div>
+                          </div>
                           <Badge className={statusConfig.className}>{statusConfig.label}</Badge>
-                          {doc.payment_method && doc.status === 'paid' && (
-                            <span className="text-xs text-gray-400">
-                              {PAYMENT_METHODS.find(m => m.value === doc.payment_method)?.label || doc.payment_method}
-                            </span>
+                        </div>
+                        <div className="space-y-1 text-xs text-slate-500">
+                          <div className="flex items-center justify-between gap-2">
+                            <span>{doc.supplier_number || 'Sans n° fournisseur'}</span>
+                            <span>{doc.date ? new Date(doc.date).toLocaleDateString('fr-FR') : '-'}</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold text-slate-900">{(doc.total || 0).toFixed(3)} TND</span>
+                            <span className="font-medium text-rose-600">Reste {(doc.balance_due || 0).toFixed(3)} TND</span>
+                          </div>
+                          {doc.attachments?.length > 0 && (
+                            <div className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-1 text-[11px] font-medium text-violet-700">
+                              <FileText className="h-3 w-3" /> Importée avec document
+                            </div>
                           )}
                         </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild><Button variant="ghost" size="sm"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEdit(doc)}><Edit className="w-4 h-4 mr-2" /> Modifier</DropdownMenuItem>
-                            {doc.status !== 'paid' && (
-                              <DropdownMenuItem onClick={() => { setPaymentModal({ open: true, doc }); setPaymentMethod('transfer'); setPaymentReference(''); }}>
-                                <CreditCard className="w-4 h-4 mr-2 text-green-600" /> Marquer payée
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator /><DropdownMenuItem className="text-red-600" onClick={() => handleDelete(doc.id)}><Trash2 className="w-4 h-4 mr-2" /> Supprimer</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                      </button>
+                    );
+                  })}
+                </div>
+              </Card>
+
+              <Card className="overflow-hidden border-slate-200">
+                <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">Document</p>
+                    <p className="text-xs text-slate-500">
+                      {selectedPreviewDoc.number} {selectedPreviewDoc.supplier_number ? `· ${selectedPreviewDoc.supplier_number}` : ''}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedPreviewId(null)}>
+                      Fermer
+                    </Button>
+                    {previewUrl && (
+                      <Button variant="ghost" size="sm" onClick={() => window.open(previewUrl, '_blank', 'noopener,noreferrer')}>
+                        <ExternalLink className="w-4 h-4 mr-1" /> Ouvrir
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <div className="bg-slate-50/60 p-4">
+                  {previewUrl ? (
+                    previewIsPdf ? (
+                      <SupplierInvoicePdfPreview
+                        fileUrl={previewUrl}
+                        documentLabel={selectedPreviewDoc.number}
+                      />
+                    ) : (
+                      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                        <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+                          <p className="text-sm font-semibold text-slate-900">Aperçu document</p>
+                          <p className="text-xs text-slate-500">Image source importée</p>
+                        </div>
+                        <div className="flex h-[calc(100vh-19rem)] min-h-[620px] items-center justify-center p-4">
+                          <img src={previewUrl} alt={selectedPreviewDoc.number} className="max-h-full max-w-full rounded-xl object-contain" />
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    <div className="flex h-[calc(100vh-19rem)] min-h-[620px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
+                      <Eye className="mb-4 h-10 w-10 text-slate-300" />
+                      <p className="font-semibold text-slate-900">Aucun document importé disponible</p>
+                      <p className="mt-2 max-w-md text-sm text-slate-500">
+                        Cette facture semble avoir été créée manuellement. Les factures ajoutées via l’import afficheront ici leur PDF ou leur image source.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+
+              <Card className="overflow-hidden border-slate-200">
+                <div className="border-b border-slate-200 px-5 py-3">
+                  <p className="text-sm font-semibold text-slate-900">Actions & détails</p>
+                  <p className="text-xs text-slate-500">Expérience de validation orientée document</p>
+                </div>
+                <div className="max-h-[calc(100vh-18rem)] space-y-5 overflow-y-auto p-5">
+                  <div className="grid gap-2">
+                    <Button onClick={() => openEdit(selectedPreviewDoc)}>
+                      <Edit className="w-4 h-4 mr-2" /> Modifier la facture
+                    </Button>
+                    {selectedPreviewDoc.status !== 'paid' ? (
+                      <Button
+                        variant="outline"
+                        onClick={() => { setPaymentModal({ open: true, doc: selectedPreviewDoc }); setPaymentMethod('transfer'); setPaymentReference(''); }}
+                      >
+                        <CreditCard className="w-4 h-4 mr-2 text-green-600" /> Marquer payée
+                      </Button>
+                    ) : (
+                      <Button variant="outline" disabled>
+                        <CreditCard className="w-4 h-4 mr-2" /> Déjà payée
+                      </Button>
+                    )}
+                    {previewUrl && (
+                      <Button variant="outline" onClick={() => window.open(previewUrl, '_blank', 'noopener,noreferrer')}>
+                        <Eye className="w-4 h-4 mr-2" /> Voir le document
+                      </Button>
+                    )}
+                    <Button variant="outline" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(selectedPreviewDoc.id)}>
+                      <Trash2 className="w-4 h-4 mr-2" /> Supprimer
+                    </Button>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Synthèse</p>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="text-slate-500">Fournisseur</span>
+                        <span className="text-right font-medium text-slate-900">{selectedPreviewDoc.supplier_name || '-'}</span>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="text-slate-500">N° interne</span>
+                        <span className="text-right font-medium text-slate-900">{selectedPreviewDoc.number || '-'}</span>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="text-slate-500">N° fournisseur</span>
+                        <span className="text-right font-medium text-slate-900">{selectedPreviewDoc.supplier_number || '-'}</span>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="text-slate-500">Date facture</span>
+                        <span className="text-right font-medium text-slate-900">{selectedPreviewDoc.date ? new Date(selectedPreviewDoc.date).toLocaleDateString('fr-FR') : '-'}</span>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="text-slate-500">Échéance</span>
+                        <span className="text-right font-medium text-slate-900">{selectedPreviewDoc.due_date ? new Date(selectedPreviewDoc.due_date).toLocaleDateString('fr-FR') : '-'}</span>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="text-slate-500">Statut</span>
+                        <Badge className={getStatusBadge(selectedPreviewDoc.status).className}>{getStatusBadge(selectedPreviewDoc.status).label}</Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 p-4">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Montants</p>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500">Total HT</span>
+                        <span className="font-medium text-slate-900">{(selectedPreviewDoc.subtotal || 0).toFixed(3)} TND</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500">TVA</span>
+                        <span className="font-medium text-slate-900">{(selectedPreviewDoc.total_tax || 0).toFixed(3)} TND</span>
+                      </div>
+                      {!!selectedPreviewDoc.fodec && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500">FODEC</span>
+                          <span className="font-medium text-slate-900">{(selectedPreviewDoc.fodec || 0).toFixed(3)} TND</span>
+                        </div>
+                      )}
+                      {!!selectedPreviewDoc.timbre && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500">Timbre</span>
+                          <span className="font-medium text-slate-900">{(selectedPreviewDoc.timbre || 0).toFixed(3)} TND</span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between border-t border-slate-200 pt-3">
+                        <span className="font-semibold text-slate-700">Net à payer</span>
+                        <span className="text-lg font-bold text-slate-900">{(selectedPreviewDoc.total || 0).toFixed(3)} TND</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500">Reste dû</span>
+                        <span className="font-semibold text-rose-600">{(selectedPreviewDoc.balance_due || 0).toFixed(3)} TND</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 p-4">
+                    <div className="mb-3 flex items-center gap-2">
+                      <CalendarDays className="h-4 w-4 text-violet-600" />
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Lignes de facture</p>
+                    </div>
+                    <div className="space-y-2">
+                      {(selectedPreviewDoc.items || []).length ? (
+                        selectedPreviewDoc.items.map((item, index) => (
+                          <div key={`${selectedPreviewDoc.id}-item-${index}`} className="rounded-xl bg-slate-50 p-3">
+                            <p className="text-sm font-medium text-slate-900">{item.description || `Ligne ${index + 1}`}</p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {Number(item.quantity || 0).toFixed(3)} × {Number(item.unit_price || 0).toFixed(3)} TND
+                              {item.tax_rate !== undefined ? ` · TVA ${item.tax_rate}%` : ''}
+                            </p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-slate-400">Aucune ligne disponible.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {selectedPreviewDoc.notes && (
+                    <div className="rounded-2xl border border-slate-200 p-4">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Commentaires</p>
+                      <p className="text-sm text-slate-600">{selectedPreviewDoc.notes}</p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </div>
+          ) : (
+            <div className="p-4">
+              <Card className="overflow-hidden border-slate-200">
+                <div className="border-b border-slate-200 px-4 py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Liste des factures</p>
+                      <p className="text-xs text-slate-500">Cliquez sur une facture pour ouvrir le visualiseur</p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => navigate('/invoice-scanner')}>
+                      <Upload className="w-3.5 h-3.5 mr-1" /> Import
+                    </Button>
+                  </div>
+                </div>
+                <div className="max-h-[calc(100vh-18rem)] space-y-2 overflow-y-auto p-3">
+                  {filteredDocs.map((doc) => {
+                    const statusConfig = getStatusBadge(doc.status);
+                    return (
+                      <button
+                        key={doc.id}
+                        type="button"
+                        onClick={() => setSelectedPreviewId(doc.id)}
+                        className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left transition-all hover:border-violet-200 hover:bg-slate-50"
+                      >
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100">
+                              <Receipt className="w-5 h-5 text-slate-700" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate font-semibold text-slate-900">{doc.number}</p>
+                              <p className="truncate text-xs text-slate-500">{doc.supplier_name || 'Fournisseur non renseigné'}</p>
+                            </div>
+                          </div>
+                          <Badge className={statusConfig.className}>{statusConfig.label}</Badge>
+                        </div>
+                        <div className="space-y-1 text-xs text-slate-500">
+                          <div className="flex items-center justify-between gap-2">
+                            <span>{doc.supplier_number || 'Sans n° fournisseur'}</span>
+                            <span>{doc.date ? new Date(doc.date).toLocaleDateString('fr-FR') : '-'}</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold text-slate-900">{(doc.total || 0).toFixed(3)} TND</span>
+                            <span className="font-medium text-rose-600">Reste {(doc.balance_due || 0).toFixed(3)} TND</span>
+                          </div>
+                          {doc.attachments?.length > 0 && (
+                            <div className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-1 text-[11px] font-medium text-violet-700">
+                              <FileText className="h-3 w-3" /> Importée avec document
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </Card>
+            </div>
           )}
         </Card>
       </div>

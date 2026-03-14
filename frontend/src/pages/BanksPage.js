@@ -252,12 +252,12 @@ const BanksPage = () => {
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Banques</h1>
-            <p className="text-gray-500 mt-1">Gérez vos comptes bancaires</p>
+            <h1 className="page-header-title">Banques</h1>
+            <p className="page-header-subtitle">Gérez vos comptes bancaires</p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) { setEditingAccount(null); resetForm(); } setIsDialogOpen(open); }}>
             <DialogTrigger asChild>
-              <Button className="bg-violet-600 hover:bg-violet-700 text-white flex items-center gap-2" onClick={openNewDialog}>
+              <Button className="flex items-center gap-2" onClick={openNewDialog}>
                 <Plus className="w-4 h-4" />
                 Nouveau compte
               </Button>
@@ -265,7 +265,7 @@ const BanksPage = () => {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>{editingAccount ? 'Modifier le compte' : 'Nouveau compte'}</DialogTitle>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="mt-1 text-sm text-slate-500">
                   Renseignez la banque et le RIB pour identifier le compte.
                 </p>
               </DialogHeader>
@@ -360,7 +360,7 @@ const BanksPage = () => {
                     id="show_in_footer"
                     checked={formData.show_in_footer}
                     onChange={(e) => setFormData({ ...formData, show_in_footer: e.target.checked })}
-                    className="rounded border-gray-300"
+                    className="rounded border-slate-300"
                   />
                   <Label htmlFor="show_in_footer">Afficher en pied des factures</Label>
                 </div>
@@ -370,13 +370,13 @@ const BanksPage = () => {
                     id="is_default"
                     checked={formData.is_default}
                     onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
-                    className="rounded border-gray-300"
+                    className="rounded border-slate-300"
                   />
                   <Label htmlFor="is_default">Compte par défaut</Label>
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Annuler</Button>
-                  <Button type="submit" className="bg-violet-600 hover:bg-violet-700">Enregistrer</Button>
+                  <Button type="submit">Enregistrer</Button>
                 </div>
               </form>
             </DialogContent>
@@ -385,7 +385,7 @@ const BanksPage = () => {
 
         <Card>
           {loading ? (
-            <div className="p-8 text-center text-gray-500">Chargement...</div>
+            <div className="p-8 text-center text-slate-500">Chargement...</div>
           ) : (
             <Table>
               <TableHeader>
@@ -399,7 +399,7 @@ const BanksPage = () => {
               <TableBody>
                 {accounts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={4} className="py-8 text-center text-slate-500">
                       Aucun compte bancaire. Cliquez sur « Nouveau compte » pour en ajouter un.
                     </TableCell>
                   </TableRow>
@@ -408,17 +408,17 @@ const BanksPage = () => {
                     <TableRow key={acc.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Building2 className="w-4 h-4 text-blue-500" />
-                          <span className="font-medium">{acc.name}</span>
+                          <Building2 className="w-4 h-4 text-violet-600" />
+                          <span className="font-medium text-slate-900">{acc.name}</span>
                           {acc.is_default && (
-                            <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded">Défaut</span>
+                            <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs text-violet-700">Défaut</span>
                           )}
                           {acc.show_in_footer && (
-                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Pied de page</span>
+                            <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Pied de page</span>
                           )}
                         </div>
                         {(acc.description || acc.bank_name || acc.rib) && (
-                          <p className="text-xs text-gray-500 mt-0.5">
+                          <p className="mt-0.5 text-xs text-slate-500">
                             {acc.bank_name && acc.rib ? `${acc.bank_name} - RIB: ${acc.rib}` : (acc.description || acc.bank_name || acc.rib)}
                           </p>
                         )}
@@ -432,7 +432,7 @@ const BanksPage = () => {
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(acc)}>
                             <Pencil className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => setAccountToDelete(acc)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                          <Button variant="ghost" size="icon" onClick={() => setAccountToDelete(acc)} className="text-red-600 hover:bg-red-50 hover:text-red-700">
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>

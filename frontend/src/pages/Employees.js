@@ -348,20 +348,20 @@ const Employees = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Employés</h1>
-            <p className="text-gray-500 mt-1">{filteredEmployees.length} employé{filteredEmployees.length > 1 ? 's' : ''} au total</p>
+            <h1 className="page-header-title">Employés</h1>
+            <p className="page-header-subtitle">{filteredEmployees.length} employé{filteredEmployees.length > 1 ? 's' : ''} au total</p>
           </div>
-          <Button className="bg-violet-600 hover:bg-violet-700 text-white" onClick={openCreateModal}>
+          <Button onClick={openCreateModal}>
             <Plus className="w-4 h-4 mr-2" />
             Nouvel employé
           </Button>
         </div>
 
         {/* Filters */}
-        <Card className="p-4">
+        <Card className="stat-surface p-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <Input
                 placeholder="Rechercher par nom, matricule ou département..."
                 value={searchTerm}
@@ -402,9 +402,9 @@ const Employees = () => {
             </div>
           ) : filteredEmployees.length === 0 ? (
             <div className="p-12 text-center">
-              <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 mb-2">Aucun employé trouvé</p>
-              <Button onClick={openCreateModal} className="mt-4 bg-violet-600 hover:bg-violet-700">
+              <Users className="mx-auto mb-4 h-12 w-12 text-slate-300" />
+              <p className="mb-2 text-slate-500">Aucun employé trouvé</p>
+              <Button onClick={openCreateModal} className="mt-4">
                 <Plus className="w-4 h-4 mr-2" />
                 Ajouter votre premier employé
               </Button>
@@ -413,39 +413,39 @@ const Employees = () => {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Matricule</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Nom complet</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Poste</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Département</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Type contrat</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Salaire base</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Statut</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase text-right">Actions</TableHead>
+                  <TableRow className="bg-slate-50">
+                    <TableHead className="text-xs font-semibold uppercase text-slate-500">Matricule</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase text-slate-500">Nom complet</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase text-slate-500">Poste</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase text-slate-500">Département</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase text-slate-500">Type contrat</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase text-slate-500">Salaire base</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase text-slate-500">Statut</TableHead>
+                    <TableHead className="text-right text-xs font-semibold uppercase text-slate-500">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredEmployees.map((emp) => {
                     const statusCfg = STATUS_CONFIG[emp.status] || STATUS_CONFIG.actif;
                     return (
-                      <TableRow key={emp.id} className="hover:bg-gray-50">
-                        <TableCell className="text-sm text-gray-600 font-mono">{emp.matricule || '-'}</TableCell>
+                      <TableRow key={emp.id} className="hover:bg-slate-50/80">
+                        <TableCell className="font-mono text-sm text-slate-600">{emp.matricule || '-'}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 font-semibold text-sm">
                               {emp.first_name?.charAt(0)}{emp.last_name?.charAt(0)}
                             </div>
-                            <span className="font-medium text-gray-900">{emp.first_name} {emp.last_name}</span>
+                            <span className="font-medium text-slate-900">{emp.first_name} {emp.last_name}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm text-gray-600">{emp.position || '-'}</TableCell>
-                        <TableCell className="text-sm text-gray-600">{emp.department || '-'}</TableCell>
-                        <TableCell className="text-sm text-gray-600">{emp.contract_type || '-'}</TableCell>
-                        <TableCell className="text-sm font-medium text-gray-900">
+                        <TableCell className="text-sm text-slate-600">{emp.position || '-'}</TableCell>
+                        <TableCell className="text-sm text-slate-600">{emp.department || '-'}</TableCell>
+                        <TableCell className="text-sm text-slate-600">{emp.contract_type || '-'}</TableCell>
+                        <TableCell className="text-sm font-medium text-slate-900">
                           {emp.base_salary != null
                             ? parseFloat(emp.base_salary).toLocaleString('fr-FR', { minimumFractionDigits: 3 })
                             : '-'}{' '}
-                          <span className="text-gray-500 text-xs">TND</span>
+                          <span className="text-xs text-slate-500">TND</span>
                         </TableCell>
                         <TableCell>
                           <Badge className={statusCfg.className}>{statusCfg.label}</Badge>
@@ -486,7 +486,7 @@ const Employees = () => {
 
       {/* Create / Edit Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingEmployee ? 'Modifier l\'employé' : 'Nouvel employé'}</DialogTitle>
           </DialogHeader>
@@ -494,7 +494,7 @@ const Employees = () => {
           <div className="space-y-6 py-2">
             {/* Informations personnelles */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Informations personnelles</h3>
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-700">Informations personnelles</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label>Prénom *</Label>
@@ -554,7 +554,7 @@ const Employees = () => {
 
             {/* Informations professionnelles */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Informations professionnelles</h3>
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-700">Informations professionnelles</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label>Département</Label>
@@ -583,7 +583,7 @@ const Employees = () => {
                 </div>
                 <div>
                   <Label>Salaire de base brut calculé (TND)</Label>
-                  <Input type="number" step="0.001" value={form.base_salary} readOnly className="mt-1 bg-gray-50" />
+                  <Input type="number" step="0.001" value={form.base_salary} readOnly className="mt-1 bg-slate-50" />
                 </div>
                 <div>
                   <Label>Date d'embauche</Label>
@@ -607,7 +607,7 @@ const Employees = () => {
 
             {/* Informations bancaires */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Informations bancaires & CNSS</h3>
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-700">Informations bancaires & CNSS</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label>Banque</Label>
@@ -640,14 +640,14 @@ const Employees = () => {
             {/* Primes mensuelles */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Primes mensuelles</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Primes mensuelles</h3>
                 <Button type="button" variant="outline" size="sm" onClick={addPrime}>
                   <Plus className="w-3 h-3 mr-1" /> Ajouter une prime
                 </Button>
               </div>
               {(form.mandatory_primes || []).length > 0 && (
                 <div className="mb-3 space-y-2">
-                  <div className="text-xs font-medium text-gray-500 uppercase">Primes minimales obligatoires injectées</div>
+                  <div className="text-xs font-medium uppercase text-slate-500">Primes minimales obligatoires injectées</div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {form.mandatory_primes.map((prime, index) => (
                       <div key={`${prime.code}-${index}`} className="flex items-center justify-between rounded-lg border bg-violet-50 px-3 py-2 text-sm">
@@ -659,11 +659,11 @@ const Employees = () => {
                 </div>
               )}
               {form.primes.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-4 bg-gray-50 rounded-lg">Aucune prime définie</p>
+                <p className="rounded-lg bg-slate-50 py-4 text-center text-sm text-slate-400">Aucune prime définie</p>
               ) : (
                 <div className="space-y-2">
                   {form.primes.map((prime, index) => (
-                    <div key={index} className="flex items-end gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div key={index} className="flex items-end gap-3 rounded-lg bg-slate-50 p-3">
                       <div className="flex-1">
                         <Label className="text-xs">Code</Label>
                         <Input
@@ -703,45 +703,45 @@ const Employees = () => {
 
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Simulation de paie</h3>
-                {previewLoading && <span className="text-xs text-gray-500">Calcul en cours...</span>}
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Simulation de paie</h3>
+                {previewLoading && <span className="text-xs text-slate-500">Calcul en cours...</span>}
               </div>
               {form.salary_breakdown_snapshot ? (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div className="rounded-lg border bg-gray-50 p-3">
-                    <div className="text-xs text-gray-500">Brut mensuel</div>
-                    <div className="mt-1 font-semibold text-gray-900">
+                  <div className="rounded-lg border bg-slate-50 p-3">
+                    <div className="text-xs text-slate-500">Brut mensuel</div>
+                    <div className="mt-1 font-semibold text-slate-900">
                       {Number(form.salary_breakdown_snapshot.total_brut || 0).toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} TND
                     </div>
                   </div>
-                  <div className="rounded-lg border bg-gray-50 p-3">
-                    <div className="text-xs text-gray-500">Retenues</div>
-                    <div className="mt-1 font-semibold text-gray-900">
+                  <div className="rounded-lg border bg-slate-50 p-3">
+                    <div className="text-xs text-slate-500">Retenues</div>
+                    <div className="mt-1 font-semibold text-slate-900">
                       {Number(form.salary_breakdown_snapshot.total_deductions || 0).toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} TND
                     </div>
                   </div>
-                  <div className="rounded-lg border bg-gray-50 p-3">
-                    <div className="text-xs text-gray-500">Net à payer</div>
+                  <div className="rounded-lg border bg-slate-50 p-3">
+                    <div className="text-xs text-slate-500">Net à payer</div>
                     <div className="mt-1 font-semibold text-violet-700">
                       {Number(form.salary_breakdown_snapshot.net_a_payer || 0).toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} TND
                     </div>
                   </div>
-                  <div className="rounded-lg border bg-gray-50 p-3">
-                    <div className="text-xs text-gray-500">Charges patronales</div>
-                    <div className="mt-1 font-semibold text-gray-900">
+                  <div className="rounded-lg border bg-slate-50 p-3">
+                    <div className="text-xs text-slate-500">Charges patronales</div>
+                    <div className="mt-1 font-semibold text-slate-900">
                       {Number(form.salary_breakdown_snapshot.total_employer_charges || 0).toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} TND
                     </div>
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-gray-400 text-center py-4 bg-gray-50 rounded-lg">Saisis le net cible pour lancer la simulation automatique.</p>
+                <p className="rounded-lg bg-slate-50 py-4 text-center text-sm text-slate-400">Saisis le net cible pour lancer la simulation automatique.</p>
               )}
             </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)}>Annuler</Button>
-            <Button className="bg-violet-600 hover:bg-violet-700 text-white" onClick={handleSubmit} disabled={saving}>
+            <Button onClick={handleSubmit} disabled={saving}>
               {saving ? 'Enregistrement...' : editingEmployee ? 'Modifier' : 'Créer'}
             </Button>
           </DialogFooter>

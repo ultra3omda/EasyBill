@@ -167,12 +167,12 @@ const CashAccountsPage = () => {
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Comptes caisse</h1>
-            <p className="text-gray-500 mt-1">Gérez vos caisses (espèces, tiroir-caisse)</p>
+            <h1 className="page-header-title">Comptes caisse</h1>
+            <p className="page-header-subtitle">Gérez vos caisses (espèces, tiroir-caisse)</p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) { setEditingAccount(null); resetForm(); } setIsDialogOpen(open); }}>
             <DialogTrigger asChild>
-              <Button className="bg-violet-600 hover:bg-violet-700 text-white flex items-center gap-2" onClick={() => { setEditingAccount(null); resetForm(); setIsDialogOpen(true); }}>
+              <Button className="flex items-center gap-2" onClick={() => { setEditingAccount(null); resetForm(); setIsDialogOpen(true); }}>
                 <Plus className="w-4 h-4" />
                 Nouvelle caisse
               </Button>
@@ -180,7 +180,7 @@ const CashAccountsPage = () => {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>{editingAccount ? 'Modifier la caisse' : 'Nouvelle caisse'}</DialogTitle>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="mt-1 text-sm text-slate-500">
                   Comptes espèces pour encaissements et décaissements.
                 </p>
               </DialogHeader>
@@ -241,13 +241,13 @@ const CashAccountsPage = () => {
                     id="is_default_cash"
                     checked={formData.is_default}
                     onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
-                    className="rounded border-gray-300"
+                    className="rounded border-slate-300"
                   />
                   <Label htmlFor="is_default_cash">Compte caisse par défaut</Label>
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Annuler</Button>
-                  <Button type="submit" className="bg-violet-600 hover:bg-violet-700">Enregistrer</Button>
+                  <Button type="submit">Enregistrer</Button>
                 </div>
               </form>
             </DialogContent>
@@ -256,7 +256,7 @@ const CashAccountsPage = () => {
 
         <Card>
           {loading ? (
-            <div className="p-8 text-center text-gray-500">Chargement...</div>
+            <div className="p-8 text-center text-slate-500">Chargement...</div>
           ) : (
             <Table>
               <TableHeader>
@@ -270,7 +270,7 @@ const CashAccountsPage = () => {
               <TableBody>
                 {accounts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={4} className="py-8 text-center text-slate-500">
                       Aucune caisse. La caisse principale est créée automatiquement à la création de l&apos;entreprise.
                     </TableCell>
                   </TableRow>
@@ -279,14 +279,14 @@ const CashAccountsPage = () => {
                     <TableRow key={acc.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Wallet className="w-4 h-4 text-amber-500" />
-                          <span className="font-medium">{acc.name}</span>
+                          <Wallet className="w-4 h-4 text-amber-600" />
+                          <span className="font-medium text-slate-900">{acc.name}</span>
                           {acc.is_default && (
-                            <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded">Défaut</span>
+                            <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs text-violet-700">Défaut</span>
                           )}
                         </div>
                         {acc.description && (
-                          <p className="text-xs text-gray-500 mt-0.5">{acc.description}</p>
+                          <p className="mt-0.5 text-xs text-slate-500">{acc.description}</p>
                         )}
                       </TableCell>
                       <TableCell>{acc.currency}</TableCell>

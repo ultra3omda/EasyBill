@@ -2,14 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
 body {
     margin: 0;
-    font-family:
-        -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-        "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-        sans-serif;
+    font-family: "Manrope", "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background:
+        radial-gradient(circle at top left, rgba(124, 58, 237, 0.1), transparent 24%),
+        radial-gradient(circle at top right, rgba(245, 158, 11, 0.08), transparent 22%),
+        linear-gradient(180deg, #f7f7fb 0%, #f1f3f8 100%);
 }
 
 code {
@@ -19,39 +22,39 @@ code {
 
 @layer base {
     :root {
-        --background: 0 0% 100%;
-        --foreground: 0 0% 3.9%;
+        --background: 240 25% 97%;
+        --foreground: 240 18% 14%;
         --card: 0 0% 100%;
-        --card-foreground: 0 0% 3.9%;
+        --card-foreground: 240 18% 14%;
         --popover: 0 0% 100%;
-        --popover-foreground: 0 0% 3.9%;
-        --primary: 263 70% 50%;
-        --primary-foreground: 0 0% 98%;
-        --secondary: 45 93% 47%;
-        --secondary-foreground: 0 0% 9%;
-        --muted: 0 0% 96.1%;
-        --muted-foreground: 0 0% 45.1%;
-        --accent: 263 70% 95%;
-        --accent-foreground: 263 70% 30%;
+        --popover-foreground: 240 18% 14%;
+        --primary: 258 85% 59%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 43 96% 56%;
+        --secondary-foreground: 240 18% 14%;
+        --muted: 240 17% 94%;
+        --muted-foreground: 240 9% 42%;
+        --accent: 258 85% 95%;
+        --accent-foreground: 258 70% 34%;
         --destructive: 0 84.2% 60.2%;
         --destructive-foreground: 0 0% 98%;
-        --border: 0 0% 89.8%;
-        --input: 0 0% 89.8%;
-        --ring: 263 70% 50%;
-        --chart-1: 263 70% 50%;
-        --chart-2: 45 93% 47%;
-        --chart-3: 263 50% 70%;
-        --chart-4: 45 70% 60%;
-        --chart-5: 263 40% 80%;
-        --radius: 0.5rem;
+        --border: 240 16% 88%;
+        --input: 240 16% 88%;
+        --ring: 258 85% 59%;
+        --chart-1: 258 85% 59%;
+        --chart-2: 43 96% 56%;
+        --chart-3: 231 83% 61%;
+        --chart-4: 279 70% 62%;
+        --chart-5: 27 87% 63%;
+        --radius: 1rem;
         
         /* EasyBill Custom Colors */
-        --easybill-violet: 263 70% 50%;
-        --easybill-violet-light: 263 70% 95%;
-        --easybill-violet-dark: 263 70% 35%;
-        --easybill-gold: 45 93% 47%;
-        --easybill-gold-light: 45 93% 90%;
-        --easybill-gold-dark: 45 93% 35%;
+        --easybill-violet: 258 85% 59%;
+        --easybill-violet-light: 258 100% 96%;
+        --easybill-violet-dark: 258 60% 24%;
+        --easybill-gold: 43 96% 56%;
+        --easybill-gold-light: 48 100% 92%;
+        --easybill-gold-dark: 40 80% 35%;
     }
     .dark {
         --background: 0 0% 3.9%;
@@ -119,6 +122,38 @@ code {
         border-right-color: inherit;
         border-top-color: inherit;
         border-bottom-color: inherit;
+    }
+}
+
+@layer base {
+    html {
+        font-family: "Manrope", "Segoe UI", sans-serif;
+    }
+
+    body {
+        min-height: 100vh;
+    }
+
+    ::selection {
+        background: rgba(124, 58, 237, 0.22);
+    }
+}
+
+@layer components {
+    .app-page {
+        @apply rounded-[28px] border border-white/80 bg-white/85 shadow-[0_20px_60px_rgba(15,23,42,0.06)] backdrop-blur-sm;
+    }
+
+    .page-header-title {
+        @apply text-[28px] font-extrabold tracking-[-0.03em] text-slate-900;
+    }
+
+    .page-header-subtitle {
+        @apply mt-1 text-sm text-slate-500;
+    }
+
+    .stat-surface {
+        @apply rounded-[24px] border border-slate-200/70 bg-gradient-to-br from-white to-slate-50 shadow-[0_14px_30px_rgba(15,23,42,0.05)];
     }
 }
 

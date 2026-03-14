@@ -96,13 +96,13 @@ const StockMovements = () => {
     <AppLayout>
       <div className="space-y-6" data-testid="stock-movements-page">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div><h1 className="text-3xl font-bold text-gray-900">Mouvements de stock</h1><p className="text-gray-500 mt-1">Historique des entrées/sorties</p></div>
-          <Button className="bg-violet-600 hover:bg-violet-700 text-white" onClick={openCreate} data-testid="create-movement-btn"><Plus className="w-4 h-4 mr-2" /> Nouveau mouvement</Button>
+          <div><h1 className="page-header-title">Mouvements de stock</h1><p className="page-header-subtitle">Historique des entrées/sorties</p></div>
+          <Button onClick={openCreate} data-testid="create-movement-btn"><Plus className="w-4 h-4 mr-2" /> Nouveau mouvement</Button>
         </div>
 
         <Card className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><Input placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" /></div>
+            <div className="relative flex-1"><Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" /><Input placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-11" /></div>
             <Select value={filterType} onValueChange={(v) => { setFilterType(v); }}>
               <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -117,15 +117,15 @@ const StockMovements = () => {
         </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-violet-100 rounded-lg"><ArrowDownUp className="w-5 h-5 text-violet-600" /></div><div><p className="text-sm text-gray-600">Total mouvements</p><p className="text-2xl font-bold text-violet-600">{stats.total}</p></div></div></Card>
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-green-100 rounded-lg"><ArrowDown className="w-5 h-5 text-green-600" /></div><div><p className="text-sm text-gray-600">Entrées</p><p className="text-2xl font-bold text-green-600">+{stats.in}</p></div></div></Card>
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-red-100 rounded-lg"><ArrowUp className="w-5 h-5 text-red-600" /></div><div><p className="text-sm text-gray-600">Sorties</p><p className="text-2xl font-bold text-red-600">-{stats.out}</p></div></div></Card>
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-blue-100 rounded-lg"><ArrowLeftRight className="w-5 h-5 text-blue-600" /></div><div><p className="text-sm text-gray-600">Transferts</p><p className="text-2xl font-bold text-blue-600">{stats.transfers}</p></div></div></Card>
+          <Card className="stat-surface p-6"><div className="flex items-center gap-3"><div className="rounded-2xl bg-violet-100 p-3"><ArrowDownUp className="w-5 h-5 text-violet-700" /></div><div><p className="text-sm text-slate-600">Total mouvements</p><p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.total}</p></div></div></Card>
+          <Card className="stat-surface p-6"><div className="flex items-center gap-3"><div className="rounded-2xl bg-green-100 p-3"><ArrowDown className="w-5 h-5 text-green-700" /></div><div><p className="text-sm text-slate-600">Entrées</p><p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">+{stats.in}</p></div></div></Card>
+          <Card className="stat-surface p-6"><div className="flex items-center gap-3"><div className="rounded-2xl bg-rose-100 p-3"><ArrowUp className="w-5 h-5 text-rose-700" /></div><div><p className="text-sm text-slate-600">Sorties</p><p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">-{stats.out}</p></div></div></Card>
+          <Card className="stat-surface p-6"><div className="flex items-center gap-3"><div className="rounded-2xl bg-blue-100 p-3"><ArrowLeftRight className="w-5 h-5 text-blue-700" /></div><div><p className="text-sm text-slate-600">Transferts</p><p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.transfers}</p></div></div></Card>
         </div>
 
         <Card>
-          {loading ? (<div className="p-8 text-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600 mx-auto"></div></div>
-          ) : filteredMovements.length === 0 ? (<div className="p-8 text-center"><ArrowDownUp className="w-12 h-12 text-gray-300 mx-auto mb-4" /><p className="text-gray-500">Aucun mouvement</p><Button onClick={openCreate} className="mt-4 bg-violet-600 hover:bg-violet-700"><Plus className="w-4 h-4 mr-2" /> Créer</Button></div>
+          {loading ? (<div className="p-8 text-center"><div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div></div>
+          ) : filteredMovements.length === 0 ? (<div className="p-8 text-center"><ArrowDownUp className="mx-auto mb-4 h-12 w-12 text-slate-300" /><p className="text-slate-500">Aucun mouvement</p><Button onClick={openCreate} className="mt-4"><Plus className="w-4 h-4 mr-2" /> Créer</Button></div>
           ) : (
             <Table>
               <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead>Produit</TableHead><TableHead>Entrepôt</TableHead><TableHead>Quantité</TableHead><TableHead>Stock avant</TableHead><TableHead>Stock après</TableHead><TableHead>Référence</TableHead></TableRow></TableHeader>
@@ -137,8 +137,8 @@ const StockMovements = () => {
                     <TableRow key={m.id}>
                       <TableCell>{m.created_at ? new Date(m.created_at).toLocaleString('fr-FR') : '-'}</TableCell>
                       <TableCell><Badge className={typeConfig.className}><TypeIcon className="w-3 h-3 mr-1" />{typeConfig.label}</Badge></TableCell>
-                      <TableCell><div className="flex items-center gap-2"><Package className="w-4 h-4 text-gray-400" />{m.product_name}</div></TableCell>
-                      <TableCell><div className="flex items-center gap-1"><Warehouse className="w-4 h-4 text-gray-400" />{m.warehouse_name}{m.type === 'transfer' && m.destination_warehouse_name && <span className="text-gray-400"> → {m.destination_warehouse_name}</span>}</div></TableCell>
+                      <TableCell><div className="flex items-center gap-2"><Package className="w-4 h-4 text-slate-400" />{m.product_name}</div></TableCell>
+                      <TableCell><div className="flex items-center gap-1"><Warehouse className="w-4 h-4 text-slate-400" />{m.warehouse_name}{m.type === 'transfer' && m.destination_warehouse_name && <span className="text-slate-400"> → {m.destination_warehouse_name}</span>}</div></TableCell>
                       <TableCell className={`font-semibold ${m.type === 'in' ? 'text-green-600' : m.type === 'out' ? 'text-red-600' : ''}`}>{m.type === 'in' ? '+' : m.type === 'out' ? '-' : ''}{m.quantity}</TableCell>
                       <TableCell>{m.stock_before}</TableCell>
                       <TableCell className="font-semibold">{m.stock_after}</TableCell>
@@ -196,7 +196,7 @@ const StockMovements = () => {
               <div><Label>Référence</Label><Input value={formData.reference} onChange={(e) => setFormData({...formData, reference: e.target.value})} placeholder="N° facture, BC..." /></div>
             </div>
             <div><Label>Notes</Label><Textarea value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} rows={2} /></div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Annuler</Button><Button type="submit" className="bg-violet-600 hover:bg-violet-700">Enregistrer</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Annuler</Button><Button type="submit">Enregistrer</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

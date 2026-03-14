@@ -131,33 +131,33 @@ const SupplierPayments = () => {
     <AppLayout>
       <div className="space-y-6" data-testid="supplier-payments-page">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div><h1 className="text-3xl font-bold text-gray-900">Paiements fournisseur</h1><p className="text-gray-500 mt-1">{filteredPayments.length} paiements</p></div>
-          <Button className="bg-violet-600 hover:bg-violet-700 text-white" onClick={openCreate} data-testid="create-sp-btn"><Plus className="w-4 h-4 mr-2" /> Enregistrer un paiement</Button>
+          <div><h1 className="page-header-title">Paiements fournisseur</h1><p className="page-header-subtitle">{filteredPayments.length} paiements</p></div>
+          <Button onClick={openCreate} data-testid="create-sp-btn"><Plus className="w-4 h-4 mr-2" /> Enregistrer un paiement</Button>
         </div>
 
-        <Card className="p-4"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><Input placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" /></div></Card>
+        <Card className="p-4"><div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" /><Input placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-11" /></div></Card>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-red-100 rounded-lg"><CreditCard className="w-5 h-5 text-red-600" /></div><div><p className="text-sm text-gray-600">Total payé</p><p className="text-2xl font-bold text-red-600">{stats.total.toFixed(3)} TND</p></div></div></Card>
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-blue-100 rounded-lg"><Building2 className="w-5 h-5 text-blue-600" /></div><div><p className="text-sm text-gray-600">Virements</p><p className="text-2xl font-bold text-blue-600">{stats.transfer.toFixed(3)} TND</p></div></div></Card>
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-orange-100 rounded-lg"><Banknote className="w-5 h-5 text-orange-600" /></div><div><p className="text-sm text-gray-600">Chèques</p><p className="text-2xl font-bold text-orange-600">{stats.check.toFixed(3)} TND</p></div></div></Card>
+          <Card className="stat-surface p-6"><div className="flex items-center gap-3"><div className="rounded-2xl bg-rose-100 p-3"><CreditCard className="w-5 h-5 text-rose-700" /></div><div><p className="text-sm text-slate-600">Total payé</p><p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.total.toFixed(3)} TND</p></div></div></Card>
+          <Card className="stat-surface p-6"><div className="flex items-center gap-3"><div className="rounded-2xl bg-violet-100 p-3"><Building2 className="w-5 h-5 text-violet-700" /></div><div><p className="text-sm text-slate-600">Virements</p><p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.transfer.toFixed(3)} TND</p></div></div></Card>
+          <Card className="stat-surface p-6"><div className="flex items-center gap-3"><div className="rounded-2xl bg-amber-100 p-3"><Banknote className="w-5 h-5 text-amber-700" /></div><div><p className="text-sm text-slate-600">Chèques</p><p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.check.toFixed(3)} TND</p></div></div></Card>
         </div>
 
         <Card>
-          {loading ? (<div className="p-8 text-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600 mx-auto"></div></div>
-          ) : filteredPayments.length === 0 ? (<div className="p-8 text-center"><CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-4" /><p className="text-gray-500">Aucun paiement</p><Button onClick={openCreate} className="mt-4 bg-violet-600 hover:bg-violet-700"><Plus className="w-4 h-4 mr-2" /> Enregistrer</Button></div>
+          {loading ? (<div className="p-8 text-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div></div>
+          ) : filteredPayments.length === 0 ? (<div className="p-8 text-center"><CreditCard className="w-12 h-12 text-slate-300 mx-auto mb-4" /><p className="text-slate-500">Aucun paiement</p><Button onClick={openCreate} className="mt-4"><Plus className="w-4 h-4 mr-2" /> Enregistrer</Button></div>
           ) : (
             <Table>
               <TableHeader><TableRow><TableHead>N° Paiement</TableHead><TableHead>Fournisseur</TableHead><TableHead>Date</TableHead><TableHead>Mode</TableHead><TableHead>Référence</TableHead><TableHead>Montant</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
                 {filteredPayments.map((payment) => (
                   <TableRow key={payment.id}>
-                    <TableCell><div className="flex items-center gap-3"><div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center"><CreditCard className="w-5 h-5 text-red-600" /></div><span className="font-medium">{payment.number}</span></div></TableCell>
+                    <TableCell><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-100"><CreditCard className="w-5 h-5 text-rose-700" /></div><span className="font-semibold text-slate-900">{payment.number}</span></div></TableCell>
                     <TableCell>{payment.supplier_name}</TableCell>
                     <TableCell>{payment.date ? new Date(payment.date).toLocaleDateString('fr-FR') : '-'}</TableCell>
                     <TableCell><Badge className="bg-gray-100 text-gray-800">{getMethodLabel(payment.payment_method)}</Badge></TableCell>
                     <TableCell>{payment.reference || '-'}</TableCell>
-                    <TableCell className="font-semibold text-red-600">-{(payment.amount || 0).toFixed(3)} TND</TableCell>
+                    <TableCell className="font-semibold text-rose-600">-{(payment.amount || 0).toFixed(3)} TND</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="sm"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
@@ -188,14 +188,14 @@ const SupplierPayments = () => {
             {formData.supplier_id && (
               <div>
                 <Label className="mb-2 block">Factures à payer</Label>
-                {pendingInvoices.length === 0 ? (<p className="text-sm text-gray-500 p-4 bg-gray-50 rounded">Ce fournisseur n'a aucune facture impayée.</p>
+                {pendingInvoices.length === 0 ? (<p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Ce fournisseur n'a aucune facture impayée.</p>
                 ) : (
-                  <div className="border rounded-lg divide-y max-h-60 overflow-y-auto">
+                  <div className="max-h-60 overflow-y-auto divide-y rounded-2xl border border-slate-200">
                     {pendingInvoices.map((inv, index) => (
-                      <div key={inv.id} className="p-3 flex items-center gap-4 hover:bg-gray-50">
+                      <div key={inv.id} className="flex items-center gap-4 p-3 hover:bg-slate-50">
                         <Checkbox checked={formData.allocations[index]?.selected} onCheckedChange={() => toggleInvoice(index)} />
-                        <div className="flex-1"><p className="font-medium">{inv.number}</p><p className="text-sm text-gray-500">{new Date(inv.date).toLocaleDateString('fr-FR')}</p></div>
-                        <div className="text-right"><p className="text-sm text-gray-500">Total: {inv.total.toFixed(3)} TND</p><p className="font-medium text-red-600">Reste: {inv.balance_due.toFixed(3)} TND</p></div>
+                        <div className="flex-1"><p className="font-medium text-slate-900">{inv.number}</p><p className="text-sm text-slate-500">{new Date(inv.date).toLocaleDateString('fr-FR')}</p></div>
+                        <div className="text-right"><p className="text-sm text-slate-500">Total: {inv.total.toFixed(3)} TND</p><p className="font-medium text-rose-600">Reste: {inv.balance_due.toFixed(3)} TND</p></div>
                         <div className="w-32"><Input type="number" step="0.01" value={formData.allocations[index]?.amount || 0} onChange={(e) => handleAllocationChange(index, parseFloat(e.target.value) || 0)} disabled={!formData.allocations[index]?.selected} /></div>
                       </div>
                     ))}
@@ -204,14 +204,14 @@ const SupplierPayments = () => {
               </div>
             )}
 
-            <div className="flex justify-between items-center bg-red-50 p-4 rounded-lg">
-              <div><p className="text-sm text-gray-600">Montant total du paiement</p></div>
-              <p className="text-3xl font-bold text-red-600">{formData.amount.toFixed(3)} TND</p>
+            <div className="flex items-center justify-between rounded-2xl bg-violet-50 p-4">
+              <div><p className="text-sm text-slate-600">Montant total du paiement</p></div>
+              <p className="text-3xl font-bold tracking-[-0.03em] text-violet-700">{formData.amount.toFixed(3)} TND</p>
             </div>
 
             <div><Label>Remarques</Label><Textarea value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} rows={2} /></div>
 
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Annuler</Button><Button type="submit" className="bg-violet-600 hover:bg-violet-700">Enregistrer</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Annuler</Button><Button type="submit">Enregistrer</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

@@ -135,21 +135,21 @@ const PurchaseOrders = () => {
     <AppLayout>
       <div className="space-y-6" data-testid="purchase-orders-page">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div><h1 className="text-3xl font-bold text-gray-900">Bons de commande</h1><p className="text-gray-500 mt-1">{filteredDocs.length} commandes</p></div>
-          <Button className="bg-violet-600 hover:bg-violet-700 text-white" onClick={openCreate} data-testid="create-po-btn"><Plus className="w-4 h-4 mr-2" /> Nouveau BC</Button>
+          <div><h1 className="page-header-title">Bons de commande</h1><p className="page-header-subtitle">{filteredDocs.length} commandes</p></div>
+          <Button onClick={openCreate} data-testid="create-po-btn"><Plus className="w-4 h-4 mr-2" /> Nouveau BC</Button>
         </div>
 
-        <Card className="p-4"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><Input placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" /></div></Card>
+        <Card className="p-4"><div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" /><Input placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-11" /></div></Card>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-violet-100 rounded-lg"><ShoppingCart className="w-5 h-5 text-violet-600" /></div><div><p className="text-sm text-gray-600">Total commandé</p><p className="text-2xl font-bold text-violet-600">{stats.total.toFixed(3)} TND</p></div></div></Card>
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-orange-100 rounded-lg"><Send className="w-5 h-5 text-orange-600" /></div><div><p className="text-sm text-gray-600">En attente</p><p className="text-2xl font-bold text-orange-600">{stats.pending}</p></div></div></Card>
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-green-100 rounded-lg"><Package className="w-5 h-5 text-green-600" /></div><div><p className="text-sm text-gray-600">Reçus</p><p className="text-2xl font-bold text-green-600">{stats.received}</p></div></div></Card>
+          <Card className="stat-surface p-6"><div className="flex items-center gap-3"><div className="rounded-2xl bg-violet-100 p-3"><ShoppingCart className="w-5 h-5 text-violet-700" /></div><div><p className="text-sm text-slate-600">Total commandé</p><p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.total.toFixed(3)} TND</p></div></div></Card>
+          <Card className="stat-surface p-6"><div className="flex items-center gap-3"><div className="rounded-2xl bg-amber-100 p-3"><Send className="w-5 h-5 text-amber-700" /></div><div><p className="text-sm text-slate-600">En attente</p><p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.pending}</p></div></div></Card>
+          <Card className="stat-surface p-6"><div className="flex items-center gap-3"><div className="rounded-2xl bg-green-100 p-3"><Package className="w-5 h-5 text-green-700" /></div><div><p className="text-sm text-slate-600">Reçus</p><p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.received}</p></div></div></Card>
         </div>
 
         <Card>
-          {loading ? (<div className="p-8 text-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600 mx-auto"></div></div>
-          ) : filteredDocs.length === 0 ? (<div className="p-8 text-center"><ShoppingCart className="w-12 h-12 text-gray-300 mx-auto mb-4" /><p className="text-gray-500">Aucun bon de commande</p><Button onClick={openCreate} className="mt-4 bg-violet-600 hover:bg-violet-700"><Plus className="w-4 h-4 mr-2" /> Créer</Button></div>
+          {loading ? (<div className="p-8 text-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div></div>
+          ) : filteredDocs.length === 0 ? (<div className="p-8 text-center"><ShoppingCart className="w-12 h-12 text-slate-300 mx-auto mb-4" /><p className="text-slate-500">Aucun bon de commande</p><Button onClick={openCreate} className="mt-4"><Plus className="w-4 h-4 mr-2" /> Créer</Button></div>
           ) : (
             <Table>
               <TableHeader><TableRow><TableHead>N° BC</TableHead><TableHead>Fournisseur</TableHead><TableHead>Date</TableHead><TableHead>Livraison prévue</TableHead><TableHead>Montant</TableHead><TableHead>Statut</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
@@ -158,11 +158,11 @@ const PurchaseOrders = () => {
                   const statusConfig = getStatusBadge(doc.status);
                   return (
                     <TableRow key={doc.id}>
-                      <TableCell><div className="flex items-center gap-3"><div className="w-10 h-10 bg-violet-100 rounded-lg flex items-center justify-center"><ShoppingCart className="w-5 h-5 text-violet-600" /></div><span className="font-medium">{doc.number}</span></div></TableCell>
+                      <TableCell><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-100"><ShoppingCart className="w-5 h-5 text-violet-700" /></div><span className="font-semibold text-slate-900">{doc.number}</span></div></TableCell>
                       <TableCell>{doc.supplier_name}</TableCell>
                       <TableCell>{doc.date ? new Date(doc.date).toLocaleDateString('fr-FR') : '-'}</TableCell>
                       <TableCell>{doc.expected_date ? new Date(doc.expected_date).toLocaleDateString('fr-FR') : '-'}</TableCell>
-                      <TableCell className="font-semibold">{(doc.total || 0).toFixed(3)} TND</TableCell>
+                      <TableCell className="font-semibold text-slate-900">{(doc.total || 0).toFixed(3)} TND</TableCell>
                       <TableCell><Badge className={statusConfig.className}>{statusConfig.label}</Badge></TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>

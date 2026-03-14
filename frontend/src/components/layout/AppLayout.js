@@ -510,10 +510,10 @@ const AppLayout = ({ children }) => {
         <div key={item.key}>
           <button
             onClick={() => toggleMenu(item.key)}
-            className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm transition-colors ${
+            className={`flex items-center justify-between w-full rounded-2xl px-3 py-2.5 text-sm font-medium transition-all ${
               hasActiveChild
-                ? 'bg-violet-50 text-violet-600'
-                : 'text-gray-600 hover:bg-gray-100'
+                ? 'bg-white text-violet-900 shadow-sm'
+                : 'text-slate-300 hover:bg-white/10 hover:text-white'
             }`}
           >
             <div className="flex items-center gap-3">
@@ -528,7 +528,7 @@ const AppLayout = ({ children }) => {
           </button>
           
           {isExpanded && (
-            <div className="ml-4 mt-1 space-y-1 border-l border-gray-200">
+            <div className="ml-5 mt-2 space-y-1 border-l border-white/10 pl-3">
               {item.items.map((subItem) => {
                 const SubIcon = subItem.icon;
                 const isSubActive = isActiveItem(subItem.path);
@@ -536,10 +536,10 @@ const AppLayout = ({ children }) => {
                   <Link
                     key={subItem.path}
                     to={subItem.path}
-                    className={`flex items-center gap-3 px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                    className={`flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-medium transition-all ${
                       isSubActive
-                        ? 'bg-violet-50 text-violet-600 font-medium'
-                        : 'text-gray-500 hover:bg-gray-100'
+                        ? 'bg-violet-50 text-violet-700'
+                        : 'text-slate-400 hover:bg-white/10 hover:text-white'
                     }`}
                   >
                     <SubIcon className="w-3 h-3" />
@@ -560,10 +560,10 @@ const AppLayout = ({ children }) => {
       <Link
         key={item.path}
         to={item.path}
-        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+        className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all ${
           isActive
-            ? 'bg-violet-50 text-violet-600 font-medium'
-            : 'text-gray-600 hover:bg-gray-100'
+            ? 'bg-white text-violet-800 shadow-sm'
+            : 'text-slate-300 hover:bg-white/10 hover:text-white'
         }`}
       >
         <Icon className="w-4 h-4" />
@@ -581,63 +581,63 @@ const AppLayout = ({ children }) => {
   };
 
   return (
-    <div className="h-screen flex overflow-hidden bg-gray-50">
+    <div className="h-screen flex overflow-hidden bg-[#f5f4fb]">
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
+      <div className={`fixed inset-y-0 left-0 z-50 w-[290px] bg-[#4f2cc8] text-white transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="h-full flex flex-col">
           {/* Logo */}
-          <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
+          <div className="flex h-20 items-center justify-between px-5 border-b border-white/10">
             <Link to="/dashboard" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-violet-600 to-violet-700 rounded-lg flex items-center justify-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/12 ring-1 ring-white/15">
                 <span className="text-white font-bold text-lg">E</span>
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-violet-600 to-amber-500 bg-clip-text text-transparent">
+              <span className="text-xl font-extrabold tracking-[-0.03em] text-white">
                 EasyBill
               </span>
             </Link>
             <button 
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+              className="lg:hidden p-2 rounded-xl hover:bg-white/10"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* Company Section */}
-          <div className="p-3 border-b border-gray-200">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Mes Entreprises</p>
+          <div className="border-b border-white/10 p-4">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-100/70">Mes Entreprises</p>
             
             {/* List of companies */}
-            <div className="space-y-1 max-h-32 overflow-y-auto">
+            <div className="space-y-2 max-h-36 overflow-y-auto">
               {companies.map((company) => (
                 <button
                   key={company.id}
                   onClick={() => handleCompanySelect(company.id)}
-                  className={`flex items-center gap-3 w-full p-2 rounded-lg transition-colors ${
+                  className={`flex items-center gap-3 w-full rounded-2xl p-3 transition-all ${
                     currentCompany?.id === company.id
-                      ? 'bg-violet-50 border-l-4 border-violet-600'
-                      : 'hover:bg-gray-100'
+                      ? 'bg-white text-violet-900 shadow-sm'
+                      : 'bg-white/5 text-white hover:bg-white/10'
                   }`}
                   data-testid={`company-${company.id}`}
                 >
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                    currentCompany?.id === company.id ? 'bg-amber-100' : 'bg-gray-100'
+                  <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${
+                    currentCompany?.id === company.id ? 'bg-amber-100' : 'bg-white/10'
                   }`}>
                     <Building2 className={`w-4 h-4 ${
-                      currentCompany?.id === company.id ? 'text-amber-600' : 'text-gray-500'
+                      currentCompany?.id === company.id ? 'text-amber-700' : 'text-white/75'
                     }`} />
                   </div>
                   <div className="flex-1 min-w-0 text-left">
                     <p className={`text-sm font-medium truncate ${
-                      currentCompany?.id === company.id ? 'text-gray-900' : 'text-gray-700'
+                      currentCompany?.id === company.id ? 'text-slate-900' : 'text-white'
                     }`}>
                       {company.name}
                     </p>
                   </div>
                   {currentCompany?.id === company.id && (
-                    <Check className="w-4 h-4 text-violet-600" />
+                    <Check className="w-4 h-4 text-violet-700" />
                   )}
                 </button>
               ))}
@@ -646,7 +646,7 @@ const AppLayout = ({ children }) => {
             {/* Add new company button */}
             <button 
               onClick={() => setNewCompanyModalOpen(true)}
-              className="flex items-center gap-2 mt-2 w-full p-2 text-sm text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"
+              className="mt-3 flex w-full items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 text-sm font-medium text-white hover:bg-white/10 transition-colors"
               data-testid="add-company-btn"
             >
               <Plus className="w-4 h-4" />
@@ -655,9 +655,9 @@ const AppLayout = ({ children }) => {
           </div>
 
           {/* Menu Items */}
-          <nav className="flex-1 overflow-y-auto py-3">
-            <p className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Menu Principal</p>
-            <div className="space-y-1 px-3">
+          <nav className="flex-1 overflow-y-auto py-4">
+            <p className="mb-3 px-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-100/70">Menu Principal</p>
+            <div className="space-y-1.5 px-3">
               {menuStructure.map((item, index) => {
                 if (item.type === 'single') {
                   const Icon = item.icon;
@@ -666,10 +666,10 @@ const AppLayout = ({ children }) => {
                     <Link
                       key={item.path}
                       to={item.path}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all ${
                         isActive
-                          ? 'bg-violet-50 text-violet-600 border-l-4 border-violet-600 -ml-0.5'
-                          : 'text-gray-700 hover:bg-gray-100'
+                          ? 'bg-white text-violet-800 shadow-sm'
+                          : 'text-slate-200 hover:bg-white/10 hover:text-white'
                       }`}
                     >
                       <Icon className="w-5 h-5" />
@@ -684,10 +684,10 @@ const AppLayout = ({ children }) => {
                     <div key={item.key}>
                       <button
                         onClick={() => toggleMenu(item.key)}
-                        className={`flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                        className={`flex items-center justify-between w-full rounded-2xl px-3 py-3 text-sm font-medium transition-all ${
                           hasActiveChild
-                            ? 'bg-violet-50 text-violet-600'
-                            : 'text-gray-700 hover:bg-gray-100'
+                            ? 'bg-white text-violet-900 shadow-sm'
+                            : 'text-slate-200 hover:bg-white/10 hover:text-white'
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -702,7 +702,7 @@ const AppLayout = ({ children }) => {
                       </button>
                       
                       {isExpanded && (
-                        <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200">
+                        <div className="ml-5 mt-2 space-y-1.5 border-l border-white/10 pl-3">
                           {item.items.map((subItem) => renderMenuItem(subItem, 1))}
                         </div>
                       )}
@@ -714,10 +714,10 @@ const AppLayout = ({ children }) => {
           </nav>
 
           {/* Logout */}
-          <div className="p-4 border-t border-gray-200">
+          <div className="border-t border-white/10 p-4">
             <button
               onClick={handleLogout}
-              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+              className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-rose-200 hover:bg-white/10 hover:text-white transition-colors"
             >
               <LogOut className="w-5 h-5" />
               Déconnexion
@@ -729,21 +729,21 @@ const AppLayout = ({ children }) => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-6">
+        <header className="flex h-20 items-center justify-between border-b border-slate-200/70 bg-white/75 px-5 backdrop-blur-sm lg:px-8">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+              className="lg:hidden p-2 rounded-xl hover:bg-slate-100"
             >
               <Menu className="w-6 h-6" />
             </button>
             
-            <div className="hidden md:flex items-center gap-2 bg-gray-100 rounded-lg px-4 py-2 w-96">
-              <Search className="w-5 h-5 text-gray-400" />
+            <div className="hidden md:flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 w-[28rem]">
+              <Search className="w-5 h-5 text-slate-400" />
               <input
                 type="text"
                 placeholder="Rechercher..."
-                className="bg-transparent border-none outline-none text-sm w-full"
+                className="w-full border-none bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
               />
             </div>
           </div>
@@ -753,12 +753,12 @@ const AppLayout = ({ children }) => {
             <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
               <DropdownMenuTrigger asChild>
                 <button 
-                  className="p-2 hover:bg-gray-100 rounded-lg relative"
+                  className="relative rounded-2xl border border-slate-200 bg-white p-2.5 hover:bg-slate-50"
                   data-testid="notifications-btn"
                 >
-                  <Bell className="w-5 h-5 text-gray-600" />
+                  <Bell className="w-5 h-5 text-slate-600" />
                   {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-medium">
+                  <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-medium text-white">
                       {unreadCount}
                     </span>
                   )}
@@ -800,7 +800,7 @@ const AppLayout = ({ children }) => {
                   )}
                 </div>
                 <div className="p-2 border-t">
-                  <Button variant="ghost" className="w-full text-sm text-violet-600">
+                  <Button variant="ghost" className="w-full text-sm text-primary">
                     Voir toutes les notifications
                   </Button>
                 </div>
@@ -810,7 +810,7 @@ const AppLayout = ({ children }) => {
             {/* Language Selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center space-x-1 p-2 hover:bg-gray-100 rounded-lg">
+                <button className="flex items-center space-x-1 rounded-2xl border border-slate-200 bg-white p-2.5 hover:bg-slate-50">
                   <img 
                     src={language === 'fr' ? 'https://flagcdn.com/w40/fr.png' : 'https://flagcdn.com/w40/gb.png'}
                     alt={language}
@@ -833,19 +833,19 @@ const AppLayout = ({ children }) => {
             {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-lg">
+                <button className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 hover:bg-slate-50">
                   {user?.photo ? (
                     <img
                       src={user.photo.startsWith('http') ? user.photo : `${process.env.REACT_APP_BACKEND_URL || ''}${user.photo}`}
                       alt=""
-                      className="w-8 h-8 rounded-full object-cover border border-gray-200"
+                      className="h-9 w-9 rounded-2xl object-cover border border-slate-200"
                     />
                   ) : (
-                    <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                      {getUserInitials(user?.full_name || user?.name)}
+                    <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-violet-700 text-sm font-semibold text-white">
+                      {getUserInitials(user?.full_name || user?.name || user?.email)}
                     </div>
                   )}
-                  <ChevronDown className="w-4 h-4 text-gray-600" />
+                  <ChevronDown className="w-4 h-4 text-slate-500" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -868,15 +868,17 @@ const AppLayout = ({ children }) => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6">
-          {children}
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+          <div className="app-page min-h-full p-4 lg:p-6">
+            {children}
+          </div>
         </main>
       </div>
 
       {/* Overlay for mobile */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-950/30 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}

@@ -77,11 +77,11 @@ const ExitVouchers = () => {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Bons de Sortie</h1>
-            <p className="text-gray-500 mt-1">Gérez les sorties de stock</p>
+            <h1 className="page-header-title">Bons de Sortie</h1>
+            <p className="page-header-subtitle">Gérez les sorties de stock</p>
           </div>
           <Button>
             <Plus className="w-4 h-4 mr-2" />
@@ -90,38 +90,38 @@ const ExitVouchers = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-6">
-            <p className="text-sm text-gray-500">Total</p>
-            <h3 className="text-2xl font-bold mt-1">{stats.total}</h3>
+          <Card className="stat-surface p-6">
+            <p className="text-sm text-slate-500">Total</p>
+            <h3 className="mt-1 text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.total}</h3>
           </Card>
-          <Card className="p-6">
-            <p className="text-sm text-gray-500">Validés</p>
-            <h3 className="text-2xl font-bold text-green-600 mt-1">{stats.validated}</h3>
+          <Card className="stat-surface p-6">
+            <p className="text-sm text-slate-500">Validés</p>
+            <h3 className="mt-1 text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.validated}</h3>
           </Card>
-          <Card className="p-6">
-            <p className="text-sm text-gray-500">En attente</p>
-            <h3 className="text-2xl font-bold text-orange-600 mt-1">{stats.pending}</h3>
+          <Card className="stat-surface p-6">
+            <p className="text-sm text-slate-500">En attente</p>
+            <h3 className="mt-1 text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.pending}</h3>
           </Card>
         </div>
 
         <Card className="p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Liste des bons de sortie</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Liste des bons de sortie</h2>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
               <Input
                 placeholder="Rechercher..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-64"
+                className="w-64 pl-11"
               />
             </div>
           </div>
 
           {loading ? (
-            <div className="text-center py-8">Chargement...</div>
+            <div className="py-8 text-center text-slate-500">Chargement...</div>
           ) : filteredVouchers.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">Aucun bon de sortie</div>
+            <div className="py-8 text-center text-slate-500">Aucun bon de sortie</div>
           ) : (
             <Table>
               <TableHeader>
@@ -136,7 +136,7 @@ const ExitVouchers = () => {
               <TableBody>
                 {filteredVouchers.map((voucher) => (
                   <TableRow key={voucher.id}>
-                    <TableCell className="font-medium">{voucher.number}</TableCell>
+                    <TableCell className="font-medium text-slate-900">{voucher.number}</TableCell>
                     <TableCell>{new Date(voucher.date).toLocaleDateString('fr-FR')}</TableCell>
                     <TableCell>{voucher.reference}</TableCell>
                     <TableCell>{getStatusBadge(voucher.status)}</TableCell>

@@ -60,12 +60,12 @@ const Inventory = () => {
     <AppLayout>
       <div className="space-y-6" data-testid="inventory-page">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div><h1 className="text-3xl font-bold text-gray-900">Inventaire</h1><p className="text-gray-500 mt-1">État du stock en temps réel</p></div>
+          <div><h1 className="page-header-title">Inventaire</h1><p className="page-header-subtitle">État du stock en temps réel</p></div>
         </div>
 
         <Card className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><Input placeholder="Rechercher un produit..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" /></div>
+            <div className="relative flex-1"><Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" /><Input placeholder="Rechercher un produit..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-11" /></div>
             <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse}>
               <SelectTrigger className="w-[200px]"><SelectValue placeholder="Tous les entrepôts" /></SelectTrigger>
               <SelectContent>
@@ -77,24 +77,24 @@ const Inventory = () => {
         </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-violet-100 rounded-lg"><Package className="w-5 h-5 text-violet-600" /></div><div><p className="text-sm text-gray-600">Produits</p><p className="text-2xl font-bold text-violet-600">{stats.totalProducts}</p></div></div></Card>
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-blue-100 rounded-lg"><ArrowDownUp className="w-5 h-5 text-blue-600" /></div><div><p className="text-sm text-gray-600">Quantité totale</p><p className="text-2xl font-bold text-blue-600">{stats.totalQuantity.toFixed(0)}</p></div></div></Card>
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-green-100 rounded-lg"><TrendingDown className="w-5 h-5 text-green-600" /></div><div><p className="text-sm text-gray-600">Valeur totale</p><p className="text-2xl font-bold text-green-600">{stats.totalValue.toFixed(3)} TND</p></div></div></Card>
-          <Card className="p-6"><div className="flex items-center gap-3"><div className="p-2 bg-red-100 rounded-lg"><AlertTriangle className="w-5 h-5 text-red-600" /></div><div><p className="text-sm text-gray-600">Stock bas</p><p className="text-2xl font-bold text-red-600">{stats.lowStock}</p></div></div></Card>
+          <Card className="stat-surface p-6"><div className="flex items-center gap-3"><div className="rounded-2xl bg-violet-100 p-3"><Package className="w-5 h-5 text-violet-700" /></div><div><p className="text-sm text-slate-600">Produits</p><p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.totalProducts}</p></div></div></Card>
+          <Card className="stat-surface p-6"><div className="flex items-center gap-3"><div className="rounded-2xl bg-blue-100 p-3"><ArrowDownUp className="w-5 h-5 text-blue-700" /></div><div><p className="text-sm text-slate-600">Quantité totale</p><p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.totalQuantity.toFixed(0)}</p></div></div></Card>
+          <Card className="stat-surface p-6"><div className="flex items-center gap-3"><div className="rounded-2xl bg-green-100 p-3"><TrendingDown className="w-5 h-5 text-green-700" /></div><div><p className="text-sm text-slate-600">Valeur totale</p><p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.totalValue.toFixed(3)} TND</p></div></div></Card>
+          <Card className="stat-surface p-6"><div className="flex items-center gap-3"><div className="rounded-2xl bg-rose-100 p-3"><AlertTriangle className="w-5 h-5 text-rose-700" /></div><div><p className="text-sm text-slate-600">Stock bas</p><p className="text-2xl font-bold tracking-[-0.03em] text-slate-900">{stats.lowStock}</p></div></div></Card>
         </div>
 
         <Card>
-          {loading ? (<div className="p-8 text-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600 mx-auto"></div></div>
-          ) : filteredLevels.length === 0 ? (<div className="p-8 text-center"><Package className="w-12 h-12 text-gray-300 mx-auto mb-4" /><p className="text-gray-500">Aucun stock trouvé</p></div>
+          {loading ? (<div className="p-8 text-center"><div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div></div>
+          ) : filteredLevels.length === 0 ? (<div className="p-8 text-center"><Package className="mx-auto mb-4 h-12 w-12 text-slate-300" /><p className="text-slate-500">Aucun stock trouvé</p></div>
           ) : (
             <Table>
               <TableHeader><TableRow><TableHead>Produit</TableHead><TableHead>SKU</TableHead><TableHead>Entrepôt</TableHead><TableHead>Quantité</TableHead><TableHead>Coût unitaire</TableHead><TableHead>Valeur</TableHead><TableHead>Statut</TableHead></TableRow></TableHeader>
               <TableBody>
                 {filteredLevels.map((level, idx) => (
-                  <TableRow key={idx} className={level.is_low_stock ? 'bg-red-50' : ''}>
-                    <TableCell><div className="flex items-center gap-3"><div className="w-10 h-10 bg-violet-100 rounded-lg flex items-center justify-center"><Package className="w-5 h-5 text-violet-600" /></div><span className="font-medium">{level.product_name}</span></div></TableCell>
+                  <TableRow key={idx} className={level.is_low_stock ? 'bg-red-50/80' : ''}>
+                    <TableCell><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-100"><Package className="w-5 h-5 text-violet-700" /></div><span className="font-medium text-slate-900">{level.product_name}</span></div></TableCell>
                     <TableCell>{level.product_sku || '-'}</TableCell>
-                    <TableCell><div className="flex items-center gap-1"><Warehouse className="w-4 h-4 text-gray-400" />{level.warehouse_name}</div></TableCell>
+                    <TableCell><div className="flex items-center gap-1"><Warehouse className="w-4 h-4 text-slate-400" />{level.warehouse_name}</div></TableCell>
                     <TableCell className="font-semibold">{level.quantity}</TableCell>
                     <TableCell>{level.unit_cost.toFixed(3)} TND</TableCell>
                     <TableCell className="font-semibold">{level.total_value.toFixed(3)} TND</TableCell>

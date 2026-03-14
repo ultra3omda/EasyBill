@@ -63,14 +63,14 @@ const AuxiliaryLedgers = () => {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Livres de Tiers</h1>
-          <p className="text-gray-500 mt-1">Exports comptables clients et fournisseurs</p>
+          <h1 className="page-header-title">Livres de Tiers</h1>
+          <p className="page-header-subtitle">Exports comptables clients et fournisseurs</p>
         </div>
 
         <Card className="p-6">
-          <h2 className="text-lg font-semibold mb-4">Filtres de période</h2>
+          <h2 className="mb-4 text-lg font-semibold text-slate-900">Filtres de période</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>Date de début</Label>
@@ -93,34 +93,34 @@ const AuxiliaryLedgers = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Livre Clients */}
-          <Card className="p-6">
+          <Card className="stat-surface p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <Users className="w-6 h-6 text-purple-600" />
+              <div className="rounded-2xl bg-violet-100 p-3">
+                <Users className="w-6 h-6 text-violet-700" />
               </div>
               <div>
                 <h2 className="text-xl font-semibold">Livre des Clients</h2>
-                <p className="text-sm text-gray-500">Compte 411 - Créances clients</p>
+                <p className="text-sm text-slate-500">Compte 411 - Créances clients</p>
               </div>
             </div>
             
-            <p className="text-gray-600 mb-6">
+            <p className="mb-6 text-slate-600">
               Exportez le livre auxiliaire des clients avec le détail de toutes les transactions et soldes par client.
             </p>
             
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+              <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-3">
                 <span className="text-sm">Format</span>
                 <Badge className="bg-green-100 text-green-800">Excel (.xlsx)</Badge>
               </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+              <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-3">
                 <span className="text-sm">Contenu</span>
-                <span className="text-xs text-gray-600">Une feuille par client</span>
+                <span className="text-xs text-slate-600">Une feuille par client</span>
               </div>
             </div>
             
             <Button 
-              className="w-full mt-6 bg-purple-600 hover:bg-purple-700"
+              className="mt-6 w-full"
               onClick={() => exportLedger('customers')}
             >
               <Download className="w-4 h-4 mr-2" />
@@ -129,34 +129,34 @@ const AuxiliaryLedgers = () => {
           </Card>
 
           {/* Livre Fournisseurs */}
-          <Card className="p-6">
+          <Card className="stat-surface p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-orange-100 rounded-lg">
-                <Building className="w-6 h-6 text-orange-600" />
+              <div className="rounded-2xl bg-amber-100 p-3">
+                <Building className="w-6 h-6 text-amber-700" />
               </div>
               <div>
                 <h2 className="text-xl font-semibold">Livre des Fournisseurs</h2>
-                <p className="text-sm text-gray-500">Compte 401 - Dettes fournisseurs</p>
+                <p className="text-sm text-slate-500">Compte 401 - Dettes fournisseurs</p>
               </div>
             </div>
             
-            <p className="text-gray-600 mb-6">
+            <p className="mb-6 text-slate-600">
               Exportez le livre auxiliaire des fournisseurs avec le détail de toutes les transactions et soldes par fournisseur.
             </p>
             
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+              <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-3">
                 <span className="text-sm">Format</span>
                 <Badge className="bg-green-100 text-green-800">Excel (.xlsx)</Badge>
               </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+              <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-3">
                 <span className="text-sm">Contenu</span>
-                <span className="text-xs text-gray-600">Une feuille par fournisseur</span>
+                <span className="text-xs text-slate-600">Une feuille par fournisseur</span>
               </div>
             </div>
             
             <Button 
-              className="w-full mt-6 bg-orange-600 hover:bg-orange-700"
+              className="mt-6 w-full"
               onClick={() => exportLedger('suppliers')}
             >
               <Download className="w-4 h-4 mr-2" />
@@ -166,7 +166,7 @@ const AuxiliaryLedgers = () => {
         </div>
 
         {/* Info Card */}
-        <Card className="p-6 bg-blue-50 border-blue-200">
+        <Card className="border-blue-200 bg-blue-50 p-6">
           <div className="flex gap-3">
             <BookMarked className="w-6 h-6 text-blue-600 flex-shrink-0" />
             <div>

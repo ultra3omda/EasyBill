@@ -67,8 +67,8 @@ const RolesPermissionsPage = () => {
       if (permList.length === 0) return null;
       return (
         <div key={moduleKey} className="flex flex-wrap gap-1">
-          <span className="text-xs font-medium text-gray-600 w-24">{MODULE_LABELS[moduleKey] || moduleKey}:</span>
-          <span className="text-xs text-gray-700">{permList.join(', ')}</span>
+          <span className="w-24 text-xs font-medium text-slate-600">{MODULE_LABELS[moduleKey] || moduleKey}:</span>
+          <span className="text-xs text-slate-700">{permList.join(', ')}</span>
         </div>
       );
     }).filter(Boolean);
@@ -78,32 +78,32 @@ const RolesPermissionsPage = () => {
     <AppLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Rôles & permissions</h1>
-          <p className="text-gray-500 mt-1">Vue d'ensemble des rôles et droits d'accès par module</p>
+          <h1 className="page-header-title">Rôles & permissions</h1>
+          <p className="page-header-subtitle">Vue d'ensemble des rôles et droits d'accès par module</p>
         </div>
 
         {myPermissions && (
-          <Card className="p-4 border-violet-200 bg-violet-50/50">
-            <h3 className="font-semibold text-gray-900 mb-2">Votre rôle actuel</h3>
-            <p className="text-sm text-gray-600">
+          <Card className="stat-surface border-violet-200 bg-violet-50/50 p-4">
+            <h3 className="mb-2 font-semibold text-slate-900">Votre rôle actuel</h3>
+            <p className="text-sm text-slate-600">
               <span className="font-medium">{myPermissions.role_label}</span> — Permissions associées à votre compte pour cette entreprise.
             </p>
           </Card>
         )}
 
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Chargement...</div>
+          <div className="p-8 text-center text-slate-500">Chargement...</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {roles.map((role) => (
-              <Card key={role.value} className="p-5">
+              <Card key={role.value} className="stat-surface p-5">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-100">
                     <Shield className="w-5 h-5 text-violet-600" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">{role.label}</h3>
-                    <p className="text-xs text-gray-500">{role.value}</p>
+                    <h3 className="font-semibold text-slate-900">{role.label}</h3>
+                    <p className="text-xs text-slate-500">{role.value}</p>
                   </div>
                 </div>
                 <div className="space-y-2 text-sm">
@@ -114,9 +114,9 @@ const RolesPermissionsPage = () => {
           </div>
         )}
 
-        <Card className="p-6">
-          <h3 className="font-semibold text-gray-900 mb-2">À propos des rôles</h3>
-          <p className="text-sm text-gray-600">
+        <Card className="stat-surface p-6">
+          <h3 className="mb-2 font-semibold text-slate-900">À propos des rôles</h3>
+          <p className="text-sm text-slate-600">
             Les rôles définissent les niveaux d'accès dans EasyBill. Le <strong>Propriétaire</strong> a tous les droits.
             Les <strong>Administrateurs</strong> peuvent gérer les collaborateurs mais pas supprimer l'entreprise.
             Les autres rôles (Manager, Comptable, Commercial, Acheteur, Lecteur) ont des permissions restreintes par module.
